@@ -1,15 +1,16 @@
 const express = require("express");
 const path = require("path");
-
 const app = express();
-const port = process.env.PORT || 8080;
 
+// Serve static files from the dist folder
 app.use(express.static(path.join(__dirname, "dist")));
 
-app.get("*", (_, res) => {
+app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+// Azure provides the port in process.env.PORT
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
