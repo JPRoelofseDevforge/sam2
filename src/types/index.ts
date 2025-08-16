@@ -39,6 +39,8 @@ export interface MuscleSymmetry {
   trunk_mass_kg: number;
 }
 
+
+
 export interface BodyComposition {
   athlete_id: string;
   date?: string; // Optional for single entry, required for history
