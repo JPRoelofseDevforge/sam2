@@ -62,14 +62,23 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   const minValue = Math.min(...allValues) * 0.98;
   const maxValue = Math.max(...allValues) * 1.02;
 
+const getStatus = () => {
+  if (value >= goalValue!) return 'good';
+  if (value >= goalValue! * 0.85) return 'warning';
+  return 'alert';
+};
+
+const status = getStatus();
+const dotColor =
+  status === 'good' ? 'bg-green-500' :
+  status === 'warning' ? 'bg-yellow-500' :
+  'bg-red-500';
+
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm border hover:shadow transition-shadow duration-200 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-600">{title}</h3>
-        <span className="text-lg" role="img" aria-label={title}>
-          {icon}
-        </span>
+      <div className="mb-3">
+        <div className={`w-3 h-3 rounded-full ${dotColor}`} title={`Status: ${status}`} />
       </div>
 
       {/* Value */}
@@ -156,6 +165,24 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           </LineChart>
         </ResponsiveContainer>
       </div>
+
+{/* Legend */}
+{((goalValue && goalLabel) || teamAverage) && (
+  <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-1">
+    {goalValue && (
+      <div className="flex items-center">
+        <div className="w-3 h-0.5 bg-[#8884d8] mr-1 border-dashed"></div>
+        <span>{goalLabel}</span>
+      </div>
+    )}
+    {teamAverage && (
+      <div className="flex items-center">
+        <div className="w-3 h-0.5 bg-[#82ca9d] mr-1 border-dashed border-0.5"></div>
+        <span>Team Avg</span>
+      </div>
+    )}
+  </div>
+)}
 
       {/* Subtitle */}
       {subtitle && (
