@@ -61,12 +61,12 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
     return acc;
   }, {} as Record<string, string>);
 
-  const tabs = [
-    { id: 'metrics' as const, label: '📊 Current Metrics', count: latest ? 9 : 0 },
-    { id: 'trends' as const, label: '📈 Trends & Analysis', count: athleteBiometrics.length },
-    { id: 'insights' as const, label: '🧠 Predictive Insights', count: geneticInsights.length },
-    { id: 'body' as const, label: '⚖️ Body Composition', count: athleteBodyComp ? 1 : 0 }
-  ];
+const tabs = [
+  { id: 'metrics' as const, label: 'Current Metrics', icon: '📊', count: latest ? 9 : 0 },
+  { id: 'trends' as const, label: 'Trends & Analysis', icon: '📈', count: athleteBiometrics.length },
+  { id: 'insights' as const, label: 'Predictive Insights', icon: '🧠', count: geneticInsights.length },
+  { id: 'body' as const, label: 'Body Composition', icon: '⚖️', count: athleteBodyComp ? 1 : 0 }
+];
 
   return (
     <div className="space-y-6">
@@ -111,29 +111,50 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
       {/* Current Alert */}
       <AlertCard alert={alert} />
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+{/* Responsive Tabs */}
+<div className="border-b border-gray-200 mb-6">
+  <nav className="flex flex-col sm:flex-row sm:flex-wrap gap-1 sm:gap-0">
+    {tabs.map((tab) => {
+      const isActive = activeTab === tab.id;
+      return (
+        <button
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id)}
+          className={`flex items-center justify-start sm:justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium transition-all duration-200 relative group
+            ${isActive
+              ? 'text-blue-700 bg-blue-50'
+              : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+            }`}
+        >
+          {/* Icon & Label */}
+          <span className="flex items-center gap-2">
+  <span>{tab.icon}</span>
+  <span className="sm:hidden">{tab.label}</span>
+  <span className="hidden sm:inline">{tab.label}</span>
+</span>
+
+          {/* Count Badge */}
+          {tab.count > 0 && (
+            <span
+              className={`inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full
+                ${isActive 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 text-gray-700 group-hover:bg-gray-300'
+                }`}
             >
-              {tab.label}
-              {tab.count > 0 && (
-                <span className="ml-2 bg-gray-100 text-gray-600 py-1 px-2 rounded-full text-xs">
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-      </div>
+              {tab.count}
+            </span>
+          )}
+
+          {/* Active Indicator (Bottom Bar) */}
+          {isActive && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"></span>
+          )}
+        </button>
+      );
+    })}
+  </nav>
+</div>
 
       {/* Tab Content */}
       <div className="mt-6">
