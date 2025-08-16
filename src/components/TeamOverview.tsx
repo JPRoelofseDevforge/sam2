@@ -24,6 +24,8 @@ const CITY = import.meta.env.VITE_CITY || 'Pretoria';
 const STATE = import.meta.env.VITE_STATE || 'Gauteng';
 const COUNTRY = import.meta.env.VITE_COUNTRY || 'South Africa';
 
+
+
 export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) => {
   const [airQuality, setAirQuality] = useState<AirQualityData | null>(null);
   const [loading, setLoading] = useState(true);
