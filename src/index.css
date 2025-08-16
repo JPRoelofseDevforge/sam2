@@ -26,17 +26,7 @@ body {
   overflow: hidden;
 }
 
-/* Full-Screen Gradient Background */
-.background-gradient {
-  position: fixed;
-  inset: 0;
-  background: linear-gradient(135deg, #f97316, #fb923c);
-  /* For orange variant: #f97316, #fb923c */
-  filter: blur(80px);
-  opacity: 0.4;
-  z-index: -1;
-  pointer-events: none;
-}
+
 
 .background-rings {
   position: fixed;

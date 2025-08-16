@@ -348,7 +348,7 @@ return (
 const StatCard: React.FC<{ label: string; value: number | string; icon: string; color: string }> = ({ label, value, icon, color }) => (
   <div className="bg-gradient-to-br from-gray-900/70 to-gray-950/60 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 text-center shadow-lg hover:shadow-purple-500/10 transition-shadow">
     <div className="text-3xl mb-1">{icon}</div>
-    <div className={`text-xl sm:text-2xl font-extrabold bg-gradient-to-r ${color} bg-clip-text text-transparent`}>
+    <div className={`text-xl sm:text-2xl font-extrabold bg-gradient-to-r ${color} bg-clip-text`}>
       {value}
     </div>
     <div className="text-gray-300 text-xs sm:text-sm mt-1 font-medium">{label}</div>
