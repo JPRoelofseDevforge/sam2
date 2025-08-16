@@ -77,32 +77,42 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
   // Fetch Air Quality from IQAir
   useEffect(() => {
     const fetchAirQuality = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(
-          `http://api.airvisual.com/v2/city?city=${encodeURIComponent(CITY)}&state=${encodeURIComponent(STATE)}&country=${encodeURIComponent(COUNTRY)}&key=${IQAIR_API_KEY}`
-        );
+  try {
+    setLoading(true);
+    const url = new URL('https://api.airvisual.com/v2/city'); // ← USE HTTPS!
+    url.searchParams.append('city', CITY);
+    url.searchParams.append('state', STATE);
+    url.searchParams.append('country', COUNTRY);
+    url.searchParams.append('key', IQAIR_API_KEY);
 
-        const data = response.data.data;
-        const current = data.current;
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
 
-        setAirQuality({
-          temperature: current.weather.tp, // temp in °C
-          humidity: current.weather.hu,
-          aqi: current.pollution.aqius,
-          co: current.pollution.co,
-          pm25: current.pollution.pm25,
-          pm10: current.pollution.pm10,
-          lastUpdated: new Date(data.current.pollution.ts).toLocaleTimeString(),
-        });
-        setError(null);
-      } catch (err: any) {
-        console.error('AirQuality API Error:', err);
-        setError(err.response?.data?.message || 'Failed to load air quality');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    const json = await res.json();
+    const current = json.data.current;
+
+    setAirQuality({
+      temperature: current.weather.tp,
+      humidity: current.weather.hu,
+      aqi: current.pollution.aqius,
+      co: current.pollution.co,
+      pm25: current.pollution.pm25,
+      pm10: current.pollution.pm10,
+      lastUpdated: new Date().toLocaleTimeString(),
+    });
+    setError(null);
+  } catch (err: any) {
+    console.error('AirQuality API Error:', err);
+    setError(err.message || 'Failed to load air quality');
+  } finally {
+    setLoading(false);
+  }
+};
 
     fetchAirQuality();
     const interval = setInterval(fetchAirQuality, 300000); // Refresh every 5 minutes
