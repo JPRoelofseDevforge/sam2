@@ -26,6 +26,38 @@ interface TeamOverviewProps {
   onAthleteClick: (athleteId: string) => void;
 }
 
+const getStatusColorClass = (alertType: string): string => {
+  switch (alertType) {
+    case 'critical':
+    case 'high':
+      return 'status-critical';
+    case 'warning':
+    case 'medium':
+      return 'status-warning';
+    case 'optimal':
+    case 'low':
+      return 'status-optimal';
+    default:
+      return 'status-unknown';
+  }
+};
+
+const getStatusColor = (alertType: string): string => {
+  switch (alertType) {
+    case 'critical':
+    case 'high':
+      return 'text-red-400';
+    case 'warning':
+    case 'medium':
+      return 'text-yellow-400';
+    case 'optimal':
+    case 'low':
+      return 'text-green-400';
+    default:
+      return 'text-gray-400';
+  }
+};
+
 // 🔧 CONFIG: Replace with your actual location and IQAir API key
 const IQAIR_API_KEY = import.meta.env.VITE_IQAIR_API_KEY || 'f8e6fb6c-6ec0-4064-a46b-a173e4137718';
 const CITY = import.meta.env.VITE_CITY || 'Pretoria';
@@ -167,135 +199,149 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
 
 
   
-  return (
-    <div className="min-h-screen text-white relative">
-      {/* Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-950 via-black to-purple-950/30 -z-10"></div>
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(147,51,234,0.08),transparent),radial-gradient(circle_at_80%_20%,rgba(249,115,22,0.08),transparent)] -z-10"></div>
+return (
+  <div className="app-container">
+    {/* Full Screen Gradient Background */}
+    <div className="background-gradient"></div>
+    <div className="background-rings"></div>
 
-      <div className="relative z-10 px-4 py-6 max-w-7xl mx-auto space-y-8 sm:space-y-10">
+    {/* Main Content */}
+    <div className="main-content">
+      {/* Header */}
+      <header className="header-section">
+        <h1 className="logo-text">
+          🧬 SAM Recovery
+        </h1>
+        <p className="tagline">
+          Precision Recovery Through Genetics × Biometrics × Environment
+        </p>
+      </header>
 
-        {/* Header */}
-        <div className="text-center space-y-2 sm:space-y-3">
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black bg-gradient-to-r from-purple-400 via-pink-300 to-orange-400 bg-clip-text text-transparent">
-            🧬 SAM Recovery
-          </h1>
-          <p className="text-lg sm:text-xl text-gray-300 font-light tracking-wide">
-            Precision Recovery Through Genetics × Biometrics × Environment
-          </p>
+      {/* Environmental Health */}
+      <section className="environment-card">
+        <div className="card-header">
+          <div className="indicator-dot"></div>
+          <h2 className="card-title">
+            Environmental Health • {CITY} • {formatted}
+          </h2>
         </div>
 
-        {/* Environmental Health - Mobile Friendly */}
-        <section className="bg-gradient-to-br from-gray-900/60 to-gray-900/70 backdrop-blur-sm border border-gray-700/30 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full"></div>
-            <h2 className="text-base sm:text-lg font-semibold text-white">Environmental Health • {CITY}  • {formatted}</h2>
+        <div className="metrics-grid">
+          <div className="metric-item">
+            <div className="metric-icon">🌡️</div>
+            <div className="metric-value temp-value">{airQuality?.temperature}°C</div>
+            <div className="metric-label">Temp</div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div className="p-4 bg-black/20 backdrop-blur-sm border border-gray-700/30 rounded-xl text-center">
-              <div className="text-xl sm:text-2xl mb-1">🌡️</div>
-              <div className="text-lg sm:text-2xl font-bold text-orange-400">{airQuality?.temperature}°C</div>
-              <div className="text-xs text-gray-400 mt-1">Temp</div>
-            </div>
-
-            <div className="p-4 bg-black/20 backdrop-blur-sm border border-gray-700/30 rounded-xl text-center">
-              <div className="text-xl sm:text-2xl mb-1">💧</div>
-              <div className="text-lg sm:text-2xl font-bold text-blue-400">{airQuality?.humidity}%</div>
-              <div className="text-xs text-gray-400 mt-1">Humidity</div>
-            </div>
-
-            <div className="p-4 bg-black/20 backdrop-blur-sm border border-gray-700/30 rounded-xl text-center">
-              <div className="text-xl sm:text-2xl mb-1">🌫️</div>
-              <div className={`text-lg sm:text-2xl font-bold ${getAqiLevel(airQuality?.aqi || 0).color}`}>
-                {airQuality?.aqi}
-              </div>
-              <div className="text-xs text-gray-400 mt-1">
-                AQI • {getAqiLevel(airQuality?.aqi || 0).label}
-              </div>
-            </div>
+          <div className="metric-item">
+            <div className="metric-icon">💧</div>
+            <div className="metric-value humidity-value">{airQuality?.humidity}%</div>
+            <div className="metric-label">Humidity</div>
           </div>
 
-          <div className="flex justify-end mt-4 text-xs text-gray-500">
-            ⏱️ Updated: {airQuality?.lastUpdated || '—'} • Every 5 min
+          <div className="metric-item">
+            <div className="metric-icon">🌫️</div>
+            <div className={`metric-value aqi-value ${getAqiLevel(airQuality?.aqi || 0).class}`}>
+              {airQuality?.aqi}
+            </div>
+            <div className="metric-label">
+              AQI • {getAqiLevel(airQuality?.aqi || 0).label}
+            </div>
           </div>
-        </section>
-
-        {/* Team Stats - Responsive Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <StatCard label="Athletes" value={teamStats.totalAthletes} icon="👥" color="from-blue-500 to-cyan-400" />
-          <StatCard label="Avg HRV" value={`${teamStats.avgHRV.toFixed(0)} ms`} icon="💓" color="from-purple-500 to-pink-400" />
-          <StatCard label="Avg Sleep" value={`${teamStats.avgSleep.toFixed(1)}h`} icon="😴" color="from-indigo-500 to-blue-400" />
-          <StatCard label="Readiness" value={`${teamStats.avgReadiness.toFixed(0)}%`} icon="⚡" color="from-orange-500 to-red-400" />
         </div>
 
-        {/* Alert Summary - Stack on Mobile */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-          <AlertCard
-            title="High Priority"
-            count={teamStats.alertCounts.high}
-            icon="🔴"
-            color="red"
-            desc="Immediate attention"
-          />
-          <AlertCard
-            title="Monitor"
-            count={teamStats.alertCounts.medium}
-            icon="🟡"
-            color="yellow"
-            desc="Potential issues"
-          />
-          <AlertCard
-            title="Optimal"
-            count={teamStats.alertCounts.optimal}
-            icon="🟢"
-            color="green"
-            desc="Ready for training"
-          />
+        <div className="last-updated">
+          ⏱️ Updated: {airQuality?.lastUpdated || '—'} • Every 5 min
         </div>
+      </section>
 
-        {/* Athletes Grid */}
-        <section>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 sm:mb-6">👥 Athlete Status</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {teamStats.athleteMetrics.map(({ athlete, latest, alert, readinessScore }) => (
-              <div
-                key={athlete.athlete_id}
-                className={`group bg-gradient-to-br from-gray-900/70 to-gray-950/60 backdrop-blur-sm border p-5 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 hover:scale-105 ${getStatusColor(alert.type)} hover:border-opacity-70`}
-                onClick={() => onAthleteClick(athlete.athlete_id)}
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="text-base font-bold text-white group-hover:text-purple-300">{athlete.name}</h3>
-                    <p className="text-xs text-gray-400">{athlete.sport} • {athlete.team}</p>
-                  </div>
-                  <div className="text-xl">{getStatusIcon(alert.type)}</div>
-                </div>
-
-                {latest && (
-                  <div className="grid grid-cols-2 gap-3 mb-3 text-xs sm:text-sm">
-                    <Metric label="HRV" value={`${latest.hrv_night.toFixed(0)} ms`} />
-                    <Metric label="Sleep" value={`${latest.sleep_duration_h.toFixed(1)}h`} />
-                    <Metric label="RHR" value={`${latest.resting_hr.toFixed(0)} bpm`} />
-                    <Metric label="Ready" value={`${readinessScore.toFixed(0)}%`} />
-                  </div>
-                )}
-
-                <div className="border-t border-gray-700 pt-2">
-                  <p className="font-medium text-white text-xs line-clamp-1">{alert.title.replace(/[\ emoji]/g, '').trim()}</p>
-                  <p className="text-xs text-gray-400 line-clamp-2">{alert.cause}</p>
-                </div>
-
-                <button className="mt-3 w-full py-2 bg-gradient-to-r from-purple-600 to-orange-500 hover:from-purple-700 hover:to-orange-600 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 shadow-md">
-                  📊 Open Profile
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
+      {/* Team Stats */}
+      <div className="stats-grid-wide">
+        <StatCard label="Athletes" value={teamStats.totalAthletes} icon="👥" color="blue" />
+        <StatCard label="Avg HRV" value={`${teamStats.avgHRV.toFixed(0)} ms`} icon="💓" color="purple" />
+        <StatCard label="Avg Sleep" value={`${teamStats.avgSleep.toFixed(1)}h`} icon="😴" color="indigo" />
+        <StatCard label="Readiness" value={`${teamStats.avgReadiness.toFixed(0)}%`} icon="⚡" color="orange" />
       </div>
+
+      {/* Alert Summary */}
+      <div className="alerts-grid">
+        <AlertCard
+          title="High Priority"
+          count={teamStats.alertCounts.high}
+          icon="🔴"
+          color="red"
+          desc="Immediate attention"
+        />
+        <AlertCard
+          title="Monitor"
+          count={teamStats.alertCounts.medium}
+          icon="🟡"
+          color="yellow"
+          desc="Potential issues"
+        />
+        <AlertCard
+          title="Optimal"
+          count={teamStats.alertCounts.optimal}
+          icon="🟢"
+          color="green"
+          desc="Ready for training"
+        />
+      </div>
+
+      {/* Athletes Grid */}
+      <section className="athletes-section">
+        <h2 className="section-title">👥 Athlete Status</h2>
+        <div className="athletes-grid">
+          {teamStats.athleteMetrics.map(({ athlete, latest, alert, readinessScore }) => (
+            <div
+              key={athlete.athlete_id}
+              className={`athlete-card ${getStatusColorClass(alert.type)} card-hover`}
+              onClick={() => onAthleteClick(athlete.athlete_id)}
+            >
+              <div className="athlete-header">
+                <div className="athlete-info">
+                  <h3 className="athlete-name">{athlete.name}</h3>
+                  <p className="athlete-meta">{athlete.sport} • {athlete.team}</p>
+                </div>
+                <div className="alert-icon">{getStatusIcon(alert.type)}</div>
+              </div>
+
+              {latest && (
+                <div className="athlete-metrics">
+                  <div className="metric-pair">
+                    <span className="label">HRV</span>
+                    <span className="value">{latest.hrv_night.toFixed(0)} ms</span>
+                  </div>
+                  <div className="metric-pair">
+                    <span className="label">Sleep</span>
+                    <span className="value">{latest.sleep_duration_h.toFixed(1)}h</span>
+                  </div>
+                  <div className="metric-pair">
+                    <span className="label">RHR</span>
+                    <span className="value">{latest.resting_hr.toFixed(0)} bpm</span>
+                  </div>
+                  <div className="metric-pair">
+                    <span className="label">Ready</span>
+                    <span className="value">{readinessScore.toFixed(0)}%</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="athlete-alert">
+                <p className="alert-title">{alert.title.replace(/[\ emoji]/g, '').trim()}</p>
+                <p className="alert-cause">{alert.cause}</p>
+              </div>
+
+              <button className="profile-button">
+                📊 Open Profile
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
-  );
+  </div>
+);
 };
 
 // Reusable Components

@@ -16,22 +16,27 @@ function App() {
     setSelectedAthleteId(null);
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        {currentView === 'team' ? (
-          <TeamOverview onAthleteClick={handleAthleteClick} />
-        ) : (
-          selectedAthleteId && (
-            <AthleteProfile 
-              athleteId={selectedAthleteId} 
-              onBack={handleBackToTeam} 
-            />
-          )
-        )}
-      </div>
+return (
+  <div className="app-container">
+    {/* Full-Screen Purple Gradient Background (Soft Glow) */}
+    <div className="background-gradient"></div>
+    <div className="background-rings"></div>
+
+    {/* Main Content Area with Glassmorphism */}
+    <div className="main-content">
+      {currentView === 'team' ? (
+        <TeamOverview onAthleteClick={handleAthleteClick} />
+      ) : (
+        selectedAthleteId && (
+          <AthleteProfile 
+            athleteId={selectedAthleteId} 
+            onBack={handleBackToTeam} 
+          />
+        )
+      )}
     </div>
-  );
+  </div>
+);
 }
 
 export default App;
