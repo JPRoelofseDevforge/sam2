@@ -16,7 +16,7 @@ import { TrendChart } from './TrendChart';
 import { BodyComposition } from './BodyComposition';
 import { ArrowLeft } from 'lucide-react';
 import { getTeamAverage } from '../utils/analytics';
-import { DigitalTwin, DigitalTwin3D } from './DigitalTwin';
+import { DigitalTwin3D } from './DigitalTwin';
 
 interface AthleteProfileProps {
   athleteId: string;

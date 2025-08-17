@@ -1,111 +1,125 @@
 import { Athlete, BiometricData, GeneticProfile, BodyComposition } from '../types';
 
+// === ATHLETES (Only 5) ===
 export const athletes: Athlete[] = [
   { athlete_id: 'ATH001', name: 'Marcus Thompson', sport: 'Basketball', age: 24, team: 'Phoenix Warriors' },
   { athlete_id: 'ATH002', name: 'Sarah Chen', sport: 'Soccer', age: 22, team: 'Metro United' },
   { athlete_id: 'ATH003', name: 'David Rodriguez', sport: 'Swimming', age: 26, team: 'Aqua Elite' },
   { athlete_id: 'ATH004', name: 'Emma Johnson', sport: 'Track & Field', age: 23, team: 'Speed Demons' },
-  { athlete_id: 'ATH005', name: 'Ryan Mitchell', sport: 'Football', age: 25, team: 'Storm Ravens' },
-  { athlete_id: 'ATH006', name: 'Alexis Park', sport: 'Volleyball', age: 21, team: 'Sky Setters' },
-  { athlete_id: 'ATH007', name: 'Liam Foster', sport: 'Cycling', age: 27, team: 'Velocity Pro' },
-  { athlete_id: 'ATH008', name: 'Zoe Kim', sport: 'Gymnastics', age: 19, team: 'Flex Stars' },
-  { athlete_id: 'ATH009', name: 'Jordan Lee', sport: 'Tennis', age: 24, team: 'Ace Squad' },
-  { athlete_id: 'ATH010', name: 'Maya Patel', sport: 'Rowing', age: 25, team: 'River Hawks' },
-  { athlete_id: 'ATH011', name: 'Ethan Brooks', sport: 'Baseball', age: 26, team: 'Diamond Kings' },
-  { athlete_id: 'ATH012', name: 'Nina Williams', sport: 'Martial Arts', age: 28, team: 'Iron Phoenix' },
-  { athlete_id: 'ATH013', name: 'Carlos Mendez', sport: 'Boxing', age: 29, team: 'Knockout Crew' },
-  { athlete_id: 'ATH014', name: 'Sophia Reed', sport: 'Diving', age: 20, team: 'Aqua Stars' },
-  { athlete_id: 'ATH015', name: 'Tyler Grant', sport: 'Skiing', age: 27, team: 'Alpine Rush' },
-  { athlete_id: 'ATH016', name: 'Leah Torres', sport: 'Rugby', age: 23, team: 'Thunder Bulls' },
-  { athlete_id: 'ATH017', name: 'Omar Hassan', sport: 'Weightlifting', age: 30, team: 'Iron Will' },
-  { athlete_id: 'ATH018', name: 'Grace Wong', sport: 'Figure Skating', age: 21, team: 'Gliding Blades' },
-  { athlete_id: 'ATH019', name: 'Isaac Clarke', sport: 'Triathlon', age: 26, team: 'Endurance X' },
-  { athlete_id: 'ATH020', name: 'Ava Simmons', sport: 'Lacrosse', age: 22, team: 'Forest Hawks' }
+  { athlete_id: 'ATH005', name: 'Ryan Mitchell', sport: 'Football', age: 25, team: 'Storm Ravens' }
 ];
 
+// === BIOMETRIC DATA (2 full weeks: Jan 13 - Jan 26) ===
 export const biometricData: BiometricData[] = [
   // Marcus Thompson - Improving recovery
-  { athlete_id: 'ATH001', date: '2024-01-13', hrv_night: 46, resting_hr: 63, spo2_night: 97.2, resp_rate_night: 16, deep_sleep_pct: 18, rem_sleep_pct: 18, light_sleep_pct: 64, sleep_duration_h: 7.5, temp_trend_c: 37.0, training_load_pct: 95 },
-  { athlete_id: 'ATH001', date: '2024-01-14', hrv_night: 47, resting_hr: 62, spo2_night: 97.3, resp_rate_night: 15, deep_sleep_pct: 19, rem_sleep_pct: 17, light_sleep_pct: 64, sleep_duration_h: 7.6, temp_trend_c: 36.9, training_load_pct: 90 },
-  { athlete_id: 'ATH001', date: '2024-01-15', hrv_night: 45, resting_hr: 64, spo2_night: 97.0, resp_rate_night: 16, deep_sleep_pct: 16, rem_sleep_pct: 16, light_sleep_pct: 68, sleep_duration_h: 7.2, temp_trend_c: 37.1, training_load_pct: 98 },
-  { athlete_id: 'ATH001', date: '2024-01-16', hrv_night: 49, resting_hr: 60, spo2_night: 97.4, resp_rate_night: 15, deep_sleep_pct: 21, rem_sleep_pct: 18, light_sleep_pct: 61, sleep_duration_h: 8.0, temp_trend_c: 36.9, training_load_pct: 80 },
-  { athlete_id: 'ATH001', date: '2024-01-17', hrv_night: 50, resting_hr: 59, spo2_night: 97.6, resp_rate_night: 14, deep_sleep_pct: 22, rem_sleep_pct: 19, light_sleep_pct: 59, sleep_duration_h: 8.1, temp_trend_c: 36.8, training_load_pct: 82 },
-  { athlete_id: 'ATH001', date: '2024-01-18', hrv_night: 51, resting_hr: 58, spo2_night: 97.7, resp_rate_night: 14, deep_sleep_pct: 23, rem_sleep_pct: 18, light_sleep_pct: 59, sleep_duration_h: 8.0, temp_trend_c: 36.8, training_load_pct: 88 },
-  { athlete_id: 'ATH001', date: '2024-01-19', hrv_night: 48, resting_hr: 61, spo2_night: 97.5, resp_rate_night: 15, deep_sleep_pct: 20, rem_sleep_pct: 19, light_sleep_pct: 61, sleep_duration_h: 7.8, temp_trend_c: 36.9, training_load_pct: 92 },
-  { athlete_id: 'ATH001', date: '2024-01-20', hrv_night: 52, resting_hr: 58, spo2_night: 97.8, resp_rate_night: 14, deep_sleep_pct: 25, rem_sleep_pct: 17, light_sleep_pct: 57, sleep_duration_h: 8.2, temp_trend_c: 36.8, training_load_pct: 85, sleep_onset_time: '22:45', wake_time: '06:30' },
-  { athlete_id: 'ATH001', date: '2024-01-21', hrv_night: 52, resting_hr: 58, spo2_night: 97.8, resp_rate_night: 14, deep_sleep_pct: 17, rem_sleep_pct: 11, light_sleep_pct: 72, sleep_duration_h: 8.7, temp_trend_c: 36.8, training_load_pct: 85, sleep_onset_time: '22:45', wake_time: '06:30' },
-  { athlete_id: 'ATH001', date: '2024-01-22', hrv_night: 52, resting_hr: 58, spo2_night: 97.8, resp_rate_night: 14, deep_sleep_pct: 22, rem_sleep_pct: 21, light_sleep_pct: 57, sleep_duration_h: 8.2, temp_trend_c: 36.8, training_load_pct: 85, sleep_onset_time: '22:45', wake_time: '06:30' },
+  ...Array.from({ length: 14 }, (_, i) => {
+    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0]; // 2024-01-13 to 2024-01-26
+    let hrv = 46 + Math.sin(i * 0.5) * 3 + (i > 6 ? 4 : 0); // Improves after week 1
+    return {
+      athlete_id: 'ATH001',
+      date,
+      hrv_night: Math.round(hrv),
+      resting_hr: 63 - Math.min(5, Math.floor(i / 2)),
+      spo2_night: 97.0 + Math.random() * 0.8,
+      resp_rate_night: 16 - Math.min(2, Math.floor(i / 3)),
+      deep_sleep_pct: 18 + Math.min(7, i),
+      rem_sleep_pct: 18 + Math.min(4, Math.floor(i / 2)),
+      light_sleep_pct: 64 - Math.min(15, i * 2),
+      sleep_duration_h: 7.5 + Math.random() * 1.0,
+      temp_trend_c: 37.0 - Math.min(0.2, i * 0.02),
+      training_load_pct: 95 - Math.min(20, i * 3),
+      ...(i >= 7 && { sleep_onset_time: '22:45', wake_time: '06:30' }) // Better sleep schedule week 2
+    };
+  }),
 
-  // Sarah Chen - Circadian misalignment
-  { athlete_id: 'ATH002', date: '2024-01-13', hrv_night: 40, resting_hr: 70, spo2_night: 96.0, resp_rate_night: 16, deep_sleep_pct: 14, rem_sleep_pct: 15, light_sleep_pct: 71, sleep_duration_h: 6.0, temp_trend_c: 36.8, training_load_pct: 80 },
-  { athlete_id: 'ATH002', date: '2024-01-14', hrv_night: 39, resting_hr: 71, spo2_night: 96.1, resp_rate_night: 17, deep_sleep_pct: 15, rem_sleep_pct: 14, light_sleep_pct: 71, sleep_duration_h: 5.8, temp_trend_c: 36.9, training_load_pct: 85 },
-  { athlete_id: 'ATH002', date: '2024-01-15', hrv_night: 37, resting_hr: 73, spo2_night: 95.8, resp_rate_night: 17, deep_sleep_pct: 13, rem_sleep_pct: 13, light_sleep_pct: 74, sleep_duration_h: 5.5, temp_trend_c: 37.0, training_load_pct: 90 },
-  { athlete_id: 'ATH002', date: '2024-01-16', hrv_night: 38, resting_hr: 72, spo2_night: 96.0, resp_rate_night: 16, deep_sleep_pct: 14, rem_sleep_pct: 15, light_sleep_pct: 71, sleep_duration_h: 6.2, temp_trend_c: 36.9, training_load_pct: 82 },
-  { athlete_id: 'ATH002', date: '2024-01-17', hrv_night: 39, resting_hr: 71, spo2_night: 96.3, resp_rate_night: 16, deep_sleep_pct: 15, rem_sleep_pct: 16, light_sleep_pct: 69, sleep_duration_h: 6.4, temp_trend_c: 36.8, training_load_pct: 79 },
-  { athlete_id: 'ATH002', date: '2024-01-18', hrv_night: 41, resting_hr: 69, spo2_night: 96.5, resp_rate_night: 15, deep_sleep_pct: 17, rem_sleep_pct: 17, light_sleep_pct: 66, sleep_duration_h: 6.8, temp_trend_c: 36.7, training_load_pct: 76 },
-  { athlete_id: 'ATH002', date: '2024-01-19', hrv_night: 42, resting_hr: 68, spo2_night: 96.8, resp_rate_night: 15, deep_sleep_pct: 18, rem_sleep_pct: 18, light_sleep_pct: 64, sleep_duration_h: 7.0, temp_trend_c: 36.6, training_load_pct: 82 },
-  { athlete_id: 'ATH002', date: '2024-01-20', hrv_night: 38, resting_hr: 72, spo2_night: 96.2, resp_rate_night: 16, deep_sleep_pct: 15, rem_sleep_pct: 16, light_sleep_pct: 69, sleep_duration_h: 6.5, temp_trend_c: 36.7, training_load_pct: 78, sleep_onset_time: '01:15', wake_time: '07:45' },
-  { athlete_id: 'ATH002', date: '2024-01-21', hrv_night: 37, resting_hr: 73, spo2_night: 96.0, resp_rate_night: 17, deep_sleep_pct: 14, rem_sleep_pct: 15, light_sleep_pct: 71, sleep_duration_h: 6.0, temp_trend_c: 36.8, training_load_pct: 80, sleep_onset_time: '01:30', wake_time: '08:00' },
-  { athlete_id: 'ATH002', date: '2024-01-22', hrv_night: 39, resting_hr: 70, spo2_night: 96.4, resp_rate_night: 16, deep_sleep_pct: 16, rem_sleep_pct: 17, light_sleep_pct: 67, sleep_duration_h: 6.7, temp_trend_c: 36.7, training_load_pct: 75, sleep_onset_time: '00:45', wake_time: '07:15' },
+  // Sarah Chen - Circadian misalignment → gradual correction
+  ...Array.from({ length: 14 }, (_, i) => {
+    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0];
+    const isLateNight = i < 7; // First week late sleep
+    return {
+      athlete_id: 'ATH002',
+      date,
+      hrv_night: 37 + Math.min(6, i),
+      resting_hr: 73 - Math.min(5, i),
+      spo2_night: 95.8 + Math.random() * 0.7,
+      resp_rate_night: 17 - Math.min(2, Math.floor(i / 3)),
+      deep_sleep_pct: 13 + Math.min(6, i),
+      rem_sleep_pct: 13 + Math.min(6, i),
+      light_sleep_pct: 74 - Math.min(20, i * 2),
+      sleep_duration_h: 5.5 + Math.min(1.5, i * 0.2) + Math.random() * 0.5,
+      temp_trend_c: 37.0 - Math.min(0.4, i * 0.05),
+      training_load_pct: 90 - Math.min(20, i * 2),
+      sleep_onset_time: isLateNight ? ['01:15', '01:30', '00:45'][i % 3] : '23:30',
+      wake_time: isLateNight ? ['07:45', '08:00', '07:15'][i % 3] : '06:45'
+    };
+  }),
 
-  // David Rodriguez - Inflammation trend
-  { athlete_id: 'ATH003', date: '2024-01-13', hrv_night: 32, resting_hr: 80, spo2_night: 94.0, resp_rate_night: 19, deep_sleep_pct: 14, rem_sleep_pct: 13, light_sleep_pct: 73, sleep_duration_h: 5.8, temp_trend_c: 37.4, training_load_pct: 70 },
-  { athlete_id: 'ATH003', date: '2024-01-14', hrv_night: 33, resting_hr: 79, spo2_night: 94.2, resp_rate_night: 18, deep_sleep_pct: 15, rem_sleep_pct: 13, light_sleep_pct: 72, sleep_duration_h: 6.0, temp_trend_c: 37.3, training_load_pct: 68 },
-  { athlete_id: 'ATH003', date: '2024-01-15', hrv_night: 34, resting_hr: 78, spo2_night: 94.3, resp_rate_night: 18, deep_sleep_pct: 15, rem_sleep_pct: 14, light_sleep_pct: 71, sleep_duration_h: 6.1, temp_trend_c: 37.25, training_load_pct: 66 },
-  { athlete_id: 'ATH003', date: '2024-01-16', hrv_night: 35, resting_hr: 78, spo2_night: 94.4, resp_rate_night: 18, deep_sleep_pct: 16, rem_sleep_pct: 14, light_sleep_pct: 70, sleep_duration_h: 6.2, temp_trend_c: 37.2, training_load_pct: 65 },
-  { athlete_id: 'ATH003', date: '2024-01-17', hrv_night: 36, resting_hr: 77, spo2_night: 94.6, resp_rate_night: 17, deep_sleep_pct: 16, rem_sleep_pct: 15, light_sleep_pct: 69, sleep_duration_h: 6.3, temp_trend_c: 37.1, training_load_pct: 64 },
-  { athlete_id: 'ATH003', date: '2024-01-18', hrv_night: 38, resting_hr: 75, spo2_night: 95.0, resp_rate_night: 17, deep_sleep_pct: 17, rem_sleep_pct: 16, light_sleep_pct: 67, sleep_duration_h: 6.5, temp_trend_c: 37.0, training_load_pct: 62 },
-  { athlete_id: 'ATH003', date: '2024-01-19', hrv_night: 42, resting_hr: 65, spo2_night: 97.0, resp_rate_night: 15, deep_sleep_pct: 19, rem_sleep_pct: 20, light_sleep_pct: 61, sleep_duration_h: 7.5, temp_trend_c: 36.8, training_load_pct: 88 },
-  { athlete_id: 'ATH003', date: '2024-01-20', hrv_night: 35, resting_hr: 78, spo2_night: 94.5, resp_rate_night: 18, deep_sleep_pct: 16, rem_sleep_pct: 14, light_sleep_pct: 70, sleep_duration_h: 6.2, temp_trend_c: 37.2, training_load_pct: 65, sleep_onset_time: '23:30', wake_time: '06:00' },
-  { athlete_id: 'ATH003', date: '2024-01-21', hrv_night: 34, resting_hr: 79, spo2_night: 94.3, resp_rate_night: 19, deep_sleep_pct: 15, rem_sleep_pct: 13, light_sleep_pct: 72, sleep_duration_h: 6.0, temp_trend_c: 37.3, training_load_pct: 67 },
-  { athlete_id: 'ATH003', date: '2024-01-22', hrv_night: 36, resting_hr: 76, spo2_night: 94.8, resp_rate_night: 17, deep_sleep_pct: 17, rem_sleep_pct: 15, light_sleep_pct: 68, sleep_duration_h: 6.4, temp_trend_c: 37.1, training_load_pct: 63 },
+  // David Rodriguez - Inflammation trend → resolves mid-week 2
+  ...Array.from({ length: 14 }, (_, i) => {
+    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0];
+    const inflammationPhase = i < 9 ? 0 : 1; // Recovers after day 9
+    return {
+      athlete_id: 'ATH003',
+      date,
+      hrv_night: inflammationPhase === 0 ? (32 + i * 1.2) : (45 + (i - 9) * 0.5),
+      resting_hr: inflammationPhase === 0 ? (80 - i * 1.2) : (68 + (i - 9) * 0.3),
+      spo2_night: inflammationPhase === 0 ? (94.0 + i * 0.25) : (96.5 + Math.random() * 0.5),
+      resp_rate_night: inflammationPhase === 0 ? (19 - i * 0.3) : (15 + Math.random()),
+      deep_sleep_pct: inflammationPhase === 0 ? (14 + i * 0.3) : (20 + (i - 9) * 0.5),
+      rem_sleep_pct: inflammationPhase === 0 ? (13 + i * 0.2) : (18 + (i - 9) * 0.3),
+      light_sleep_pct: inflammationPhase === 0 ? (73 - i * 0.5) : (60 - (i - 9) * 0.5),
+      sleep_duration_h: 5.8 + Math.min(1.7, i * 0.15) + Math.random() * 0.4,
+      temp_trend_c: inflammationPhase === 0 ? (37.4 - i * 0.05) : (36.8 + Math.random() * 0.1),
+      training_load_pct: inflammationPhase === 0 ? (70 - i * 0.8) : (85 + (i - 9) * 0.5),
+      ...(i >= 9 && { sleep_onset_time: '23:00', wake_time: '06:30' })
+    };
+  }),
 
-  // Emma Johnson - Optimal recovery
-  { athlete_id: 'ATH004', date: '2024-01-13', hrv_night: 55, resting_hr: 57, spo2_night: 98.0, resp_rate_night: 14, deep_sleep_pct: 22, rem_sleep_pct: 22, light_sleep_pct: 56, sleep_duration_h: 8.0, temp_trend_c: 36.7, training_load_pct: 88 },
-  { athlete_id: 'ATH004', date: '2024-01-14', hrv_night: 56, resting_hr: 56, spo2_night: 98.1, resp_rate_night: 13, deep_sleep_pct: 23, rem_sleep_pct: 22, light_sleep_pct: 55, sleep_duration_h: 8.3, temp_trend_c: 36.6, training_load_pct: 89 },
-  { athlete_id: 'ATH004', date: '2024-01-15', hrv_night: 57, resting_hr: 55, spo2_night: 98.1, resp_rate_night: 13, deep_sleep_pct: 24, rem_sleep_pct: 23, light_sleep_pct: 53, sleep_duration_h: 8.4, temp_trend_c: 36.6, training_load_pct: 90 },
-  { athlete_id: 'ATH004', date: '2024-01-16', hrv_night: 58, resting_hr: 54, spo2_night: 98.2, resp_rate_night: 13, deep_sleep_pct: 25, rem_sleep_pct: 23, light_sleep_pct: 52, sleep_duration_h: 8.6, temp_trend_c: 36.5, training_load_pct: 87 },
-  { athlete_id: 'ATH004', date: '2024-01-17', hrv_night: 59, resting_hr: 53, spo2_night: 98.3, resp_rate_night: 12, deep_sleep_pct: 26, rem_sleep_pct: 24, light_sleep_pct: 50, sleep_duration_h: 8.7, temp_trend_c: 36.5, training_load_pct: 85 },
-  { athlete_id: 'ATH004', date: '2024-01-18', hrv_night: 60, resting_hr: 52, spo2_night: 98.4, resp_rate_night: 12, deep_sleep_pct: 27, rem_sleep_pct: 25, light_sleep_pct: 48, sleep_duration_h: 8.8, temp_trend_c: 36.4, training_load_pct: 83 },
-  { athlete_id: 'ATH004', date: '2024-01-19', hrv_night: 61, resting_hr: 51, spo2_night: 98.5, resp_rate_night: 12, deep_sleep_pct: 28, rem_sleep_pct: 26, light_sleep_pct: 46, sleep_duration_h: 8.9, temp_trend_c: 36.4, training_load_pct: 80 },
-  { athlete_id: 'ATH004', date: '2024-01-20', hrv_night: 58, resting_hr: 55, spo2_night: 98.2, resp_rate_night: 13, deep_sleep_pct: 24, rem_sleep_pct: 23, light_sleep_pct: 53, sleep_duration_h: 8.5, temp_trend_c: 36.6, training_load_pct: 90, sleep_onset_time: '22:15', wake_time: '06:45' },
-  { athlete_id: 'ATH004', date: '2024-01-21', hrv_night: 57, resting_hr: 56, spo2_night: 98.1, resp_rate_night: 13, deep_sleep_pct: 23, rem_sleep_pct: 22, light_sleep_pct: 55, sleep_duration_h: 8.4, temp_trend_c: 36.6, training_load_pct: 92 },
-  { athlete_id: 'ATH004', date: '2024-01-22', hrv_night: 59, resting_hr: 54, spo2_night: 98.3, resp_rate_night: 12, deep_sleep_pct: 25, rem_sleep_pct: 24, light_sleep_pct: 51, sleep_duration_h: 8.6, temp_trend_c: 36.5, training_load_pct: 86 },
+  // Emma Johnson - Optimal recovery (stable, slight improvements)
+  ...Array.from({ length: 14 }, (_, i) => {
+    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0];
+    return {
+      athlete_id: 'ATH004',
+      date,
+      hrv_night: 55 + i,
+      resting_hr: 57 - Math.min(5, i),
+      spo2_night: 98.0 + Math.random() * 0.4,
+      resp_rate_night: 14 - Math.min(2, Math.floor(i / 4)),
+      deep_sleep_pct: 22 + Math.min(6, i),
+      rem_sleep_pct: 22 + Math.min(4, i),
+      light_sleep_pct: 56 - Math.min(15, i * 1.5),
+      sleep_duration_h: 8.0 + Math.min(1.0, i * 0.1) + Math.random() * 0.3,
+      temp_trend_c: 36.7 - Math.min(0.3, i * 0.02),
+      training_load_pct: 88 - Math.min(10, i * 0.8),
+      sleep_onset_time: '22:15',
+      wake_time: '06:45'
+    };
+  }),
 
-  // Ryan Mitchell - Nutrition fluctuations
-  { athlete_id: 'ATH005', date: '2024-01-13', hrv_night: 38, resting_hr: 72, spo2_night: 96.5, resp_rate_night: 16, deep_sleep_pct: 17, rem_sleep_pct: 14, light_sleep_pct: 69, sleep_duration_h: 7.0, temp_trend_c: 36.8, training_load_pct: 85 },
-  { athlete_id: 'ATH005', date: '2024-01-14', hrv_night: 37, resting_hr: 73, spo2_night: 96.4, resp_rate_night: 16, deep_sleep_pct: 16, rem_sleep_pct: 14, light_sleep_pct: 70, sleep_duration_h: 6.8, temp_trend_c: 36.9, training_load_pct: 88 },
-  { athlete_id: 'ATH005', date: '2024-01-15', hrv_night: 36, resting_hr: 74, spo2_night: 96.3, resp_rate_night: 17, deep_sleep_pct: 15, rem_sleep_pct: 13, light_sleep_pct: 72, sleep_duration_h: 6.5, temp_trend_c: 37.0, training_load_pct: 90 },
-  { athlete_id: 'ATH005', date: '2024-01-16', hrv_night: 38, resting_hr: 71, spo2_night: 96.6, resp_rate_night: 15, deep_sleep_pct: 17, rem_sleep_pct: 15, light_sleep_pct: 68, sleep_duration_h: 7.1, temp_trend_c: 36.8, training_load_pct: 84 },
-  { athlete_id: 'ATH005', date: '2024-01-17', hrv_night: 39, resting_hr: 70, spo2_night: 96.7, resp_rate_night: 15, deep_sleep_pct: 18, rem_sleep_pct: 16, light_sleep_pct: 66, sleep_duration_h: 7.3, temp_trend_c: 36.7, training_load_pct: 82 },
-  { athlete_id: 'ATH005', date: '2024-01-18', hrv_night: 41, resting_hr: 68, spo2_night: 96.9, resp_rate_night: 15, deep_sleep_pct: 19, rem_sleep_pct: 17, light_sleep_pct: 64, sleep_duration_h: 7.5, temp_trend_c: 36.6, training_load_pct: 80 },
-  { athlete_id: 'ATH005', date: '2024-01-19', hrv_night: 42, resting_hr: 67, spo2_night: 97.0, resp_rate_night: 14, deep_sleep_pct: 20, rem_sleep_pct: 18, light_sleep_pct: 62, sleep_duration_h: 7.6, temp_trend_c: 36.5, training_load_pct: 78 },
-  { athlete_id: 'ATH005', date: '2024-01-20', hrv_night: 40, resting_hr: 70, spo2_night: 96.8, resp_rate_night: 15, deep_sleep_pct: 18, rem_sleep_pct: 15, light_sleep_pct: 67, sleep_duration_h: 7.2, temp_trend_c: 36.7, training_load_pct: 82 },
-  { athlete_id: 'ATH005', date: '2024-01-21', hrv_night: 39, resting_hr: 71, spo2_night: 96.6, resp_rate_night: 16, deep_sleep_pct: 17, rem_sleep_pct: 15, light_sleep_pct: 68, sleep_duration_h: 7.0, temp_trend_c: 36.8, training_load_pct: 84 },
-  { athlete_id: 'ATH005', date: '2024-01-22', hrv_night: 41, resting_hr: 68, spo2_night: 96.9, resp_rate_night: 15, deep_sleep_pct: 19, rem_sleep_pct: 17, light_sleep_pct: 64, sleep_duration_h: 7.4, temp_trend_c: 36.6, training_load_pct: 79 },
-
-  // Alexis Park - Airway issues persist
-  { athlete_id: 'ATH006', date: '2024-01-13', hrv_night: 42, resting_hr: 68, spo2_night: 93.5, resp_rate_night: 20, deep_sleep_pct: 15, rem_sleep_pct: 16, light_sleep_pct: 69, sleep_duration_h: 6.5, temp_trend_c: 37.0, training_load_pct: 78 },
-  { athlete_id: 'ATH006', date: '2024-01-14', hrv_night: 41, resting_hr: 69, spo2_night: 93.4, resp_rate_night: 21, deep_sleep_pct: 14, rem_sleep_pct: 15, light_sleep_pct: 71, sleep_duration_h: 6.3, temp_trend_c: 37.1, training_load_pct: 80 },
-  { athlete_id: 'ATH006', date: '2024-01-15', hrv_night: 40, resting_hr: 70, spo2_night: 93.2, resp_rate_night: 22, deep_sleep_pct: 13, rem_sleep_pct: 14, light_sleep_pct: 73, sleep_duration_h: 6.0, temp_trend_c: 37.2, training_load_pct: 83 },
-  { athlete_id: 'ATH006', date: '2024-01-16', hrv_night: 41, resting_hr: 68, spo2_night: 93.6, resp_rate_night: 20, deep_sleep_pct: 15, rem_sleep_pct: 16, light_sleep_pct: 69, sleep_duration_h: 6.6, temp_trend_c: 37.0, training_load_pct: 77 },
-  { athlete_id: 'ATH006', date: '2024-01-17', hrv_night: 42, resting_hr: 67, spo2_night: 93.7, resp_rate_night: 19, deep_sleep_pct: 16, rem_sleep_pct: 17, light_sleep_pct: 67, sleep_duration_h: 6.7, temp_trend_c: 36.9, training_load_pct: 76 },
-  { athlete_id: 'ATH006', date: '2024-01-18', hrv_night: 43, resting_hr: 66, spo2_night: 93.7, resp_rate_night: 19, deep_sleep_pct: 17, rem_sleep_pct: 17, light_sleep_pct: 66, sleep_duration_h: 6.9, temp_trend_c: 36.9, training_load_pct: 75 },
-  { athlete_id: 'ATH006', date: '2024-01-19', hrv_night: 44, resting_hr: 65, spo2_night: 93.8, resp_rate_night: 19, deep_sleep_pct: 17, rem_sleep_pct: 18, light_sleep_pct: 65, sleep_duration_h: 7.0, temp_trend_c: 36.8, training_load_pct: 74 },
-  { athlete_id: 'ATH006', date: '2024-01-20', hrv_night: 44, resting_hr: 66, spo2_night: 93.8, resp_rate_night: 19, deep_sleep_pct: 17, rem_sleep_pct: 18, light_sleep_pct: 65, sleep_duration_h: 6.8, temp_trend_c: 36.9, training_load_pct: 75 },
-  { athlete_id: 'ATH006', date: '2024-01-21', hrv_night: 43, resting_hr: 67, spo2_night: 93.6, resp_rate_night: 20, deep_sleep_pct: 16, rem_sleep_pct: 17, light_sleep_pct: 67, sleep_duration_h: 6.7, temp_trend_c: 36.9, training_load_pct: 76 },
-  { athlete_id: 'ATH006', date: '2024-01-22', hrv_night: 42, resting_hr: 68, spo2_night: 93.5, resp_rate_night: 20, deep_sleep_pct: 15, rem_sleep_pct: 16, light_sleep_pct: 69, sleep_duration_h: 6.6, temp_trend_c: 37.0, training_load_pct: 77 },
-
-  // Add biometric data for ATH007 to ATH020 (example: 3 days each for brevity)
-  ...['ATH007','ATH008','ATH009','ATH010','ATH011','ATH012','ATH013','ATH014','ATH015','ATH016','ATH017','ATH018','ATH019','ATH020'].flatMap(id => [
-    { athlete_id: id, date: '2024-01-20', hrv_night: 50 + Math.floor(Math.random() * 10), resting_hr: 60 + Math.floor(Math.random() * 10), spo2_night: 96.0 + Math.random() * 2.0, resp_rate_night: 14 + Math.floor(Math.random() * 4), deep_sleep_pct: 18 + Math.floor(Math.random() * 8), rem_sleep_pct: 16 + Math.floor(Math.random() * 6), light_sleep_pct: 60 + Math.floor(Math.random() * 10), sleep_duration_h: 7.0 + Math.random() * 2.0, temp_trend_c: 36.5 + Math.random() * 0.8, training_load_pct: 70 + Math.floor(Math.random() * 30) },
-    { athlete_id: id, date: '2024-01-21', hrv_night: 48 + Math.floor(Math.random() * 12), resting_hr: 58 + Math.floor(Math.random() * 12), spo2_night: 95.8 + Math.random() * 2.2, resp_rate_night: 13 + Math.floor(Math.random() * 5), deep_sleep_pct: 17 + Math.floor(Math.random() * 9), rem_sleep_pct: 15 + Math.floor(Math.random() * 7), light_sleep_pct: 58 + Math.floor(Math.random() * 12), sleep_duration_h: 6.8 + Math.random() * 2.2, temp_trend_c: 36.4 + Math.random() * 0.9, training_load_pct: 68 + Math.floor(Math.random() * 32) },
-    { athlete_id: id, date: '2024-01-22', hrv_night: 52 + Math.floor(Math.random() * 8), resting_hr: 56 + Math.floor(Math.random() * 8), spo2_night: 96.5 + Math.random() * 1.5, resp_rate_night: 14 + Math.floor(Math.random() * 3), deep_sleep_pct: 20 + Math.floor(Math.random() * 8), rem_sleep_pct: 18 + Math.floor(Math.random() * 6), light_sleep_pct: 55 + Math.floor(Math.random() * 10), sleep_duration_h: 7.5 + Math.random() * 1.5, temp_trend_c: 36.6 + Math.random() * 0.6, training_load_pct: 75 + Math.floor(Math.random() * 25) }
-  ])
+  // Ryan Mitchell - Nutrition fluctuations → stabilizes in week 2
+  ...Array.from({ length: 14 }, (_, i) => {
+    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0];
+    const stabilized = i >= 7;
+    return {
+      athlete_id: 'ATH005',
+      date,
+      hrv_night: stabilized ? (40 + Math.random() * 4) : (36 + i),
+      resting_hr: stabilized ? (68 + Math.random() * 2) : (74 - Math.min(6, i)),
+      spo2_night: stabilized ? (96.8 + Math.random() * 0.4) : (96.3 + i * 0.05),
+      resp_rate_night: stabilized ? (15 + Math.random()) : (17 - Math.min(2, Math.floor(i / 3))),
+      deep_sleep_pct: stabilized ? (18 + Math.random() * 3) : (15 + i * 0.3),
+      rem_sleep_pct: stabilized ? (16 + Math.random() * 2) : (14 + i * 0.2),
+      light_sleep_pct: stabilized ? (66 - Math.random() * 5) : (72 - i * 0.5),
+      sleep_duration_h: stabilized ? (7.2 + Math.random() * 0.6) : (6.5 + i * 0.1),
+      temp_trend_c: stabilized ? (36.6 + Math.random() * 0.1) : (37.0 - i * 0.03),
+      training_load_pct: stabilized ? (80 + Math.random() * 5) : (90 - Math.min(15, i * 1.5))
+    };
+  })
 ];
 
+// === GENETIC PROFILES (Only 5 athletes) ===
 export const geneticProfiles: GeneticProfile[] = [
-  // Existing + new genes: BDNF (neuroplasticity), PPARGC1A (mitochondrial function), ADRB2 (fat metabolism)
+  // Marcus Thompson
   { athlete_id: 'ATH001', gene: 'PER3', genotype: 'short' },
   { athlete_id: 'ATH001', gene: 'CLOCK', genotype: 'AA' },
   { athlete_id: 'ATH001', gene: 'ACTN3', genotype: 'RR' },
@@ -113,6 +127,7 @@ export const geneticProfiles: GeneticProfile[] = [
   { athlete_id: 'ATH001', gene: 'PPARGC1A', genotype: 'Gly482Gly' },
   { athlete_id: 'ATH001', gene: 'ADRB2', genotype: 'Arg16Gly' },
 
+  // Sarah Chen
   { athlete_id: 'ATH002', gene: 'PER3', genotype: 'long' },
   { athlete_id: 'ATH002', gene: 'CLOCK', genotype: 'AG' },
   { athlete_id: 'ATH002', gene: 'ACTN3', genotype: 'XX' },
@@ -120,6 +135,7 @@ export const geneticProfiles: GeneticProfile[] = [
   { athlete_id: 'ATH002', gene: 'PPARGC1A', genotype: 'Ser482' },
   { athlete_id: 'ATH002', gene: 'ADRB2', genotype: 'Gly16Gly' },
 
+  // David Rodriguez
   { athlete_id: 'ATH003', gene: 'PER3', genotype: 'short' },
   { athlete_id: 'ATH003', gene: 'CLOCK', genotype: 'AA' },
   { athlete_id: 'ATH003', gene: 'ACTN3', genotype: 'RX' },
@@ -127,6 +143,7 @@ export const geneticProfiles: GeneticProfile[] = [
   { athlete_id: 'ATH003', gene: 'PPARGC1A', genotype: 'Gly482' },
   { athlete_id: 'ATH003', gene: 'ADRB2', genotype: 'Arg16Arg' },
 
+  // Emma Johnson
   { athlete_id: 'ATH004', gene: 'PER3', genotype: 'short' },
   { athlete_id: 'ATH004', gene: 'CLOCK', genotype: 'GG' },
   { athlete_id: 'ATH004', gene: 'ACTN3', genotype: 'XX' },
@@ -134,40 +151,21 @@ export const geneticProfiles: GeneticProfile[] = [
   { athlete_id: 'ATH004', gene: 'PPARGC1A', genotype: 'Ser482Ser' },
   { athlete_id: 'ATH004', gene: 'ADRB2', genotype: 'Gly16Gly' },
 
+  // Ryan Mitchell
   { athlete_id: 'ATH005', gene: 'PER3', genotype: 'long' },
   { athlete_id: 'ATH005', gene: 'CLOCK', genotype: 'AG' },
   { athlete_id: 'ATH005', gene: 'ACTN3', genotype: 'RR' },
   { athlete_id: 'ATH005', gene: 'BDNF', genotype: 'Val/Met' },
   { athlete_id: 'ATH005', gene: 'PPARGC1A', genotype: 'Gly482' },
-  { athlete_id: 'ATH005', gene: 'ADRB2', genotype: 'Arg16Gly' },
-
-  { athlete_id: 'ATH006', gene: 'PER3', genotype: 'short' },
-  { athlete_id: 'ATH006', gene: 'CLOCK', genotype: 'AA' },
-  { athlete_id: 'ATH006', gene: 'ACTN3', genotype: 'RX' },
-  { athlete_id: 'ATH006', gene: 'BDNF', genotype: 'Val66Val' },
-  { athlete_id: 'ATH006', gene: 'PPARGC1A', genotype: 'Gly482' },
-  { athlete_id: 'ATH006', gene: 'ADRB2', genotype: 'Arg16Arg' },
-
-  // Add genetic profiles for ATH007 to ATH020
-  ...Array.from({ length: 14 }, (_, i) => {
-    const id = `ATH00${7 + i}`;
-    return [
-      { athlete_id: id, gene: 'PER3', genotype: Math.random() > 0.5 ? 'short' : 'long' },
-      { athlete_id: id, gene: 'CLOCK', genotype: ['AA', 'AG', 'GG'][Math.floor(Math.random() * 3)] },
-      { athlete_id: id, gene: 'ACTN3', genotype: ['RR', 'RX', 'XX'][Math.floor(Math.random() * 3)] },
-      { athlete_id: id, gene: 'BDNF', genotype: ['Val66Val', 'Val/Met', 'Met/Met'][Math.floor(Math.random() * 3)] },
-      { athlete_id: id, gene: 'PPARGC1A', genotype: ['Gly482Gly', 'Gly482Ser', 'Ser482Ser'][Math.floor(Math.random() * 3)] },
-      { athlete_id: id, gene: 'ADRB2', genotype: ['Arg16Arg', 'Arg16Gly', 'Gly16Gly'][Math.floor(Math.random() * 3)] }
-    ];
-  }).flat()
+  { athlete_id: 'ATH005', gene: 'ADRB2', genotype: 'Arg16Gly' }
 ];
 
-// data/mockData.ts
+// === BODY COMPOSITION (Weekly measurements over 3 weeks) ===
 export const bodyCompositionData: BodyComposition[] = [
-  // Marcus Thompson
+  // Marcus Thompson - Progressive lean gains
   {
     athlete_id: 'ATH001',
-    date: '2024-01-05',
+    date: '2024-01-08',
     weight_kg: 83.0,
     weight_range_min: 80.0,
     weight_range_max: 85.0,
@@ -190,7 +188,6 @@ export const bodyCompositionData: BodyComposition[] = [
     subcutaneous_fat_percent: 8.9,
     smi_kg_m2: 8.8,
     body_age: 20,
-    // Symmetry Data
     symmetry: {
       arm_mass_left_kg: 5.1,
       arm_mass_right_kg: 5.3,
@@ -201,7 +198,7 @@ export const bodyCompositionData: BodyComposition[] = [
   },
   {
     athlete_id: 'ATH001',
-    date: '2024-01-12',
+    date: '2024-01-15',
     weight_kg: 82.8,
     weight_range_min: 80.0,
     weight_range_max: 85.0,
@@ -234,7 +231,7 @@ export const bodyCompositionData: BodyComposition[] = [
   },
   {
     athlete_id: 'ATH001',
-    date: '2024-01-19',
+    date: '2024-01-22',
     weight_kg: 82.5,
     weight_range_min: 80.0,
     weight_range_max: 85.0,
@@ -266,10 +263,10 @@ export const bodyCompositionData: BodyComposition[] = [
     }
   },
 
-  // Sarah Chen
+  // Sarah Chen - Fat loss, muscle gain
   {
     athlete_id: 'ATH002',
-    date: '2024-01-10',
+    date: '2024-01-08',
     weight_kg: 58.5,
     weight_range_min: 56.0,
     weight_range_max: 60.0,
@@ -302,7 +299,7 @@ export const bodyCompositionData: BodyComposition[] = [
   },
   {
     athlete_id: 'ATH002',
-    date: '2024-01-17',
+    date: '2024-01-15',
     weight_kg: 58.2,
     weight_range_min: 56.0,
     weight_range_max: 60.0,
@@ -333,11 +330,44 @@ export const bodyCompositionData: BodyComposition[] = [
       trunk_mass_kg: 7.6,
     }
   },
+  {
+    athlete_id: 'ATH002',
+    date: '2024-01-22',
+    weight_kg: 57.9,
+    weight_range_min: 56.0,
+    weight_range_max: 60.0,
+    fat_mass_kg: 11.3,
+    fat_mass_range_min: 10.0,
+    fat_mass_range_max: 13.0,
+    muscle_mass_kg: 25.0,
+    muscle_mass_range_min: 23.0,
+    muscle_mass_range_max: 26.0,
+    skeletal_muscle_kg: 20.5,
+    body_fat_rate: 19.5,
+    bmi: 21.2,
+    target_weight_kg: 58.5,
+    weight_control_kg: -0.6,
+    fat_control_kg: -1.0,
+    muscle_control_kg: 0.8,
+    visceral_fat_grade: 1,
+    basal_metabolic_rate_kcal: 1315,
+    fat_free_body_weight_kg: 46.6,
+    subcutaneous_fat_percent: 18.0,
+    smi_kg_m2: 7.6,
+    body_age: 21,
+    symmetry: {
+      arm_mass_left_kg: 2.8,
+      arm_mass_right_kg: 2.8,
+      leg_mass_left_kg: 7.2,
+      leg_mass_right_kg: 7.2,
+      trunk_mass_kg: 7.6,
+    }
+  },
 
-  // Add more athletes with symmetry (example: ATH003)
+  // David Rodriguez - Stable, slight lean gain
   {
     athlete_id: 'ATH003',
-    date: '2024-01-15',
+    date: '2024-01-10',
     weight_kg: 76.0,
     weight_range_min: 74.0,
     weight_range_max: 78.0,
@@ -370,27 +400,27 @@ export const bodyCompositionData: BodyComposition[] = [
   },
   {
     athlete_id: 'ATH003',
-    date: '2024-01-22',
-    weight_kg: 76.2,
+    date: '2024-01-17',
+    weight_kg: 76.1,
     weight_range_min: 74.0,
     weight_range_max: 78.0,
-    fat_mass_kg: 7.9,
+    fat_mass_kg: 7.8,
     fat_mass_range_min: 7.0,
     fat_mass_range_max: 9.0,
-    muscle_mass_kg: 36.1,
+    muscle_mass_kg: 36.2,
     muscle_mass_range_min: 34.0,
     muscle_mass_range_max: 38.0,
     skeletal_muscle_kg: 30.1,
-    body_fat_rate: 10.4,
-    bmi: 22.6,
+    body_fat_rate: 10.3,
+    bmi: 22.5,
     target_weight_kg: 77.0,
-    weight_control_kg: -0.8,
+    weight_control_kg: -0.9,
     fat_control_kg: -0.4,
-    muscle_control_kg: 0.4,
+    muscle_control_kg: 0.5,
     visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1805,
+    basal_metabolic_rate_kcal: 1802,
     fat_free_body_weight_kg: 68.3,
-    subcutaneous_fat_percent: 9.1,
+    subcutaneous_fat_percent: 9.0,
     smi_kg_m2: 8.62,
     body_age: 24,
     symmetry: {
@@ -401,7 +431,239 @@ export const bodyCompositionData: BodyComposition[] = [
       trunk_mass_kg: 11.0,
     }
   },
+  {
+    athlete_id: 'ATH003',
+    date: '2024-01-24',
+    weight_kg: 76.3,
+    weight_range_min: 74.0,
+    weight_range_max: 78.0,
+    fat_mass_kg: 7.7,
+    fat_mass_range_min: 7.0,
+    fat_mass_range_max: 9.0,
+    muscle_mass_kg: 36.5,
+    muscle_mass_range_min: 34.0,
+    muscle_mass_range_max: 38.0,
+    skeletal_muscle_kg: 30.2,
+    body_fat_rate: 10.1,
+    bmi: 22.6,
+    target_weight_kg: 77.0,
+    weight_control_kg: -0.7,
+    fat_control_kg: -0.6,
+    muscle_control_kg: 0.8,
+    visceral_fat_grade: 1,
+    basal_metabolic_rate_kcal: 1808,
+    fat_free_body_weight_kg: 68.6,
+    subcutaneous_fat_percent: 8.9,
+    smi_kg_m2: 8.65,
+    body_age: 24,
+    symmetry: {
+      arm_mass_left_kg: 4.8,
+      arm_mass_right_kg: 4.9,
+      leg_mass_left_kg: 10.2,
+      leg_mass_right_kg: 10.3,
+      trunk_mass_kg: 11.0,
+    }
+  },
 
+  // Emma Johnson - Consistent elite physique
+  {
+    athlete_id: 'ATH004',
+    date: '2024-01-09',
+    weight_kg: 54.0,
+    weight_range_min: 52.0,
+    weight_range_max: 56.0,
+    fat_mass_kg: 8.1,
+    fat_mass_range_min: 7.0,
+    fat_mass_range_max: 9.0,
+    muscle_mass_kg: 22.0,
+    muscle_mass_range_min: 21.0,
+    muscle_mass_range_max: 24.0,
+    skeletal_muscle_kg: 18.0,
+    body_fat_rate: 15.0,
+    bmi: 20.0,
+    target_weight_kg: 54.0,
+    weight_control_kg: 0.0,
+    fat_control_kg: 0.2,
+    muscle_control_kg: 0.0,
+    visceral_fat_grade: 1,
+    basal_metabolic_rate_kcal: 1450,
+    fat_free_body_weight_kg: 45.9,
+    subcutaneous_fat_percent: 13.5,
+    smi_kg_m2: 7.2,
+    body_age: 20,
+    symmetry: {
+      arm_mass_left_kg: 2.5,
+      arm_mass_right_kg: 2.6,
+      leg_mass_left_kg: 6.8,
+      leg_mass_right_kg: 6.9,
+      trunk_mass_kg: 6.5,
+    }
+  },
+  {
+    athlete_id: 'ATH004',
+    date: '2024-01-16',
+    weight_kg: 53.8,
+    weight_range_min: 52.0,
+    weight_range_max: 56.0,
+    fat_mass_kg: 7.9,
+    fat_mass_range_min: 7.0,
+    fat_mass_range_max: 9.0,
+    muscle_mass_kg: 22.2,
+    muscle_mass_range_min: 21.0,
+    muscle_mass_range_max: 24.0,
+    skeletal_muscle_kg: 18.1,
+    body_fat_rate: 14.7,
+    bmi: 19.9,
+    target_weight_kg: 54.0,
+    weight_control_kg: -0.2,
+    fat_control_kg: -0.1,
+    muscle_control_kg: 0.3,
+    visceral_fat_grade: 1,
+    basal_metabolic_rate_kcal: 1445,
+    fat_free_body_weight_kg: 45.9,
+    subcutaneous_fat_percent: 13.2,
+    smi_kg_m2: 7.25,
+    body_age: 20,
+    symmetry: {
+      arm_mass_left_kg: 2.5,
+      arm_mass_right_kg: 2.5,
+      leg_mass_left_kg: 6.9,
+      leg_mass_right_kg: 6.9,
+      trunk_mass_kg: 6.5,
+    }
+  },
+  {
+    athlete_id: 'ATH004',
+    date: '2024-01-23',
+    weight_kg: 53.6,
+    weight_range_min: 52.0,
+    weight_range_max: 56.0,
+    fat_mass_kg: 7.7,
+    fat_mass_range_min: 7.0,
+    fat_mass_range_max: 9.0,
+    muscle_mass_kg: 22.4,
+    muscle_mass_range_min: 21.0,
+    muscle_mass_range_max: 24.0,
+    skeletal_muscle_kg: 18.2,
+    body_fat_rate: 14.4,
+    bmi: 19.8,
+    target_weight_kg: 54.0,
+    weight_control_kg: -0.4,
+    fat_control_kg: -0.3,
+    muscle_control_kg: 0.5,
+    visceral_fat_grade: 1,
+    basal_metabolic_rate_kcal: 1440,
+    fat_free_body_weight_kg: 45.9,
+    subcutaneous_fat_percent: 13.0,
+    smi_kg_m2: 7.3,
+    body_age: 20,
+    symmetry: {
+      arm_mass_left_kg: 2.5,
+      arm_mass_right_kg: 2.5,
+      leg_mass_left_kg: 7.0,
+      leg_mass_right_kg: 7.0,
+      trunk_mass_kg: 6.5,
+    }
+  },
 
-  // Add more as needed...
+  // Ryan Mitchell - Initial imbalance, improves
+  {
+    athlete_id: 'ATH005',
+    date: '2024-01-11',
+    weight_kg: 92.0,
+    weight_range_min: 90.0,
+    weight_range_max: 95.0,
+    fat_mass_kg: 15.0,
+    fat_mass_range_min: 13.0,
+    fat_mass_range_max: 17.0,
+    muscle_mass_kg: 42.0,
+    muscle_mass_range_min: 40.0,
+    muscle_mass_range_max: 44.0,
+    skeletal_muscle_kg: 36.0,
+    body_fat_rate: 16.3,
+    bmi: 27.0,
+    target_weight_kg: 90.0,
+    weight_control_kg: 2.0,
+    fat_control_kg: 1.5,
+    muscle_control_kg: 0.0,
+    visceral_fat_grade: 4,
+    basal_metabolic_rate_kcal: 2200,
+    fat_free_body_weight_kg: 77.0,
+    subcutaneous_fat_percent: 14.5,
+    smi_kg_m2: 8.2,
+    body_age: 28,
+    symmetry: {
+      arm_mass_left_kg: 6.0,
+      arm_mass_right_kg: 6.5,
+      leg_mass_left_kg: 12.0,
+      leg_mass_right_kg: 13.0,
+      trunk_mass_kg: 15.0,
+    }
+  },
+  {
+    athlete_id: 'ATH005',
+    date: '2024-01-18',
+    weight_kg: 91.0,
+    weight_range_min: 90.0,
+    weight_range_max: 95.0,
+    fat_mass_kg: 14.2,
+    fat_mass_range_min: 13.0,
+    fat_mass_range_max: 17.0,
+    muscle_mass_kg: 42.3,
+    muscle_mass_range_min: 40.0,
+    muscle_mass_range_max: 44.0,
+    skeletal_muscle_kg: 36.1,
+    body_fat_rate: 15.6,
+    bmi: 26.7,
+    target_weight_kg: 90.0,
+    weight_control_kg: 1.0,
+    fat_control_kg: 0.7,
+    muscle_control_kg: 0.5,
+    visceral_fat_grade: 3,
+    basal_metabolic_rate_kcal: 2180,
+    fat_free_body_weight_kg: 76.8,
+    subcutaneous_fat_percent: 14.0,
+    smi_kg_m2: 8.25,
+    body_age: 27,
+    symmetry: {
+      arm_mass_left_kg: 6.1,
+      arm_mass_right_kg: 6.3,
+      leg_mass_left_kg: 12.2,
+      leg_mass_right_kg: 12.7,
+      trunk_mass_kg: 14.8,
+    }
+  },
+  {
+    athlete_id: 'ATH005',
+    date: '2024-01-25',
+    weight_kg: 89.5,
+    weight_range_min: 90.0,
+    weight_range_max: 95.0,
+    fat_mass_kg: 13.0,
+    fat_mass_range_min: 13.0,
+    fat_mass_range_max: 17.0,
+    muscle_mass_kg: 42.8,
+    muscle_mass_range_min: 40.0,
+    muscle_mass_range_max: 44.0,
+    skeletal_muscle_kg: 36.3,
+    body_fat_rate: 14.5,
+    bmi: 26.2,
+    target_weight_kg: 90.0,
+    weight_control_kg: -0.5,
+    fat_control_kg: -0.5,
+    muscle_control_kg: 1.0,
+    visceral_fat_grade: 2,
+    basal_metabolic_rate_kcal: 2150,
+    fat_free_body_weight_kg: 76.5,
+    subcutaneous_fat_percent: 13.5,
+    smi_kg_m2: 8.3,
+    body_age: 26,
+    symmetry: {
+      arm_mass_left_kg: 6.2,
+      arm_mass_right_kg: 6.2,
+      leg_mass_left_kg: 12.5,
+      leg_mass_right_kg: 12.5,
+      trunk_mass_kg: 14.5,
+    }
+  }
 ];
