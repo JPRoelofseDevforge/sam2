@@ -201,10 +201,34 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         <ResponsiveContainer width="100%" height={300}>
           <ComposedChart data={sortedBiometrics}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis
+              dataKey="dateLabel"
+              stroke="#6b7280"
+              label={{ value: 'Date', position: 'insideBottom', offset: -5 }}
+            />
+            <YAxis
+              yAxisId="left"
+              stroke="#6b7280"
+              label={{ value: 'Training Load (%)', angle: -90, position: 'insideLeft' }}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke="#6b7280"
+              label={{ value: 'HRV (ms)', angle: 90, position: 'insideRight' }}
+            />
             <Bar yAxisId="left" dataKey="training_load_pct" name="Training Load" fill="#e74c3c" />
             <Line yAxisId="right" type="monotone" dataKey="hrv_night" name="HRV (Recovery)" stroke="#2ecc71" strokeWidth={4} />
           </ComposedChart>
         </ResponsiveContainer>
+        <div className="mt-4 text-sm text-gray-600">
+          <p>This chart shows the relationship between training load and recovery (measured by HRV):</p>
+          <ul className="list-disc pl-5 space-y-1 mt-2">
+            <li>Higher training loads should ideally be followed by higher HRV values (better recovery)</li>
+            <li>Consistently low HRV despite high training loads may indicate overtraining</li>
+            <li>Optimal performance occurs when training load and recovery are balanced</li>
+          </ul>
+        </div>
       </section>
 
       {/* 4. HRV vs Resting HR Scatter */}
@@ -215,7 +239,24 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             <CartesianGrid />
             <XAxis type="number" dataKey="hrv_night" name="HRV" unit="ms" domain={[30, 70]} />
             <YAxis type="number" dataKey="resting_hr" name="RHR" unit="bpm" reversed domain={[40, 80]} />
-            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+            <Tooltip
+              cursor={{ strokeDasharray: '3 3' }}
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-white border border-gray-200 p-3 rounded shadow-sm">
+                      <p className="font-semibold text-gray-800">Recovery State</p>
+                      <p className="text-sm text-gray-600">HRV: {data.hrv_night} ms</p>
+                      <p className="text-sm text-gray-600">RHR: {data.resting_hr} bpm</p>
+                      <p className="text-sm text-gray-600">Date: {data.dateLabel}</p>
+                      <p className="text-sm text-gray-600">SpO2: {data.spo2_night ? `${data.spo2_night}%` : 'N/A'}</p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
             <Scatter name="Recovery State" data={sortedBiometrics} fill="#3498db" shape="circle" />
           </ScatterChart>
         </ResponsiveContainer>
