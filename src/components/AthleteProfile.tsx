@@ -86,11 +86,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-xl p-6 text-white">
+      <div className="card-enhanced p-6">
         <div className="flex items-start justify-between mb-4">
           <button
             onClick={onBack}
-            className="flex items-center text-white hover:text-gray-200 transition-colors duration-200 mb-4"
+            className="flex items-center text-gray-700 hover:text-gray-900 transition-colors duration-200 mb-4"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Back to Team Overview
@@ -99,24 +99,24 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
         
         <div className="grid md:grid-cols-3 gap-6">
           <div>
-            <h1 className="text-3xl font-bold mb-2">{athlete.name}</h1>
-            <p className="text-xl text-blue-100 mb-1">{athlete.sport}</p>
-            <p className="text-blue-200">Age {athlete.age} | {athlete.team}</p>
+            <h1 className="text-3xl font-bold mb-2 text-gray-900">{athlete.name}</h1>
+            <p className="text-xl text-gray-700 mb-1">{athlete.sport}</p>
+            <p className="text-gray-600">Age {athlete.age} | {athlete.team}</p>
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold mb-2">🧬 Genetic Profile</h3>
+            <h3 className="text-lg font-semibold mb-2 text-gray-900">🧬 Genetic Profile</h3>
             {Object.entries(geneticDict).map(([gene, genotype]) => (
-              <div key={gene} className="text-sm text-blue-100">
+              <div key={gene} className="text-sm text-gray-700">
                 <strong>{gene}:</strong> {genotype}
               </div>
             ))}
           </div>
           
           <div className="text-center">
-            <div className="text-4xl font-bold mb-2">{readinessScore.toFixed(0)}%</div>
-            <div className="text-blue-200">Readiness Score</div>
-            <div className="text-sm text-blue-300 mt-1">
+            <div className="text-4xl font-bold mb-2 text-gray-900">{readinessScore.toFixed(0)}%</div>
+            <div className="text-gray-600">Readiness Score</div>
+            <div className="text-sm text-gray-500 mt-1">
               Based on HRV, RHR, Sleep & SpO₂
             </div>
           </div>
@@ -137,7 +137,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center justify-start sm:justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium transition-all duration-200 relative group
                   ${isActive
-                    ? 'text-blue-700 bg-blue-50'
+                    ? 'text-blue-600 bg-blue-50'
                     : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
                   }`}
               >
@@ -170,7 +170,6 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
 
       {/* Tab Content */}
       <div className="mt-6">
-
         {activeTab === 'metrics' && latest && (
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
@@ -188,7 +187,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 title="HRV (Night)"
                 value={latest.hrv_night}
                 unit="ms"
-                icon="💓"
+                icon="❤️"
                 subtitle={readinessScore > 75 ? "Excellent recovery" : "Moderate recovery"}
                 trend={readinessScore > 75 ? "up" : "down"}
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.hrv_night }))}
@@ -311,7 +310,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
             </div>
 
             {/* Summary Banner */}
-            <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5">
+            <div className="mt-8 card-enhanced p-5">
               <h3 className="font-semibold text-gray-900 mb-2">📋 Readiness Summary</h3>
               <p className="text-gray-700 text-sm">
                 {readinessScore > 75
@@ -326,11 +325,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
 
         {activeTab === 'trends' && (
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Performance Trends</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">Performance Trends</h2>
             {athleteBiometrics.length >= 2 ? (
               <TrendChart data={athleteBiometrics} />
             ) : (
-              <div className="text-center py-12 bg-gray-50 rounded-xl">
+              <div className="text-center py-12 card-enhanced rounded-xl">
                 <p className="text-gray-600 mb-2">📊 Insufficient data for trend analysis</p>
                 <p className="text-sm text-gray-500">
                   Need at least 2 days of data. Current data points: {athleteBiometrics.length}
@@ -341,26 +340,26 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
         )}
 
         {activeTab === 'insights' && (
-          <div className="space-y-8 text-gray-100">
-            <h2 className="text-2xl font-bold mb-2">🧠 AI-Powered Recovery Insights</h2>
-            <p className="text-gray-400 mb-6 text-sm">
+          <div className="space-y-8 text-gray-900">
+            <h2 className="text-2xl font-bold mb-2 text-white">🧠 AI-Powered Recovery Insights</h2>
+            <p className="text-white mb-6 text-sm">
               Personalized analysis based on biometrics, genetics, and performance trends
             </p>
 
             {/* Current Status Analysis */}
-            <section className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 backdrop-blur-sm rounded-xl p-6 border border-purple-700/50">
+            <section className="card-enhanced p-6">
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <span className="bg-purple-800/70 p-1.5 rounded-full text-purple-200 text-lg">🔍</span>
+                <span className="bg-purple-100 p-1.5 rounded-full text-purple-700 text-lg">🔍</span>
                 Current Status Analysis
               </h3>
-              <AlertCard alert={alert} darkMode />
+              <AlertCard alert={alert} />
             </section>
 
             {/* Genetic Insights */}
             <section>
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <span className="bg-green-800/70 p-1.5 rounded-full text-green-200 text-lg">🧬</span>
-                Genotype-Specific Recommendations
+                <span className="bg-green-100 p-1.5 rounded-full text-green-700 text-lg">🧬</span>
+                <span className="text-white">Genotype-Specific Recommendations</span>
               </h3>
 
               {geneticInsights.length > 0 ? (
@@ -368,33 +367,33 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                   {geneticInsights.map((insight, index) => (
                     <div
                       key={index}
-                      className="bg-gradient-to-br from-gray-800/60 to-gray-900/50 border border-gray-600 rounded-xl p-5 hover:border-blue-500/60 transition-colors duration-300"
+                      className="card-enhanced p-5"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <h4 className="text-lg font-bold text-blue-300">{insight.gene}</h4>
-                        <span className="text-xs bg-gray-700 text-gray-200 px-2 py-1 rounded-full font-medium">
-                          {insight.category}
+                        <h4 className="text-lg font-bold text-blue-700">{insight.gene}</h4>
+                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full font-medium">
+                          Insight
                         </span>
                       </div>
                       <div className="space-y-2 text-sm">
-                        <p className="text-gray-300">
-                          <strong className="text-blue-200">Trait:</strong> {insight.trait}
+                        <p className="text-gray-700">
+                          <strong className="text-blue-600">Trait:</strong> {insight.trait}
                         </p>
-                        <p className="text-gray-400 leading-relaxed">
-                          <strong className="text-blue-200">Strategy:</strong> {insight.recommendation}
+                        <p className="text-gray-600 leading-relaxed">
+                          <strong className="text-blue-600">Strategy:</strong> {insight.recommendation}
                         </p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="bg-gray-800/50 rounded-xl p-8 text-center border border-dashed border-gray-600">
+                <div className="card-enhanced rounded-xl p-8 text-center">
                   <div className="text-4xl mb-3">🧬</div>
-                  <p className="text-gray-200 font-medium">Genetic Insights Unavailable</p>
-                  <p className="text-sm text-gray-400 mt-2 max-w-md mx-auto">
+                  <p className="text-gray-700 font-medium">Genetic Insights Unavailable</p>
+                  <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
                     Genetic testing unlocks personalized training, recovery, and nutrition strategies.
                     <br />
-                    <button className="text-blue-400 hover:text-blue-300 text-sm mt-1 underline">
+                    <button className="text-blue-600 hover:text-blue-700 text-sm mt-1 underline">
                       Request Test →
                     </button>
                   </p>
@@ -405,8 +404,8 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
             {/* Nutrition & Genetics Interactions */}
             <section>
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <span className="bg-amber-800/70 p-1.5 rounded-full text-amber-200 text-lg">🥗</span>
-                Nutrition & Genetics Interactions
+                <span className="bg-amber-100 p-1.5 rounded-full text-amber-700 text-lg">🥗</span>
+                <span className="text-white">Nutrition & Genetics Interactions</span>
               </h3>
 
               <div className="space-y-4">
@@ -460,19 +459,19 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                   return (
                     <div
                       key={i}
-                      className="bg-gradient-to-r from-gray-800/50 to-gray-900/40 border border-gray-600 rounded-xl p-5"
+                      className="card-enhanced p-5"
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-semibold text-amber-300">{g.gene}</h4>
-                        <span className="text-xs bg-gray-700 text-gray-200 px-2 py-1 rounded-full">
+                        <h4 className="font-semibold text-amber-700">{g.gene}</h4>
+                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
                           Nutrition
                         </span>
                       </div>
-                      <p className="text-gray-300 text-sm">
-                        <strong className="text-amber-200">Trait:</strong> {content.trait}
+                      <p className="text-gray-700 text-sm">
+                        <strong className="text-amber-600">Trait:</strong> {content.trait}
                       </p>
-                      <p className="text-gray-400 text-sm mt-1 leading-relaxed">
-                        <strong className="text-amber-200">Nutrition Tip:</strong> {content.tip}
+                      <p className="text-gray-600 text-sm mt-1 leading-relaxed">
+                        <strong className="text-amber-600">Nutrition Tip:</strong> {content.tip}
                       </p>
                     </div>
                   );
@@ -480,8 +479,8 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
               </div>
 
               {athleteGenetics.length === 0 && (
-                <div className="bg-gray-800/50 rounded-xl p-6 text-center border border-dashed border-gray-600">
-                  <p className="text-gray-300">🧬 No genetic data available for nutrition insights</p>
+                <div className="card-enhanced rounded-xl p-6 text-center">
+                  <p className="text-gray-700">🧬 No genetic data available for nutrition insights</p>
                   <p className="text-sm text-gray-500 mt-2">
                     Unlock personalized nutrition strategies with genetic testing.
                   </p>
@@ -491,16 +490,16 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
 
             {/* Performance Forecast */}
             {athleteBiometrics.length >= 3 && latest && (
-              <section className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 backdrop-blur-sm rounded-xl p-6 border border-indigo-700/50">
+              <section className="card-enhanced p-6">
                 <h3 className="text-xl font-semibold mb-5 flex items-center gap-2">
-                  <span className="bg-indigo-800/70 p-1.5 rounded-full text-indigo-200 text-lg">🔮</span>
+                  <span className="bg-indigo-100 p-1.5 rounded-full text-indigo-700 text-lg">🔮</span>
                   Performance Readiness Forecast
                 </h3>
 
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Trend Indicators */}
-                  <div className="bg-gray-800/60 rounded-xl p-5 border border-gray-600">
-                    <h4 className="font-semibold text-blue-300 mb-4 flex items-center gap-2">
+                  <div className="card-enhanced p-5">
+                    <h4 className="font-semibold text-blue-700 mb-4 flex items-center gap-2">
                       📈 Recent Trends
                     </h4>
                     <div className="space-y-3 text-sm">
@@ -515,17 +514,17 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                         return (
                           <div
                             key={item.label}
-                            className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg border border-gray-600"
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
                           >
                             <div>
-                              <div className="font-medium text-gray-200">{item.label}</div>
-                              <div className="text-xs text-gray-400">{item.desc}</div>
+                              <div className="font-medium text-gray-700">{item.label}</div>
+                              <div className="text-xs text-gray-500">{item.desc}</div>
                             </div>
                             <div className="text-right">
-                              <div className="font-bold text-gray-100">
+                              <div className="font-bold text-gray-900">
                                 {item.value.toFixed(1)} {item.unit}
                               </div>
-                              <div className={`text-xs font-medium ${isGood ? 'text-green-400' : 'text-red-400'}`}>
+                              <div className={`text-xs font-medium ${isGood ? 'text-green-600' : 'text-red-600'}`}>
                                 {item.ideal} {isGood ? 'Optimal' : 'Needs work'}
                               </div>
                             </div>
@@ -536,24 +535,24 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                   </div>
 
                   {/* Readiness Score */}
-                  <div className="bg-gray-800/60 rounded-xl p-5 border border-gray-600 text-center">
-                    <h4 className="font-semibold text-blue-300 mb-3">📊 Today’s Readiness Score</h4>
+                  <div className="card-enhanced p-5 text-center">
+                    <h4 className="font-semibold text-blue-700 mb-3">📊 Today's Readiness Score</h4>
                     <div
                       className={`text-5xl font-extrabold mb-2 transition-all duration-300 ${
                         readinessScore > 75
-                          ? 'text-green-400 drop-shadow-sm'
+                          ? 'text-green-600 drop-shadow-sm'
                           : readinessScore > 50
-                          ? 'text-yellow-400'
-                          : 'text-red-400'
+                          ? 'text-yellow-600'
+                          : 'text-red-600'
                       }`}
                     >
                       {readinessScore > 75 ? '🟢' : readinessScore > 50 ? '🟡' : '🔴'}{' '}
                       {readinessScore.toFixed(0)}%
                     </div>
-                    <p className="text-sm text-gray-400 mb-3">Based on HRV, RHR, Sleep & SpO₂</p>
+                    <p className="text-sm text-gray-600 mb-3">Based on HRV, RHR, Sleep & SpO₂</p>
 
                     {/* Micro-Recommendation */}
-                    <div className="bg-gray-700/60 rounded-lg p-3 text-xs border border-gray-600">
+                    <div className="bg-gray-100 rounded-lg p-3 text-xs border border-gray-200">
                       <strong>Suggestion:</strong>{' '}
                       {readinessScore > 75
                         ? 'Optimize with high-intensity training'
@@ -565,11 +564,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 </div>
 
                 {/* AI Coach Recommendation */}
-                <div className="mt-6 bg-gray-800/60 rounded-xl p-5 border border-yellow-600/40">
-                  <h4 className="font-semibold text-amber-300 mb-2 flex items-center gap-2">
+                <div className="mt-6 card-enhanced p-5">
+                  <h4 className="font-semibold text-amber-700 mb-2 flex items-center gap-2">
                     🤖 AI Coach Recommendation
                   </h4>
-                  <p className="text-amber-200 text-sm leading-relaxed">
+                  <p className="text-amber-600 text-sm leading-relaxed">
                     {readinessScore > 75
                       ? `Schedule high-load sessions today. ${athlete.name.split(' ')[0]} is in peak recovery.`
                       : readinessScore > 50
@@ -581,11 +580,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
             )}
 
             {/* Recovery Tip of the Day */}
-            <section className="bg-gradient-to-r from-rose-900/20 to-pink-900/20 backdrop-blur-sm rounded-xl p-5 border border-rose-700/40">
-              <h4 className="font-semibold text-rose-300 mb-2 flex items-center gap-2">
+            <section className="card-enhanced p-5">
+              <h4 className="font-semibold text-rose-700 mb-2 flex items-center gap-2">
                 💡 Recovery Tip of the Day
               </h4>
-              <p className="text-rose-200 text-sm leading-relaxed">
+              <p className="text-rose-600 text-sm leading-relaxed">
                 {[
                   'Hydration impacts HRV. Aim for 35ml/kg body weight daily.',
                   'Blue light after 9 PM suppresses melatonin. Use night mode.',
@@ -602,7 +601,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
 
         {activeTab === 'body' && (
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">⚖️ Body Composition Analysis</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">⚖️ Body Composition Analysis</h2>
             {athleteBodyComp ? (
               <BodyComposition 
                 data={athleteBodyComp} 
@@ -610,7 +609,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 geneticData={athleteGenetics} 
               />
             ) : (
-              <div className="text-center py-12 bg-gray-50 rounded-xl">
+              <div className="text-center py-12 card-enhanced rounded-xl">
                 <p className="text-gray-600 mb-2">⚖️ No body composition data available</p>
                 <p className="text-sm text-gray-500">
                   Please ensure body composition measurements are recorded

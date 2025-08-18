@@ -347,7 +347,7 @@ export const DigitalTwin3D: React.FC<{ athleteId: string }> = ({ athleteId }) =>
 
     // Scene setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000011);
+    scene.background = new THREE.Color(0x0a0a2a);
     scene.fog = new THREE.Fog(0x000011, 5, 15);
     sceneRef.current = scene;
 
@@ -366,7 +366,7 @@ export const DigitalTwin3D: React.FC<{ athleteId: string }> = ({ athleteId }) =>
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(getWidth(), getHeight());
-    renderer.setClearColor(0x000011);
+    renderer.setClearColor(0x0a0a2a);
     renderer.outputColorSpace = 'srgb';
     renderer.setPixelRatio(window.devicePixelRatio);
     mountRef.current.appendChild(renderer.domElement);
@@ -497,10 +497,42 @@ export const DigitalTwin3D: React.FC<{ athleteId: string }> = ({ athleteId }) =>
           positions[i * 3 + 2] = 0;
         }
         ecgGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const ecgMaterial = new THREE.LineBasicMaterial({ color: ecgLineColor, linewidth: 2 });
+        
+        // Create multiple lines for a more pronounced ECG line
+        const ecgMaterial = new THREE.LineBasicMaterial({
+          color: 0xff0000, // Bright red
+          linewidth: 3
+        });
+        
         const ecgLine = new THREE.Line(ecgGeometry, ecgMaterial);
         ecgLine.position.set(0, 1.15, 0.5);
         model.add(ecgLine);
+        
+        // Add a second line with a slight offset for thickness
+        const ecgMaterial2 = new THREE.LineBasicMaterial({
+          color: 0xff0000, // Bright red
+          linewidth: 2,
+          transparent: true,
+          opacity: 0.7
+        });
+        
+        const ecgLine2 = new THREE.Line(ecgGeometry.clone(), ecgMaterial2);
+        ecgLine2.position.set(0, 1.15, 0.51);
+        model.add(ecgLine2);
+        
+        // Add a third line with a different offset for more thickness
+        const ecgMaterial3 = new THREE.LineBasicMaterial({
+          color: 0xff3333, // Slightly lighter red
+          linewidth: 1,
+          transparent: true,
+          opacity: 0.5
+        });
+        
+        const ecgLine3 = new THREE.Line(ecgGeometry.clone(), ecgMaterial3);
+        ecgLine3.position.set(0, 1.15, 0.49);
+        model.add(ecgLine3);
+        
+        // Store the main line for animation updates
         (scene.userData as any).ecgLine = ecgLine;
 
         // Create labels
@@ -620,12 +652,15 @@ export const DigitalTwin3D: React.FC<{ athleteId: string }> = ({ athleteId }) =>
         const timeWindow = 6;
         const totalPoints = 300;
 
+        // Create a trailing effect by gradually reducing y-values
         for (let i = 0; i < totalPoints; i++) {
           const x = (i / (totalPoints - 1)) * 6 - 3;
           positions[i * 3] = x;
-          positions[i * 3 + 1] = 0;
+          // Gradually reduce y-values to create trailing effect
+          positions[i * 3 + 1] *= 0.95;
         }
 
+        // Apply new beats to the ECG line
         beatHistoryRef.current.forEach((beat) => {
           const delay = now - beat.time;
           if (delay >= 0 && delay <= timeWindow) {
@@ -695,7 +730,7 @@ export const DigitalTwin3D: React.FC<{ athleteId: string }> = ({ athleteId }) =>
 
   return (
     <ErrorBoundary fallback={<div className="text-red-500 p-4">Something went wrong with the 3D twin.</div>}>
-      <div className="relative w-full h-full bg-black flex flex-col">
+      <div className="relative w-full h-full bg-indigo-900 flex flex-col">
         {/* 3D Canvas */}
         <div
           ref={mountRef}

@@ -27,19 +27,20 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
 
   // BMI & Body Fat Status
   const getBMIStatus = (bmi: number) => {
-    if (bmi < 18.5) return { status: 'Underweight', color: 'text-blue-400' };
-    if (bmi < 25) return { status: 'Healthy', color: 'text-green-400' };
-    if (bmi < 30) return { status: 'Overweight', color: 'text-yellow-400' };
-    return { status: 'Obese', color: 'text-red-400' };
+    if (bmi < 16) return { status: 'Severely Underweight', color: 'text-red-600' };
+    if (bmi < 18.5) return { status: 'Underweight', color: 'text-blue-600' };
+    if (bmi < 25) return { status: 'Healthy', color: 'text-green-600' };
+    if (bmi < 30) return { status: 'Overweight', color: 'text-yellow-600' };
+    return { status: 'Obese', color: 'text-red-600' };
   };
 
   const getBodyFatStatus = (bodyFat: number) => {
     // Assuming male; adjust if gender is available
-    if (bodyFat < 6) return { status: 'Very Low', color: 'text-blue-400' };
-    if (bodyFat < 14) return { status: 'Low', color: 'text-green-400' };
-    if (bodyFat < 18) return { status: 'Normal', color: 'text-green-400' };
-    if (bodyFat < 25) return { status: 'High', color: 'text-yellow-400' };
-    return { status: 'Very High', color: 'text-red-400' };
+    if (bodyFat < 6) return { status: 'Very Low', color: 'text-blue-600' };
+    if (bodyFat < 14) return { status: 'Low', color: 'text-green-600' };
+    if (bodyFat < 18) return { status: 'Normal', color: 'text-green-600' };
+    if (bodyFat < 25) return { status: 'High', color: 'text-yellow-600' };
+    return { status: 'Very High', color: 'text-red-600' };
   };
 
   const bmiStatus = getBMIStatus(data.bmi);
@@ -104,35 +105,35 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
   const nutritionTips = getNutritionTips();
 
   return (
-    <div className="space-y-8 text-gray-100">
+    <div className="space-y-8 text-gray-900">
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/60 rounded-xl border border-gray-600 p-6 text-center shadow-lg">
-          <div className="text-3xl font-bold text-purple-400 mb-2">
+        <div className="card-enhanced p-6 text-center">
+          <div className="text-3xl font-bold text-purple-600 mb-2">
             {data.weight_kg.toFixed(1)} kg
           </div>
-          <div className="text-gray-300 mb-2">Weight</div>
-          <div className="text-sm text-gray-400">
+          <div className="text-gray-700 mb-2">Weight</div>
+          <div className="text-sm text-gray-600">
             Target: {data.target_weight_kg.toFixed(1)} kg
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/60 rounded-xl border border-gray-600 p-6 text-center shadow-lg">
-          <div className="text-3xl font-bold text-orange-400 mb-2">
+        <div className="card-enhanced p-6 text-center">
+          <div className="text-3xl font-bold text-orange-600 mb-2">
             {data.body_fat_rate.toFixed(1)}%
           </div>
-          <div className="text-gray-300 mb-2">Body Fat</div>
+          <div className="text-gray-700 mb-2">Body Fat</div>
           <div className={`text-sm font-medium ${bodyFatStatus.color}`}>
             {bodyFatStatus.status}
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/60 rounded-xl border border-gray-600 p-6 text-center shadow-lg">
-          <div className="text-3xl font-bold text-green-400 mb-2">
+        <div className="card-enhanced p-6 text-center">
+          <div className="text-3xl font-bold text-green-600 mb-2">
             {data.muscle_mass_kg.toFixed(1)} kg
           </div>
-          <div className="text-gray-300 mb-2">Muscle Mass</div>
-          <div className="text-sm text-gray-400">
+          <div className="text-gray-700 mb-2">Muscle Mass</div>
+          <div className="text-sm text-gray-600">
             Skeletal: {data.skeletal_muscle_kg.toFixed(1)} kg
           </div>
         </div>
@@ -141,16 +142,16 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
       {/* BMI & Body Fat Scales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* BMI */}
-        <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/60 rounded-xl border border-gray-600 p-6 shadow-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">⚖️ BMI: {data.bmi.toFixed(1)}</h3>
+        <div className="card-enhanced p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">⚖️ BMI: {data.bmi.toFixed(1)}</h3>
           <div className={`text-lg font-medium mb-3 ${bmiStatus.color}`}>{bmiStatus.status}</div>
           <div className="relative h-3 bg-gradient-to-r from-blue-500 via-green-500 to-yellow-500 to-red-500 rounded-full mb-2">
             <div
-              className="absolute top-0 w-1 h-6 bg-white rounded-full transform -translate-x-1/2 shadow-md"
+              className="absolute top-0 w-1 h-6 bg-gray-800 rounded-full transform -translate-x-1/2 shadow-md"
               style={{ left: `${Math.min(100, Math.max(0, ((data.bmi - 15) / 20) * 100))}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex justify-between text-xs text-gray-600">
             <span>15</span>
             <span>18.5</span>
             <span>25</span>
@@ -160,16 +161,16 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
         </div>
 
         {/* Body Fat */}
-        <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/60 rounded-xl border border-gray-600 p-6 shadow-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">🥑 Fat: {data.body_fat_rate.toFixed(1)}%</h3>
+        <div className="card-enhanced p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">🥑 Fat: {data.body_fat_rate.toFixed(1)}%</h3>
           <div className={`text-lg font-medium mb-3 ${bodyFatStatus.color}`}>{bodyFatStatus.status}</div>
           <div className="relative h-3 bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full mb-2">
             <div
-              className="absolute top-0 w-1 h-6 bg-white rounded-full transform -translate-x-1/2 shadow-md"
+              className="absolute top-0 w-1 h-6 bg-gray-800 rounded-full transform -translate-x-1/2 shadow-md"
               style={{ left: `${Math.min(100, Math.max(0, (data.body_fat_rate / 30) * 100))}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex justify-between text-xs text-gray-600">
             <span>5%</span>
             <span>15%</span>
             <span>25%</span>
@@ -179,30 +180,30 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
       </div>
 
       {/* Weight Control Goals */}
-      <div className="bg-gradient-to-r from-indigo-900/20 to-purple-900/20 rounded-xl border border-indigo-500/30 p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">🎯 Progress Toward Goals</h3>
+      <div className="card-enhanced p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 Progress Toward Goals</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
-            <div className="text-sm text-gray-400">Target Weight</div>
-            <div className="text-xl font-bold text-indigo-400">{data.target_weight_kg.toFixed(1)}kg</div>
+            <div className="text-sm text-gray-600">Target Weight</div>
+            <div className="text-xl font-bold text-indigo-600">{data.target_weight_kg.toFixed(1)}kg</div>
           </div>
           <div className="text-center">
-            <div className="text-sm text-gray-400">Weight Δ</div>
-            <div className={`text-xl font-bold ${data.weight_control_kg >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="text-sm text-gray-600">Weight Δ</div>
+            <div className={`text-xl font-bold ${data.weight_control_kg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {data.weight_control_kg >= 0 ? '+' : ''}
               {data.weight_control_kg.toFixed(1)}kg
             </div>
           </div>
           <div className="text-center">
-            <div className="text-sm text-gray-400">Fat Δ</div>
-            <div className={`text-xl font-bold ${data.fat_control_kg >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="text-sm text-gray-600">Fat Δ</div>
+            <div className={`text-xl font-bold ${data.fat_control_kg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {data.fat_control_kg >= 0 ? '+' : ''}
               {data.fat_control_kg.toFixed(1)}kg
             </div>
           </div>
           <div className="text-center">
-            <div className="text-sm text-gray-400">Muscle Δ</div>
-            <div className={`text-xl font-bold ${data.muscle_control_kg >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="text-sm text-gray-600">Muscle Δ</div>
+            <div className={`text-xl font-bold ${data.muscle_control_kg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {data.muscle_control_kg >= 0 ? '+' : ''}
               {data.muscle_control_kg.toFixed(1)}kg
             </div>
@@ -212,21 +213,21 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
 
       {/* Trend Chart (if history) */}
       {hasHistory && (
-        <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/50 rounded-xl border border-gray-600 p-6">
-          <h3 className="text-lg font-semibold text-blue-300 mb-4">📈 Body Trends (Last 8 Weeks)</h3>
+        <div className="card-enhanced p-6">
+          <h3 className="text-lg font-semibold text-blue-700 mb-4">📈 Body Trends (Last 8 Weeks)</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sortedHistory} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
+                <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" />
                 <XAxis
                   dataKey="date"
                   tickFormatter={(date) => new Date(date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                  stroke="#9ca3af"
+                  stroke="#6b7280"
                 />
-                <YAxis yAxisId="left" stroke="#818cf8" domain={['auto', 'auto']} />
-                <YAxis yAxisId="right" orientation="right" stroke="#fbbf24" />
+                <YAxis yAxisId="left" stroke="#6366f1" domain={['auto', 'auto']} />
+                <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" />
                 <Tooltip
-                  contentStyle={{ background: '#1f2937', border: 'none', borderRadius: '6px', color: '#fff' }}
+                  contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', color: '#1f2937' }}
                   labelFormatter={(label) => new Date(label).toLocaleDateString()}
                 />
                 <Line
@@ -234,8 +235,8 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
                   type="monotone"
                   dataKey="weight_kg"
                   name="Weight"
-                  stroke="#818cf8"
-                  strokeWidth={2}
+                  stroke="#6366f1"
+                  strokeWidth={3}
                   dot={false}
                 />
                 <Line
@@ -243,7 +244,8 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
                   type="monotone"
                   dataKey="muscle_mass_kg"
                   name="Muscle"
-                  stroke="#34d399"
+                  stroke="#10b981"
+                  strokeWidth={3}
                   strokeDasharray="5 5"
                   dot={false}
                 />
@@ -253,7 +255,7 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
                   dataKey="body_fat_rate"
                   name="Body Fat %"
                   stroke="#f59e0b"
-                  strokeWidth={2}
+                  strokeWidth={3}
                   dot={false}
                 />
               </LineChart>
@@ -264,35 +266,35 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
 
       {/* Additional Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/60 rounded-xl border border-gray-600 p-4 text-center shadow">
-          <div className="text-sm text-gray-400">Visceral Fat</div>
-          <div className="text-2xl font-bold text-red-400">{data.visceral_fat_grade}</div>
+        <div className="card-enhanced p-4 text-center">
+          <div className="text-sm text-gray-600">Visceral Fat</div>
+          <div className="text-2xl font-bold text-red-600">{data.visceral_fat_grade}</div>
           <div className="text-xs text-gray-500">Grade</div>
         </div>
-        <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/60 rounded-xl border border-gray-600 p-4 text-center shadow">
-          <div className="text-sm text-gray-400">BMR</div>
-          <div className="text-2xl font-bold text-blue-400">{data.basal_metabolic_rate_kcal}</div>
+        <div className="card-enhanced p-4 text-center">
+          <div className="text-sm text-gray-600">BMR</div>
+          <div className="text-2xl font-bold text-blue-600">{data.basal_metabolic_rate_kcal}</div>
           <div className="text-xs text-gray-500">kcal/day</div>
         </div>
-        <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/60 rounded-xl border border-gray-600 p-4 text-center shadow">
-          <div className="text-sm text-gray-400">SMI</div>
-          <div className="text-2xl font-bold text-purple-400">{data.smi_kg_m2.toFixed(1)}</div>
+        <div className="card-enhanced p-4 text-center">
+          <div className="text-sm text-gray-600">SMI</div>
+          <div className="text-2xl font-bold text-purple-600">{data.smi_kg_m2.toFixed(1)}</div>
           <div className="text-xs text-gray-500">kg/m²</div>
         </div>
-        <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/60 rounded-xl border border-gray-600 p-4 text-center shadow">
-          <div className="text-sm text-gray-400">Body Age</div>
-          <div className="text-2xl font-bold text-green-400">{data.body_age}</div>
+        <div className="card-enhanced p-4 text-center">
+          <div className="text-sm text-gray-600">Body Age</div>
+          <div className="text-2xl font-bold text-green-600">{data.body_age}</div>
           <div className="text-xs text-gray-500">vs </div>
         </div>
       </div>
 
       {/* Body Score */}
-      <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-xl border border-yellow-500/40 p-6 text-center backdrop-blur-sm">
-        <h3 className="text-lg font-semibold text-white mb-2">🏆 Body Composition Score</h3>
-        <div className={`text-6xl font-extrabold mb-2 ${bodyScore > 90 ? 'text-green-400' : bodyScore > 70 ? 'text-yellow-400' : 'text-red-400'}`}>
+      <div className="card-enhanced p-6 text-center">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">🏆 Body Composition Score</h3>
+        <div className={`text-6xl font-extrabold mb-2 ${bodyScore > 90 ? 'text-green-600' : bodyScore > 70 ? 'text-yellow-600' : 'text-red-600'}`}>
           {bodyScore}
         </div>
-        <p className="text-gray-300 text-sm">
+        <p className="text-gray-700 text-sm">
           {bodyScore > 90
             ? 'Elite body composition'
             : bodyScore > 70
@@ -304,23 +306,23 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
       {/* Genetic Nutrition Tips */}
       {nutritionTips.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-amber-300 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-amber-700 flex items-center gap-2">
             <span>🥗</span> Personalized Nutrition Insights
           </h3>
           {nutritionTips.map((tip, i) => (
             <div
               key={i}
-              className="bg-gradient-to-r from-gray-800/60 to-gray-900/50 border border-amber-600/40 rounded-xl p-5"
+              className="card-enhanced p-5"
             >
               <div className="flex items-start justify-between mb-2">
-                <h4 className="font-semibold text-amber-200">{tip.gene}</h4>
-                <span className="text-xs bg-gray-700 text-gray-200 px-2 py-1 rounded">Nutrition</span>
+                <h4 className="font-semibold text-amber-700">{tip.gene}</h4>
+                <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">Nutrition</span>
               </div>
-              <p className="text-gray-300 text-sm">
-                <strong className="text-amber-100">Trait:</strong> {tip.trait}
+              <p className="text-gray-700 text-sm">
+                <strong className="text-amber-600">Trait:</strong> {tip.trait}
               </p>
-              <p className="text-gray-400 text-sm mt-1">
-                <strong className="text-amber-100">Tip:</strong> {tip.tip}
+              <p className="text-gray-600 text-sm mt-1">
+                <strong className="text-amber-600">Tip:</strong> {tip.tip}
               </p>
             </div>
           ))}
@@ -330,20 +332,20 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
             {/* Muscle Symmetry Analysis */}
       {data.symmetry && (
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-blue-300 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
             <span>⚖️</span> Muscle Symmetry Analysis
           </h3>
 
           {/* Arms */}
-          <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/50 rounded-xl border border-gray-600 p-5">
-            <h4 className="font-semibold text-gray-200 mb-3">💪 Arms</h4>
+          <div className="card-enhanced p-5">
+            <h4 className="font-semibold text-gray-900 mb-3">💪 Arms</h4>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Left</span>
-                  <span className="text-white">{data.symmetry.arm_mass_left_kg.toFixed(1)}kg</span>
+                  <span className="text-gray-600">Left</span>
+                  <span className="text-gray-900">{data.symmetry.arm_mass_left_kg.toFixed(1)}kg</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-blue-500 h-2 rounded-full"
                     style={{ width: `${(data.symmetry.arm_mass_left_kg / Math.max(data.symmetry.arm_mass_left_kg, data.symmetry.arm_mass_right_kg)) * 100}%` }}
@@ -352,10 +354,10 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Right</span>
-                  <span className="text-white">{data.symmetry.arm_mass_right_kg.toFixed(1)}kg</span>
+                  <span className="text-gray-600">Right</span>
+                  <span className="text-gray-900">{data.symmetry.arm_mass_right_kg.toFixed(1)}kg</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full"
                     style={{ width: `${(data.symmetry.arm_mass_right_kg / Math.max(data.symmetry.arm_mass_left_kg, data.symmetry.arm_mass_right_kg)) * 100}%` }}
@@ -363,22 +365,22 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
                 </div>
               </div>
             </div>
-            <div className="text-xs text-gray-400 mt-2">
+            <div className="text-xs text-gray-600 mt-2">
               Imbalance: {Math.abs(data.symmetry.arm_mass_left_kg - data.symmetry.arm_mass_right_kg).toFixed(1)}kg (
               {((Math.abs(data.symmetry.arm_mass_left_kg - data.symmetry.arm_mass_right_kg) / ((data.symmetry.arm_mass_left_kg + data.symmetry.arm_mass_right_kg) / 2)) * 100).toFixed(1)}%)
             </div>
           </div>
 
           {/* Legs */}
-          <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/50 rounded-xl border border-gray-600 p-5">
-            <h4 className="font-semibold text-gray-200 mb-3">🦵 Legs</h4>
+          <div className="card-enhanced p-5">
+            <h4 className="font-semibold text-gray-900 mb-3">🦵 Legs</h4>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Left</span>
-                  <span className="text-white">{data.symmetry.leg_mass_left_kg.toFixed(1)}kg</span>
+                  <span className="text-gray-600">Left</span>
+                  <span className="text-gray-900">{data.symmetry.leg_mass_left_kg.toFixed(1)}kg</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-blue-500 h-2 rounded-full"
                     style={{ width: `${(data.symmetry.leg_mass_left_kg / Math.max(data.symmetry.leg_mass_left_kg, data.symmetry.leg_mass_right_kg)) * 100}%` }}
@@ -387,10 +389,10 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Right</span>
-                  <span className="text-white">{data.symmetry.leg_mass_right_kg.toFixed(1)}kg</span>
+                  <span className="text-gray-600">Right</span>
+                  <span className="text-gray-900">{data.symmetry.leg_mass_right_kg.toFixed(1)}kg</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full"
                     style={{ width: `${(data.symmetry.leg_mass_right_kg / Math.max(data.symmetry.leg_mass_left_kg, data.symmetry.leg_mass_right_kg)) * 100}%` }}
@@ -398,16 +400,16 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
                 </div>
               </div>
             </div>
-            <div className="text-xs text-gray-400 mt-2">
+            <div className="text-xs text-gray-600 mt-2">
               Imbalance: {Math.abs(data.symmetry.leg_mass_left_kg - data.symmetry.leg_mass_right_kg).toFixed(1)}kg (
               {((Math.abs(data.symmetry.leg_mass_left_kg - data.symmetry.leg_mass_right_kg) / ((data.symmetry.leg_mass_left_kg + data.symmetry.leg_mass_right_kg) / 2)) * 100).toFixed(1)}%)
             </div>
           </div>
 
           {/* Risk & Recommendation */}
-          <div className="bg-gradient-to-r from-amber-900/20 to-orange-900/20 rounded-xl border border-amber-600/40 p-5">
-            <h4 className="font-semibold text-amber-300 mb-2">⚠️ Asymmetry Risk</h4>
-            <p className="text-amber-200 text-sm">
+          <div className="card-enhanced p-5">
+            <h4 className="font-semibold text-amber-700 mb-2">⚠️ Asymmetry Risk</h4>
+            <p className="text-amber-600 text-sm">
               {(() => {
                 const armDiff = Math.abs(data.symmetry.arm_mass_left_kg - data.symmetry.arm_mass_right_kg);
                 const legDiff = Math.abs(data.symmetry.leg_mass_left_kg - data.symmetry.leg_mass_right_kg);

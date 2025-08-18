@@ -1,669 +1,267 @@
 import { Athlete, BiometricData, GeneticProfile, BodyComposition } from '../types';
 
-// === ATHLETES (Only 5) ===
+// === ATHLETES (Rugby Sevens Team) ===
 export const athletes: Athlete[] = [
-  { athlete_id: 'ATH001', name: 'Marcus Thompson', sport: 'Basketball', age: 24, team: 'Phoenix Warriors' },
-  { athlete_id: 'ATH002', name: 'Sarah Chen', sport: 'Soccer', age: 22, team: 'Metro United' },
-  { athlete_id: 'ATH003', name: 'David Rodriguez', sport: 'Swimming', age: 26, team: 'Aqua Elite' },
-  { athlete_id: 'ATH004', name: 'Emma Johnson', sport: 'Track & Field', age: 23, team: 'Speed Demons' },
-  { athlete_id: 'ATH005', name: 'Ryan Mitchell', sport: 'Football', age: 25, team: 'Storm Ravens' }
+  { athlete_id: 'ATH001', name: 'Aden Oerson', sport: 'Rugby Sevens', age: 22, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH002', name: 'Aldrich Wichman', sport: 'Rugby Sevens', age: 19, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH003', name: 'Bowen Bezuidenhoudt', sport: 'Rugby Sevens', age: 23, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH004', name: 'Christiaan Tromp', sport: 'Rugby Sevens', age: 22, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH005', name: 'Dijan Labuschagne', sport: 'Rugby Sevens', age: 19, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH006', name: 'Ethan Gordon', sport: 'Rugby Sevens', age: 20, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH007', name: 'George Evans', sport: 'Rugby Sevens', age: 18, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH008', name: 'Gregan Kerneels', sport: 'Rugby Sevens', age: 23, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH009', name: 'James Nero', sport: 'Rugby Sevens', age: 20, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH010', name: 'Joshua De Kock', sport: 'Rugby Sevens', age: 23, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH011', name: 'Juanre De Klerk', sport: 'Rugby Sevens', age: 19, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH012', name: 'Lezane Botto', sport: 'Rugby Sevens', age: 19, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH013', name: 'Luke Prest', sport: 'Rugby Sevens', age: 18, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH014', name: 'Marquel Miller', sport: 'Rugby Sevens', age: 18, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH015', name: 'Matthew Jacobs', sport: 'Rugby Sevens', age: 23, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH016', name: 'Michael Maseti', sport: 'Rugby Sevens', age: 21, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH017', name: 'Nicholas Fritz', sport: 'Rugby Sevens', age: 18, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH018', name: 'Riego Heath', sport: 'Rugby Sevens', age: 22, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH019', name: 'Ritchie Mitchell', sport: 'Rugby Sevens', age: 20, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH020', name: 'Siphiwe Mazibuko', sport: 'Rugby Sevens', age: 27, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH021', name: 'Souheil Tahiri', sport: 'Rugby Sevens', age: 18, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH022', name: 'Steffan De Jongh', sport: 'Rugby Sevens', age: 18, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH023', name: 'Torbyn Visser', sport: 'Rugby Sevens', age: 22, team: 'Rugby Sevens Team' }
 ];
 
-// === BIOMETRIC DATA (2 full weeks: Jan 13 - Jan 26) ===
+// === BIOMETRIC DATA (10 weeks: Jul 10 - Sep 18) ===
 export const biometricData: BiometricData[] = [
-  // Marcus Thompson - Improving recovery
-  ...Array.from({ length: 14 }, (_, i) => {
-    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0]; // 2024-01-13 to 2024-01-26
-    let hrv = 46 + Math.sin(i * 0.5) * 3 + (i > 6 ? 4 : 0); // Improves after week 1
-    return {
-      athlete_id: 'ATH001',
-      date,
-      hrv_night: Math.round(hrv),
-      resting_hr: 63 - Math.min(5, Math.floor(i / 2)),
-      spo2_night: 97.0 + Math.random() * 0.8,
-      resp_rate_night: 16 - Math.min(2, Math.floor(i / 3)),
-      deep_sleep_pct: 18 + Math.min(7, i),
-      rem_sleep_pct: 18 + Math.min(4, Math.floor(i / 2)),
-      light_sleep_pct: 64 - Math.min(15, i * 2),
-      sleep_duration_h: 7.5 + Math.random() * 1.0,
-      temp_trend_c: 37.0 - Math.min(0.2, i * 0.02),
-      training_load_pct: 95 - Math.min(20, i * 3),
-      ...(i >= 7 && { sleep_onset_time: '22:45', wake_time: '06:30' }) // Better sleep schedule week 2
-    };
-  }),
-
-  // Sarah Chen - Circadian misalignment → gradual correction
-  ...Array.from({ length: 14 }, (_, i) => {
-    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0];
-    const isLateNight = i < 7; // First week late sleep
-    return {
-      athlete_id: 'ATH002',
-      date,
-      hrv_night: 37 + Math.min(6, i),
-      resting_hr: 73 - Math.min(5, i),
-      spo2_night: 95.8 + Math.random() * 0.7,
-      resp_rate_night: 17 - Math.min(2, Math.floor(i / 3)),
-      deep_sleep_pct: 13 + Math.min(6, i),
-      rem_sleep_pct: 13 + Math.min(6, i),
-      light_sleep_pct: 74 - Math.min(20, i * 2),
-      sleep_duration_h: 5.5 + Math.min(1.5, i * 0.2) + Math.random() * 0.5,
-      temp_trend_c: 37.0 - Math.min(0.4, i * 0.05),
-      training_load_pct: 90 - Math.min(20, i * 2),
-      sleep_onset_time: isLateNight ? ['01:15', '01:30', '00:45'][i % 3] : '23:30',
-      wake_time: isLateNight ? ['07:45', '08:00', '07:15'][i % 3] : '06:45'
-    };
-  }),
-
-  // David Rodriguez - Inflammation trend → resolves mid-week 2
-  ...Array.from({ length: 14 }, (_, i) => {
-    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0];
-    const inflammationPhase = i < 9 ? 0 : 1; // Recovers after day 9
-    return {
-      athlete_id: 'ATH003',
-      date,
-      hrv_night: inflammationPhase === 0 ? (32 + i * 1.2) : (45 + (i - 9) * 0.5),
-      resting_hr: inflammationPhase === 0 ? (80 - i * 1.2) : (68 + (i - 9) * 0.3),
-      spo2_night: inflammationPhase === 0 ? (94.0 + i * 0.25) : (96.5 + Math.random() * 0.5),
-      resp_rate_night: inflammationPhase === 0 ? (19 - i * 0.3) : (15 + Math.random()),
-      deep_sleep_pct: inflammationPhase === 0 ? (14 + i * 0.3) : (20 + (i - 9) * 0.5),
-      rem_sleep_pct: inflammationPhase === 0 ? (13 + i * 0.2) : (18 + (i - 9) * 0.3),
-      light_sleep_pct: inflammationPhase === 0 ? (73 - i * 0.5) : (60 - (i - 9) * 0.5),
-      sleep_duration_h: 5.8 + Math.min(1.7, i * 0.15) + Math.random() * 0.4,
-      temp_trend_c: inflammationPhase === 0 ? (37.4 - i * 0.05) : (36.8 + Math.random() * 0.1),
-      training_load_pct: inflammationPhase === 0 ? (70 - i * 0.8) : (85 + (i - 9) * 0.5),
-      ...(i >= 9 && { sleep_onset_time: '23:00', wake_time: '06:30' })
-    };
-  }),
-
-  // Emma Johnson - Optimal recovery (stable, slight improvements)
-  ...Array.from({ length: 14 }, (_, i) => {
-    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0];
-    return {
-      athlete_id: 'ATH004',
-      date,
-      hrv_night: 55 + i,
-      resting_hr: 57 - Math.min(5, i),
-      spo2_night: 98.0 + Math.random() * 0.4,
-      resp_rate_night: 14 - Math.min(2, Math.floor(i / 4)),
-      deep_sleep_pct: 22 + Math.min(6, i),
-      rem_sleep_pct: 22 + Math.min(4, i),
-      light_sleep_pct: 56 - Math.min(15, i * 1.5),
-      sleep_duration_h: 8.0 + Math.min(1.0, i * 0.1) + Math.random() * 0.3,
-      temp_trend_c: 36.7 - Math.min(0.3, i * 0.02),
-      training_load_pct: 88 - Math.min(10, i * 0.8),
-      sleep_onset_time: '22:15',
-      wake_time: '06:45'
-    };
-  }),
-
-  // Ryan Mitchell - Nutrition fluctuations → stabilizes in week 2
-  ...Array.from({ length: 14 }, (_, i) => {
-    const date = new Date(2024, 0, 13 + i).toISOString().split('T')[0];
-    const stabilized = i >= 7;
-    return {
-      athlete_id: 'ATH005',
-      date,
-      hrv_night: stabilized ? (40 + Math.random() * 4) : (36 + i),
-      resting_hr: stabilized ? (68 + Math.random() * 2) : (74 - Math.min(6, i)),
-      spo2_night: stabilized ? (96.8 + Math.random() * 0.4) : (96.3 + i * 0.05),
-      resp_rate_night: stabilized ? (15 + Math.random()) : (17 - Math.min(2, Math.floor(i / 3))),
-      deep_sleep_pct: stabilized ? (18 + Math.random() * 3) : (15 + i * 0.3),
-      rem_sleep_pct: stabilized ? (16 + Math.random() * 2) : (14 + i * 0.2),
-      light_sleep_pct: stabilized ? (66 - Math.random() * 5) : (72 - i * 0.5),
-      sleep_duration_h: stabilized ? (7.2 + Math.random() * 0.6) : (6.5 + i * 0.1),
-      temp_trend_c: stabilized ? (36.6 + Math.random() * 0.1) : (37.0 - i * 0.03),
-      training_load_pct: stabilized ? (80 + Math.random() * 5) : (90 - Math.min(15, i * 1.5))
-    };
-  })
+  // Generate biometric data for all 23 rugby players
+  ...Array.from({ length: 23 }, (_, athleteIndex) => {
+    const athleteId = `ATH${String(athleteIndex + 1).padStart(3, '0')}`;
+    return Array.from({ length: 70 }, (_, i) => {
+      const date = new Date(2025, 6, 10 + i).toISOString().split('T')[0]; // 2025-07-10 to 2025-09-18
+      
+      // Generate rugby-specific biometric patterns
+      // HRV varies based on training intensity and recovery
+      const hrv = 40 + Math.sin(i * 0.4) * 5 + Math.random() * 3;
+      
+      // Resting heart rate for rugby players (typically 50-70 bpm)
+      const restingHr = 55 + Math.random() * 15;
+      
+      // Blood oxygen saturation (typically 95-100%)
+      const spo2 = 96.0 + Math.random() * 3.5;
+      
+      // Respiratory rate (typically 12-20 breaths per minute)
+      const respRate = 14 + Math.random() * 5;
+      
+      // Sleep patterns for athletes
+      const deepSleep = 15 + Math.random() * 10;
+      const remSleep = 15 + Math.random() * 8;
+      const lightSleep = 100 - deepSleep - remSleep;
+      const sleepDuration = 7 + Math.random() * 2;
+      
+      // Temperature trends
+      const tempTrend = 36.8 + Math.random() * 0.4;
+      
+      // Training load percentage
+      const trainingLoad = 70 + Math.random() * 30;
+      
+      // Sleep timing
+      const sleepOnsetHours = 22 + Math.floor(Math.random() * 2);
+      const sleepOnsetMinutes = Math.floor(Math.random() * 60);
+      const wakeHours = 6 + Math.floor(Math.random() * 2);
+      const wakeMinutes = Math.floor(Math.random() * 60);
+      const sleepOnsetTime = `${String(sleepOnsetHours).padStart(2, '0')}:${String(sleepOnsetMinutes).padStart(2, '0')}`;
+      const wakeTime = `${String(wakeHours).padStart(2, '0')}:${String(wakeMinutes).padStart(2, '0')}`;
+      
+      return {
+        athlete_id: athleteId,
+        date,
+        hrv_night: Math.round(hrv),
+        resting_hr: Math.round(restingHr),
+        spo2_night: parseFloat(spo2.toFixed(1)),
+        resp_rate_night: parseFloat(respRate.toFixed(1)),
+        deep_sleep_pct: Math.round(deepSleep),
+        rem_sleep_pct: Math.round(remSleep),
+        light_sleep_pct: Math.round(lightSleep),
+        sleep_duration_h: parseFloat(sleepDuration.toFixed(1)),
+        temp_trend_c: parseFloat(tempTrend.toFixed(1)),
+        training_load_pct: Math.round(trainingLoad),
+        sleep_onset_time: sleepOnsetTime,
+        wake_time: wakeTime
+      };
+    });
+  }).flat()
 ];
 
-// === GENETIC PROFILES (Only 5 athletes) ===
+// === GENETIC PROFILES (All 23 athletes) ===
 export const geneticProfiles: GeneticProfile[] = [
-  // Marcus Thompson
-  { athlete_id: 'ATH001', gene: 'PER3', genotype: 'short' },
-  { athlete_id: 'ATH001', gene: 'CLOCK', genotype: 'AA' },
-  { athlete_id: 'ATH001', gene: 'ACTN3', genotype: 'RR' },
-  { athlete_id: 'ATH001', gene: 'BDNF', genotype: 'Val66Val' },
-  { athlete_id: 'ATH001', gene: 'PPARGC1A', genotype: 'Gly482Gly' },
-  { athlete_id: 'ATH001', gene: 'ADRB2', genotype: 'Arg16Gly' },
-
-  // Sarah Chen
-  { athlete_id: 'ATH002', gene: 'PER3', genotype: 'long' },
-  { athlete_id: 'ATH002', gene: 'CLOCK', genotype: 'AG' },
-  { athlete_id: 'ATH002', gene: 'ACTN3', genotype: 'XX' },
-  { athlete_id: 'ATH002', gene: 'BDNF', genotype: 'Val/Met' },
-  { athlete_id: 'ATH002', gene: 'PPARGC1A', genotype: 'Ser482' },
-  { athlete_id: 'ATH002', gene: 'ADRB2', genotype: 'Gly16Gly' },
-
-  // David Rodriguez
-  { athlete_id: 'ATH003', gene: 'PER3', genotype: 'short' },
-  { athlete_id: 'ATH003', gene: 'CLOCK', genotype: 'AA' },
-  { athlete_id: 'ATH003', gene: 'ACTN3', genotype: 'RX' },
-  { athlete_id: 'ATH003', gene: 'BDNF', genotype: 'Val66Val' },
-  { athlete_id: 'ATH003', gene: 'PPARGC1A', genotype: 'Gly482' },
-  { athlete_id: 'ATH003', gene: 'ADRB2', genotype: 'Arg16Arg' },
-
-  // Emma Johnson
-  { athlete_id: 'ATH004', gene: 'PER3', genotype: 'short' },
-  { athlete_id: 'ATH004', gene: 'CLOCK', genotype: 'GG' },
-  { athlete_id: 'ATH004', gene: 'ACTN3', genotype: 'XX' },
-  { athlete_id: 'ATH004', gene: 'BDNF', genotype: 'Met/Met' },
-  { athlete_id: 'ATH004', gene: 'PPARGC1A', genotype: 'Ser482Ser' },
-  { athlete_id: 'ATH004', gene: 'ADRB2', genotype: 'Gly16Gly' },
-
-  // Ryan Mitchell
-  { athlete_id: 'ATH005', gene: 'PER3', genotype: 'long' },
-  { athlete_id: 'ATH005', gene: 'CLOCK', genotype: 'AG' },
-  { athlete_id: 'ATH005', gene: 'ACTN3', genotype: 'RR' },
-  { athlete_id: 'ATH005', gene: 'BDNF', genotype: 'Val/Met' },
-  { athlete_id: 'ATH005', gene: 'PPARGC1A', genotype: 'Gly482' },
-  { athlete_id: 'ATH005', gene: 'ADRB2', genotype: 'Arg16Gly' }
+  // Generate genetic profiles for all 23 rugby players
+  ...Array.from({ length: 23 }, (_, athleteIndex) => {
+    const athleteId = `ATH${String(athleteIndex + 1).padStart(3, '0')}`;
+    // Common genetic markers relevant to athletic performance
+    const genes = ['ACTN3', 'ACE', 'PPARGC1A', 'ADRB2', 'VDR', 'COL1A1'];
+    return genes.map(gene => {
+      // Generate random genotypes for each gene
+      let genotype = '';
+      switch (gene) {
+        case 'ACTN3':
+          // ACTN3 gene variants (R/R, R/X, X/X)
+          const actn3Variants = ['RR', 'RX', 'XX'];
+          genotype = actn3Variants[Math.floor(Math.random() * actn3Variants.length)];
+          break;
+        case 'ACE':
+          // ACE gene variants (I/I, I/D, D/D)
+          const aceVariants = ['II', 'ID', 'DD'];
+          genotype = aceVariants[Math.floor(Math.random() * aceVariants.length)];
+          break;
+        case 'PPARGC1A':
+          // PPARGC1A gene variants
+          const ppargc1aVariants = ['Gly482Gly', 'Ser482Ser', 'Gly482Ser'];
+          genotype = ppargc1aVariants[Math.floor(Math.random() * ppargc1aVariants.length)];
+          break;
+        case 'ADRB2':
+          // ADRB2 gene variants
+          const adrb2Variants = ['Arg16Arg', 'Arg16Gly', 'Gly16Gly'];
+          genotype = adrb2Variants[Math.floor(Math.random() * adrb2Variants.length)];
+          break;
+        case 'VDR':
+          // VDR gene variants
+          const vdrVariants = ['FF', 'Ff', 'ff'];
+          genotype = vdrVariants[Math.floor(Math.random() * vdrVariants.length)];
+          break;
+        case 'COL1A1':
+          // COL1A1 gene variants
+          const col1a1Variants = ['SS', 'SP', 'PP'];
+          genotype = col1a1Variants[Math.floor(Math.random() * col1a1Variants.length)];
+          break;
+        default:
+          genotype = 'Unknown';
+      }
+      return {
+        athlete_id: athleteId,
+        gene: gene,
+        genotype: genotype
+      };
+    });
+  }).flat()
 ];
 
-// === BODY COMPOSITION (Weekly measurements over 3 weeks) ===
+// === BODY COMPOSITION (Daily measurements from 2025-07-01) ===
 export const bodyCompositionData: BodyComposition[] = [
-  // Marcus Thompson - Progressive lean gains
-  {
-    athlete_id: 'ATH001',
-    date: '2024-01-08',
-    weight_kg: 83.0,
-    weight_range_min: 80.0,
-    weight_range_max: 85.0,
-    fat_mass_kg: 8.5,
-    fat_mass_range_min: 7.0,
-    fat_mass_range_max: 10.0,
-    muscle_mass_kg: 38.0,
-    muscle_mass_range_min: 36.0,
-    muscle_mass_range_max: 40.0,
-    skeletal_muscle_kg: 32.0,
-    body_fat_rate: 10.2,
-    bmi: 23.0,
-    target_weight_kg: 83.0,
-    weight_control_kg: 0.0,
-    fat_control_kg: 0.3,
-    muscle_control_kg: -0.2,
-    visceral_fat_grade: 2,
-    basal_metabolic_rate_kcal: 1900,
-    fat_free_body_weight_kg: 74.5,
-    subcutaneous_fat_percent: 8.9,
-    smi_kg_m2: 8.8,
-    body_age: 20,
-    symmetry: {
-      arm_mass_left_kg: 5.1,
-      arm_mass_right_kg: 5.3,
-      leg_mass_left_kg: 10.2,
-      leg_mass_right_kg: 10.6,
-      trunk_mass_kg: 12.5,
-    }
-  },
-  {
-    athlete_id: 'ATH001',
-    date: '2024-01-15',
-    weight_kg: 82.8,
-    weight_range_min: 80.0,
-    weight_range_max: 85.0,
-    fat_mass_kg: 8.3,
-    fat_mass_range_min: 7.0,
-    fat_mass_range_max: 10.0,
-    muscle_mass_kg: 38.2,
-    muscle_mass_range_min: 36.0,
-    muscle_mass_range_max: 40.0,
-    skeletal_muscle_kg: 32.1,
-    body_fat_rate: 10.0,
-    bmi: 22.9,
-    target_weight_kg: 83.0,
-    weight_control_kg: -0.2,
-    fat_control_kg: 0.1,
-    muscle_control_kg: 0.0,
-    visceral_fat_grade: 2,
-    basal_metabolic_rate_kcal: 1895,
-    fat_free_body_weight_kg: 74.5,
-    subcutaneous_fat_percent: 8.7,
-    smi_kg_m2: 8.85,
-    body_age: 20,
-    symmetry: {
-      arm_mass_left_kg: 5.1,
-      arm_mass_right_kg: 5.2,
-      leg_mass_left_kg: 10.3,
-      leg_mass_right_kg: 10.5,
-      trunk_mass_kg: 12.5,
-    }
-  },
-  {
-    athlete_id: 'ATH001',
-    date: '2024-01-22',
-    weight_kg: 82.5,
-    weight_range_min: 80.0,
-    weight_range_max: 85.0,
-    fat_mass_kg: 8.2,
-    fat_mass_range_min: 7.0,
-    fat_mass_range_max: 10.0,
-    muscle_mass_kg: 38.5,
-    muscle_mass_range_min: 36.0,
-    muscle_mass_range_max: 40.0,
-    skeletal_muscle_kg: 32.1,
-    body_fat_rate: 9.9,
-    bmi: 22.8,
-    target_weight_kg: 83.0,
-    weight_control_kg: -0.5,
-    fat_control_kg: -0.3,
-    muscle_control_kg: 0.2,
-    visceral_fat_grade: 2,
-    basal_metabolic_rate_kcal: 1890,
-    fat_free_body_weight_kg: 74.3,
-    subcutaneous_fat_percent: 8.7,
-    smi_kg_m2: 8.9,
-    body_age: 20,
-    symmetry: {
-      arm_mass_left_kg: 5.1,
-      arm_mass_right_kg: 5.1,
-      leg_mass_left_kg: 10.4,
-      leg_mass_right_kg: 10.4,
-      trunk_mass_kg: 12.5,
-    }
-  },
-
-  // Sarah Chen - Fat loss, muscle gain
-  {
-    athlete_id: 'ATH002',
-    date: '2024-01-08',
-    weight_kg: 58.5,
-    weight_range_min: 56.0,
-    weight_range_max: 60.0,
-    fat_mass_kg: 11.8,
-    fat_mass_range_min: 10.0,
-    fat_mass_range_max: 13.0,
-    muscle_mass_kg: 24.6,
-    muscle_mass_range_min: 23.0,
-    muscle_mass_range_max: 26.0,
-    skeletal_muscle_kg: 20.2,
-    body_fat_rate: 20.3,
-    bmi: 21.6,
-    target_weight_kg: 58.5,
-    weight_control_kg: 0.0,
-    fat_control_kg: 0.5,
-    muscle_control_kg: -0.2,
-    visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1325,
-    fat_free_body_weight_kg: 46.7,
-    subcutaneous_fat_percent: 18.5,
-    smi_kg_m2: 7.4,
-    body_age: 21,
-    symmetry: {
-      arm_mass_left_kg: 2.8,
-      arm_mass_right_kg: 2.9,
-      leg_mass_left_kg: 7.0,
-      leg_mass_right_kg: 7.3,
-      trunk_mass_kg: 7.6,
-    }
-  },
-  {
-    athlete_id: 'ATH002',
-    date: '2024-01-15',
-    weight_kg: 58.2,
-    weight_range_min: 56.0,
-    weight_range_max: 60.0,
-    fat_mass_kg: 11.6,
-    fat_mass_range_min: 10.0,
-    fat_mass_range_max: 13.0,
-    muscle_mass_kg: 24.8,
-    muscle_mass_range_min: 23.0,
-    muscle_mass_range_max: 26.0,
-    skeletal_muscle_kg: 20.3,
-    body_fat_rate: 19.9,
-    bmi: 21.4,
-    target_weight_kg: 58.5,
-    weight_control_kg: -0.3,
-    fat_control_kg: -0.8,
-    muscle_control_kg: 0.5,
-    visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1320,
-    fat_free_body_weight_kg: 46.6,
-    subcutaneous_fat_percent: 18.2,
-    smi_kg_m2: 7.5,
-    body_age: 21,
-    symmetry: {
-      arm_mass_left_kg: 2.8,
-      arm_mass_right_kg: 2.8,
-      leg_mass_left_kg: 7.1,
-      leg_mass_right_kg: 7.2,
-      trunk_mass_kg: 7.6,
-    }
-  },
-  {
-    athlete_id: 'ATH002',
-    date: '2024-01-22',
-    weight_kg: 57.9,
-    weight_range_min: 56.0,
-    weight_range_max: 60.0,
-    fat_mass_kg: 11.3,
-    fat_mass_range_min: 10.0,
-    fat_mass_range_max: 13.0,
-    muscle_mass_kg: 25.0,
-    muscle_mass_range_min: 23.0,
-    muscle_mass_range_max: 26.0,
-    skeletal_muscle_kg: 20.5,
-    body_fat_rate: 19.5,
-    bmi: 21.2,
-    target_weight_kg: 58.5,
-    weight_control_kg: -0.6,
-    fat_control_kg: -1.0,
-    muscle_control_kg: 0.8,
-    visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1315,
-    fat_free_body_weight_kg: 46.6,
-    subcutaneous_fat_percent: 18.0,
-    smi_kg_m2: 7.6,
-    body_age: 21,
-    symmetry: {
-      arm_mass_left_kg: 2.8,
-      arm_mass_right_kg: 2.8,
-      leg_mass_left_kg: 7.2,
-      leg_mass_right_kg: 7.2,
-      trunk_mass_kg: 7.6,
-    }
-  },
-
-  // David Rodriguez - Stable, slight lean gain
-  {
-    athlete_id: 'ATH003',
-    date: '2024-01-10',
-    weight_kg: 76.0,
-    weight_range_min: 74.0,
-    weight_range_max: 78.0,
-    fat_mass_kg: 7.8,
-    fat_mass_range_min: 7.0,
-    fat_mass_range_max: 9.0,
-    muscle_mass_kg: 36.0,
-    muscle_mass_range_min: 34.0,
-    muscle_mass_range_max: 38.0,
-    skeletal_muscle_kg: 30.0,
-    body_fat_rate: 10.3,
-    bmi: 22.5,
-    target_weight_kg: 77.0,
-    weight_control_kg: -1.0,
-    fat_control_kg: -0.5,
-    muscle_control_kg: 0.3,
-    visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1800,
-    fat_free_body_weight_kg: 68.2,
-    subcutaneous_fat_percent: 9.0,
-    smi_kg_m2: 8.6,
-    body_age: 24,
-    symmetry: {
-      arm_mass_left_kg: 4.8,
-      arm_mass_right_kg: 5.1,
-      leg_mass_left_kg: 10.0,
-      leg_mass_right_kg: 10.5,
-      trunk_mass_kg: 11.0,
-    }
-  },
-  {
-    athlete_id: 'ATH003',
-    date: '2024-01-17',
-    weight_kg: 76.1,
-    weight_range_min: 74.0,
-    weight_range_max: 78.0,
-    fat_mass_kg: 7.8,
-    fat_mass_range_min: 7.0,
-    fat_mass_range_max: 9.0,
-    muscle_mass_kg: 36.2,
-    muscle_mass_range_min: 34.0,
-    muscle_mass_range_max: 38.0,
-    skeletal_muscle_kg: 30.1,
-    body_fat_rate: 10.3,
-    bmi: 22.5,
-    target_weight_kg: 77.0,
-    weight_control_kg: -0.9,
-    fat_control_kg: -0.4,
-    muscle_control_kg: 0.5,
-    visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1802,
-    fat_free_body_weight_kg: 68.3,
-    subcutaneous_fat_percent: 9.0,
-    smi_kg_m2: 8.62,
-    body_age: 24,
-    symmetry: {
-      arm_mass_left_kg: 4.8,
-      arm_mass_right_kg: 5.0,
-      leg_mass_left_kg: 10.1,
-      leg_mass_right_kg: 10.4,
-      trunk_mass_kg: 11.0,
-    }
-  },
-  {
-    athlete_id: 'ATH003',
-    date: '2024-01-24',
-    weight_kg: 76.3,
-    weight_range_min: 74.0,
-    weight_range_max: 78.0,
-    fat_mass_kg: 7.7,
-    fat_mass_range_min: 7.0,
-    fat_mass_range_max: 9.0,
-    muscle_mass_kg: 36.5,
-    muscle_mass_range_min: 34.0,
-    muscle_mass_range_max: 38.0,
-    skeletal_muscle_kg: 30.2,
-    body_fat_rate: 10.1,
-    bmi: 22.6,
-    target_weight_kg: 77.0,
-    weight_control_kg: -0.7,
-    fat_control_kg: -0.6,
-    muscle_control_kg: 0.8,
-    visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1808,
-    fat_free_body_weight_kg: 68.6,
-    subcutaneous_fat_percent: 8.9,
-    smi_kg_m2: 8.65,
-    body_age: 24,
-    symmetry: {
-      arm_mass_left_kg: 4.8,
-      arm_mass_right_kg: 4.9,
-      leg_mass_left_kg: 10.2,
-      leg_mass_right_kg: 10.3,
-      trunk_mass_kg: 11.0,
-    }
-  },
-
-  // Emma Johnson - Consistent elite physique
-  {
-    athlete_id: 'ATH004',
-    date: '2024-01-09',
-    weight_kg: 54.0,
-    weight_range_min: 52.0,
-    weight_range_max: 56.0,
-    fat_mass_kg: 8.1,
-    fat_mass_range_min: 7.0,
-    fat_mass_range_max: 9.0,
-    muscle_mass_kg: 22.0,
-    muscle_mass_range_min: 21.0,
-    muscle_mass_range_max: 24.0,
-    skeletal_muscle_kg: 18.0,
-    body_fat_rate: 15.0,
-    bmi: 20.0,
-    target_weight_kg: 54.0,
-    weight_control_kg: 0.0,
-    fat_control_kg: 0.2,
-    muscle_control_kg: 0.0,
-    visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1450,
-    fat_free_body_weight_kg: 45.9,
-    subcutaneous_fat_percent: 13.5,
-    smi_kg_m2: 7.2,
-    body_age: 20,
-    symmetry: {
-      arm_mass_left_kg: 2.5,
-      arm_mass_right_kg: 2.6,
-      leg_mass_left_kg: 6.8,
-      leg_mass_right_kg: 6.9,
-      trunk_mass_kg: 6.5,
-    }
-  },
-  {
-    athlete_id: 'ATH004',
-    date: '2024-01-16',
-    weight_kg: 53.8,
-    weight_range_min: 52.0,
-    weight_range_max: 56.0,
-    fat_mass_kg: 7.9,
-    fat_mass_range_min: 7.0,
-    fat_mass_range_max: 9.0,
-    muscle_mass_kg: 22.2,
-    muscle_mass_range_min: 21.0,
-    muscle_mass_range_max: 24.0,
-    skeletal_muscle_kg: 18.1,
-    body_fat_rate: 14.7,
-    bmi: 19.9,
-    target_weight_kg: 54.0,
-    weight_control_kg: -0.2,
-    fat_control_kg: -0.1,
-    muscle_control_kg: 0.3,
-    visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1445,
-    fat_free_body_weight_kg: 45.9,
-    subcutaneous_fat_percent: 13.2,
-    smi_kg_m2: 7.25,
-    body_age: 20,
-    symmetry: {
-      arm_mass_left_kg: 2.5,
-      arm_mass_right_kg: 2.5,
-      leg_mass_left_kg: 6.9,
-      leg_mass_right_kg: 6.9,
-      trunk_mass_kg: 6.5,
-    }
-  },
-  {
-    athlete_id: 'ATH004',
-    date: '2024-01-23',
-    weight_kg: 53.6,
-    weight_range_min: 52.0,
-    weight_range_max: 56.0,
-    fat_mass_kg: 7.7,
-    fat_mass_range_min: 7.0,
-    fat_mass_range_max: 9.0,
-    muscle_mass_kg: 22.4,
-    muscle_mass_range_min: 21.0,
-    muscle_mass_range_max: 24.0,
-    skeletal_muscle_kg: 18.2,
-    body_fat_rate: 14.4,
-    bmi: 19.8,
-    target_weight_kg: 54.0,
-    weight_control_kg: -0.4,
-    fat_control_kg: -0.3,
-    muscle_control_kg: 0.5,
-    visceral_fat_grade: 1,
-    basal_metabolic_rate_kcal: 1440,
-    fat_free_body_weight_kg: 45.9,
-    subcutaneous_fat_percent: 13.0,
-    smi_kg_m2: 7.3,
-    body_age: 20,
-    symmetry: {
-      arm_mass_left_kg: 2.5,
-      arm_mass_right_kg: 2.5,
-      leg_mass_left_kg: 7.0,
-      leg_mass_right_kg: 7.0,
-      trunk_mass_kg: 6.5,
-    }
-  },
-
-  // Ryan Mitchell - Initial imbalance, improves
-  {
-    athlete_id: 'ATH005',
-    date: '2024-01-11',
-    weight_kg: 92.0,
-    weight_range_min: 90.0,
-    weight_range_max: 95.0,
-    fat_mass_kg: 15.0,
-    fat_mass_range_min: 13.0,
-    fat_mass_range_max: 17.0,
-    muscle_mass_kg: 42.0,
-    muscle_mass_range_min: 40.0,
-    muscle_mass_range_max: 44.0,
-    skeletal_muscle_kg: 36.0,
-    body_fat_rate: 16.3,
-    bmi: 27.0,
-    target_weight_kg: 90.0,
-    weight_control_kg: 2.0,
-    fat_control_kg: 1.5,
-    muscle_control_kg: 0.0,
-    visceral_fat_grade: 4,
-    basal_metabolic_rate_kcal: 2200,
-    fat_free_body_weight_kg: 77.0,
-    subcutaneous_fat_percent: 14.5,
-    smi_kg_m2: 8.2,
-    body_age: 28,
-    symmetry: {
-      arm_mass_left_kg: 6.0,
-      arm_mass_right_kg: 6.5,
-      leg_mass_left_kg: 12.0,
-      leg_mass_right_kg: 13.0,
-      trunk_mass_kg: 15.0,
-    }
-  },
-  {
-    athlete_id: 'ATH005',
-    date: '2024-01-18',
-    weight_kg: 91.0,
-    weight_range_min: 90.0,
-    weight_range_max: 95.0,
-    fat_mass_kg: 14.2,
-    fat_mass_range_min: 13.0,
-    fat_mass_range_max: 17.0,
-    muscle_mass_kg: 42.3,
-    muscle_mass_range_min: 40.0,
-    muscle_mass_range_max: 44.0,
-    skeletal_muscle_kg: 36.1,
-    body_fat_rate: 15.6,
-    bmi: 26.7,
-    target_weight_kg: 90.0,
-    weight_control_kg: 1.0,
-    fat_control_kg: 0.7,
-    muscle_control_kg: 0.5,
-    visceral_fat_grade: 3,
-    basal_metabolic_rate_kcal: 2180,
-    fat_free_body_weight_kg: 76.8,
-    subcutaneous_fat_percent: 14.0,
-    smi_kg_m2: 8.25,
-    body_age: 27,
-    symmetry: {
-      arm_mass_left_kg: 6.1,
-      arm_mass_right_kg: 6.3,
-      leg_mass_left_kg: 12.2,
-      leg_mass_right_kg: 12.7,
-      trunk_mass_kg: 14.8,
-    }
-  },
-  {
-    athlete_id: 'ATH005',
-    date: '2024-01-25',
-    weight_kg: 89.5,
-    weight_range_min: 90.0,
-    weight_range_max: 95.0,
-    fat_mass_kg: 13.0,
-    fat_mass_range_min: 13.0,
-    fat_mass_range_max: 17.0,
-    muscle_mass_kg: 42.8,
-    muscle_mass_range_min: 40.0,
-    muscle_mass_range_max: 44.0,
-    skeletal_muscle_kg: 36.3,
-    body_fat_rate: 14.5,
-    bmi: 26.2,
-    target_weight_kg: 90.0,
-    weight_control_kg: -0.5,
-    fat_control_kg: -0.5,
-    muscle_control_kg: 1.0,
-    visceral_fat_grade: 2,
-    basal_metabolic_rate_kcal: 2150,
-    fat_free_body_weight_kg: 76.5,
-    subcutaneous_fat_percent: 13.5,
-    smi_kg_m2: 8.3,
-    body_age: 26,
-    symmetry: {
-      arm_mass_left_kg: 6.2,
-      arm_mass_right_kg: 6.2,
-      leg_mass_left_kg: 12.5,
-      leg_mass_right_kg: 12.5,
-      trunk_mass_kg: 14.5,
-    }
-  }
+  // Generate body composition data for all 23 rugby players
+  ...Array.from({ length: 23 }, (_, athleteIndex) => {
+    const athleteId = `ATH${String(athleteIndex + 1).padStart(3, '0')}`;
+    
+    // Generate 30 days of data for each athlete (from 2025-07-01 to 2025-07-30)
+    return Array.from({ length: 30 }, (_, dayIndex) => {
+      // Base values for rugby players
+      const baseWeight = 80 + Math.random() * 20; // 80-100 kg
+      const weightChange = (Math.random() - 0.5) * 0.2; // +/- 0.1 kg per day
+      const weight = baseWeight + weightChange * dayIndex;
+      
+      // Fat mass (typically 10-20% for male rugby players)
+      const fatPercent = 12 + Math.random() * 8;
+      const fatMass = weight * (fatPercent / 100);
+      
+      // Muscle mass (typically 40-50% of body weight for athletes)
+      const musclePercent = 45 + Math.random() * 5;
+      const muscleMass = weight * (musclePercent / 100);
+      
+      // Skeletal muscle (typically 80-90% of muscle mass)
+      const skeletalMuscle = muscleMass * (0.85 + Math.random() * 0.05);
+      
+      // Body fat rate
+      const bodyFatRate = fatPercent;
+      
+      // BMI calculation (assuming average height of 1.8m for rugby players)
+      const height = 1.75 + Math.random() * 0.15; // 1.75-1.9m
+      const bmi = weight / (height * height);
+      
+      // Weight range (target weight +/- 0.5-1 kg)
+      const weightRangeMin = weight - 0.5 - Math.random() * 0.5;
+      const weightRangeMax = weight + 0.5 + Math.random() * 0.5;
+      
+      // Fat mass range
+      const fatMassRangeMin = fatMass * 0.9;
+      const fatMassRangeMax = fatMass * 1.1;
+      
+      // Muscle mass range
+      const muscleMassRangeMin = muscleMass * 0.95;
+      const muscleMassRangeMax = muscleMass * 1.05;
+      
+      // Weight control (change from previous day)
+      const weightControl = dayIndex === 0 ? 0 : weightChange;
+      
+      // Fat control (change from previous day)
+      const fatControl = dayIndex === 0 ? 0 : (fatMass - (weight * (12 + Math.random() * 8) / 100)) / dayIndex;
+      
+      // Muscle control (change from previous day)
+      const muscleControl = dayIndex === 0 ? 0 : (muscleMass - (weight * (45 + Math.random() * 5) / 100)) / dayIndex;
+      
+      // Visceral fat grade (1-4, with 1-2 being healthy for athletes)
+      const visceralFatGrade = 1 + Math.floor(Math.random() * 2);
+      
+      // Basal metabolic rate (based on weight and muscle mass)
+      const basalMetabolicRate = 1500 + weight * 10 + Math.random() * 200;
+      
+      // Fat free body weight
+      const fatFreeBodyWeight = weight - fatMass;
+      
+      // Subcutaneous fat percent
+      const subcutaneousFatPercent = bodyFatRate * (0.7 + Math.random() * 0.2);
+      
+      // Skeletal muscle index (SMI)
+      const smi = skeletalMuscle / (height * height);
+      
+      // Body age (typically close to chronological age for athletes)
+      const chronologicalAge = [22, 19, 23, 22, 19, 20, 18, 23, 20, 23, 19, 19, 18, 18, 23, 21, 18, 22, 20, 27, 18, 18, 22][athleteIndex];
+      const bodyAge = chronologicalAge + Math.floor(Math.random() * 3) - 1;
+      
+      // Symmetry measurements (arm and leg mass)
+      const armMassLeft = (muscleMass * 0.15) * (0.95 + Math.random() * 0.1);
+      const armMassRight = (muscleMass * 0.15) * (0.95 + Math.random() * 0.1);
+      const legMassLeft = (muscleMass * 0.35) * (0.95 + Math.random() * 0.1);
+      const legMassRight = (muscleMass * 0.35) * (0.95 + Math.random() * 0.1);
+      const trunkMass = muscleMass * 0.35;
+      
+      // Generate daily dates starting from 2025-07-01
+      const startDate = new Date(2025, 6, 1); // July is month 6 (0-indexed)
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + dayIndex);
+      
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const date = `${year}-${month}-${day}`;
+      
+      return {
+        athlete_id: athleteId,
+        date: date,
+        weight_kg: parseFloat(weight.toFixed(1)),
+        weight_range_min: parseFloat(weightRangeMin.toFixed(1)),
+        weight_range_max: parseFloat(weightRangeMax.toFixed(1)),
+        fat_mass_kg: parseFloat(fatMass.toFixed(1)),
+        fat_mass_range_min: parseFloat(fatMassRangeMin.toFixed(1)),
+        fat_mass_range_max: parseFloat(fatMassRangeMax.toFixed(1)),
+        muscle_mass_kg: parseFloat(muscleMass.toFixed(1)),
+        muscle_mass_range_min: parseFloat(muscleMassRangeMin.toFixed(1)),
+        muscle_mass_range_max: parseFloat(muscleMassRangeMax.toFixed(1)),
+        skeletal_muscle_kg: parseFloat(skeletalMuscle.toFixed(1)),
+        body_fat_rate: parseFloat(bodyFatRate.toFixed(1)),
+        bmi: parseFloat(bmi.toFixed(1)),
+        target_weight_kg: parseFloat(weight.toFixed(1)),
+        weight_control_kg: parseFloat(weightControl.toFixed(1)),
+        fat_control_kg: parseFloat(fatControl.toFixed(1)),
+        muscle_control_kg: parseFloat(muscleControl.toFixed(1)),
+        visceral_fat_grade: visceralFatGrade,
+        basal_metabolic_rate_kcal: Math.round(basalMetabolicRate),
+        fat_free_body_weight_kg: parseFloat(fatFreeBodyWeight.toFixed(1)),
+        subcutaneous_fat_percent: parseFloat(subcutaneousFatPercent.toFixed(1)),
+        smi_kg_m2: parseFloat(smi.toFixed(1)),
+        body_age: bodyAge,
+        symmetry: {
+          arm_mass_left_kg: parseFloat(armMassLeft.toFixed(1)),
+          arm_mass_right_kg: parseFloat(armMassRight.toFixed(1)),
+          leg_mass_left_kg: parseFloat(legMassLeft.toFixed(1)),
+          leg_mass_right_kg: parseFloat(legMassRight.toFixed(1)),
+          trunk_mass_kg: parseFloat(trunkMass.toFixed(1)),
+        }
+      };
+    });
+  }).flat()
 ];

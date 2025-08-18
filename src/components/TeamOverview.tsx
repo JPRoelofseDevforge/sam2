@@ -46,15 +46,15 @@ const getStatusColor = (alertType: string): string => {
   switch (alertType) {
     case 'critical':
     case 'high':
-      return 'text-red-400';
+      return 'text-red-600';
     case 'warning':
     case 'medium':
-      return 'text-yellow-400';
+      return 'text-yellow-600';
     case 'optimal':
     case 'low':
-      return 'text-green-400';
+      return 'text-green-600';
     default:
-      return 'text-gray-400';
+      return 'text-gray-600';
   }
 };
 
@@ -161,14 +161,14 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
     switch (type) {
       case 'inflammation':
       case 'airway':
-        return 'border-red-500/60 bg-gradient-to-br from-red-900/15 to-transparent';
+        return 'border-red-200 bg-red-50';
       case 'circadian':
       case 'nutrition':
-        return 'border-yellow-500/60 bg-gradient-to-br from-yellow-900/15 to-transparent';
+        return 'border-yellow-200 bg-yellow-50';
       case 'green':
-        return 'border-green-500/60 bg-gradient-to-br from-green-900/15 to-transparent';
+        return 'border-green-200 bg-green-50';
       default:
-        return 'border-gray-600/40 bg-gradient-to-br from-gray-800/10 to-transparent';
+        return 'border-gray-200 bg-gray-50';
     }
   };
 
@@ -190,13 +190,12 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
   };
 
   const getAqiLevel = (aqi: number) => {
-    if (aqi <= 50) return { label: 'Good', color: 'text-green-400', bg: 'bg-green-500/10' };
-    if (aqi <= 100) return { label: 'Moderate', color: 'text-yellow-400', bg: 'bg-yellow-500/10' };
-    if (aqi <= 150) return { label: 'Unhealthy (S)', color: 'text-orange-400', bg: 'bg-orange-500/10' };
-    if (aqi <= 200) return { label: 'Unhealthy', color: 'text-red-400', bg: 'bg-red-500/10' };
-    return { label: 'Hazardous', color: 'text-purple-400', bg: 'bg-purple-500/10' };
+    if (aqi <= 50) return { label: 'Good', color: 'text-green-600', bg: 'bg-green-100', class: 'aqi-good' };
+    if (aqi <= 100) return { label: 'Moderate', color: 'text-yellow-600', bg: 'bg-yellow-100', class: 'aqi-fair' };
+    if (aqi <= 150) return { label: 'Unhealthy (S)', color: 'text-orange-600', bg: 'bg-orange-100', class: 'aqi-poor' };
+    if (aqi <= 200) return { label: 'Unhealthy', color: 'text-red-600', bg: 'bg-red-100', class: 'aqi-poor' };
+    return { label: 'Hazardous', color: 'text-purple-600', bg: 'bg-purple-100', class: 'aqi-poor' };
   };
-
 
   
 return (
@@ -210,7 +209,7 @@ return (
       {/* Header */}
       <header className="header-section">
         <h1 className="logo-text">
-          🧬 SAM Recovery
+          🧬 <span className="sam-text">SAM</span> Recovery
         </h1>
         <p className="tagline">
           Precision Recovery Through Genetics × Biometrics × Environment
@@ -227,19 +226,19 @@ return (
         </div>
 
         <div className="metrics-grid">
-          <div className="metric-item">
+          <div className="metric-item metric-item-temp" >
             <div className="metric-icon">🌡️</div>
             <div className="metric-value temp-value">{airQuality?.temperature}°C</div>
             <div className="metric-label">Temp</div>
           </div>
 
-          <div className="metric-item">
+          <div className="metric-item metric-item-humidity">
             <div className="metric-icon">💧</div>
             <div className="metric-value humidity-value">{airQuality?.humidity}%</div>
             <div className="metric-label">Humidity</div>
           </div>
 
-          <div className="metric-item">
+          <div className="metric-item metric-item-aqi">
             <div className="metric-icon">🌫️</div>
             <div className={`metric-value aqi-value ${getAqiLevel(airQuality?.aqi || 0).class}`}>
               {airQuality?.aqi}
@@ -258,7 +257,7 @@ return (
       {/* Team Stats */}
       <div className="stats-grid-wide">
         <StatCard label="Athletes" value={teamStats.totalAthletes} icon="👥" color="blue" />
-        <StatCard label="Avg HRV" value={`${teamStats.avgHRV.toFixed(0)} ms`} icon="💓" color="purple" />
+        <StatCard label="Avg HRV" value={`${teamStats.avgHRV.toFixed(0)} ms`} icon="❤️" color="purple" />
         <StatCard label="Avg Sleep" value={`${teamStats.avgSleep.toFixed(1)}h`} icon="😴" color="indigo" />
         <StatCard label="Readiness" value={`${teamStats.avgReadiness.toFixed(0)}%`} icon="⚡" color="orange" />
       </div>
@@ -290,7 +289,7 @@ return (
 
       {/* Athletes Grid */}
       <section className="athletes-section">
-        <h2 className="section-title">👥 Athlete Status</h2>
+        <h2 className="section-title text-white">👥 Athlete Status</h2>
         <div className="athletes-grid">
           {teamStats.athleteMetrics.map(({ athlete, latest, alert, readinessScore }) => (
             <div
@@ -346,29 +345,22 @@ return (
 
 // Reusable Components
 const StatCard: React.FC<{ label: string; value: number | string; icon: string; color: string }> = ({ label, value, icon, color }) => (
-  <div className="bg-gradient-to-br from-gray-900/70 to-gray-950/60 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 text-center shadow-lg hover:shadow-purple-500/10 transition-shadow">
-    <div className="text-3xl mb-1">{icon}</div>
-    <div className={`text-xl sm:text-2xl font-extrabold bg-gradient-to-r ${color} bg-clip-text`}>
+  <div className="card-enhanced p-5 text-center">
+    <div className="text-3xl mb-2">{icon}</div>
+    <div className={`text-2xl font-bold text-black`}>
       {value}
     </div>
-    <div className="text-gray-300 text-xs sm:text-sm mt-1 font-medium">{label}</div>
+    <div className="text-gray-700 text-sm mt-1 font-medium">{label}</div>
   </div>
 );
 
 const AlertCard: React.FC<{ title: string; count: number; icon: string; color: string; desc: string }> = ({ title, count, icon, color, desc }) => (
-  <div className={`bg-gradient-to-br from-${color}-900/15 to-transparent border border-${color}-500/30 rounded-xl p-4 hover:shadow-lg transition-all`}>
-    <div className="flex items-center gap-2 mb-2">
-      <span className="text-xl">{icon}</span>
-      <h3 className={`text-sm sm:text-lg font-bold text-${color}-400`}>{title}</h3>
+  <div className={`card-enhanced border-${color}-200 bg-${color}-50 p-5 hover:shadow-lg transition-all`}>
+    <div className="flex items-center gap-2 mb-3">
+      <span className="text-2xl">{icon}</span>
+      <h3 className={`text-lg font-bold text-${color}-700`}>{title}</h3>
     </div>
-    <div className={`text-2xl sm:text-4xl font-bold text-${color}-400`}>{count}</div>
-    <p className={`text-xs sm:text-sm text-${color}-300 mt-1`}>{desc}</p>
-  </div>
-);
-
-const Metric: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
-  <div>
-    <div className="text-xs text-gray-500 uppercase tracking-wide">{label}</div>
-    <div className="text-sm font-semibold text-white">{value}</div>
+    <div className={`text-3xl font-bold text-${color}-700 mb-2`}>{count}</div>
+    <p className={`text-sm text-${color}-600`}>{desc}</p>
   </div>
 );

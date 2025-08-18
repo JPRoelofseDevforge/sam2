@@ -76,7 +76,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   geneticData = [],
 }) => {
   if (!data || data.length === 0) {
-    return <div className="text-center py-8 text-gray-500">No biometric data available</div>;
+    return <div className="text-center py-8 text-gray-600">No biometric data available</div>;
   }
 
   const sortedBiometrics = [...data]
@@ -154,61 +154,61 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   return (
     <div className="space-y-12 py-6 px-2">
       {/* 1. Key Performance Metrics */}
-      <section>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">📊 Key Performance Metrics</h3>
+      <section className="card-enhanced p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Key Performance Metrics</h3>
         <ResponsiveContainer width="100%" height={300}>
           <ComposedChart data={sortedBiometrics} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="dateLabel" />
-            <YAxis yAxisId="left" />
-            <YAxis yAxisId="right" orientation="right" />
-            <Tooltip />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="dateLabel" stroke="#6b7280" />
+            <YAxis yAxisId="left" stroke="#6b7280" />
+            <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
+            <Tooltip 
+              contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', color: '#1f2937' }}
+            />
             <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="hrv_night" name="HRV (ms)" stroke="#8884d8" />
-            <Line yAxisId="left" type="monotone" dataKey="resting_hr" name="RHR (bpm)" stroke="#82ca9d" />
-            <Line yAxisId="right" type="monotone" dataKey="sleep_duration_h" name="Sleep (h)" stroke="#3498db" />
-            <Line yAxisId="left" type="monotone" dataKey="spo2_night" name="SpO₂ (%)" stroke="#ff7300" />
-            <Line yAxisId="right" type="monotone" dataKey="training_load_pct" name="Load (%)" stroke="#d0ed57" dot={false} />
+            <Line yAxisId="left" type="monotone" dataKey="hrv_night" name="HRV (ms)" stroke="#6366f1" strokeWidth={3} />
+            <Line yAxisId="left" type="monotone" dataKey="resting_hr" name="RHR (bpm)" stroke="#10b981" strokeWidth={3} />
+            <Line yAxisId="right" type="monotone" dataKey="sleep_duration_h" name="Sleep (h)" stroke="#3b82f6" strokeWidth={3} />
+            <Line yAxisId="left" type="monotone" dataKey="spo2_night" name="SpO₂ (%)" stroke="#f97316" strokeWidth={3} />
+            <Line yAxisId="right" type="monotone" dataKey="training_load_pct" name="Load (%)" stroke="#8b5cf6" strokeWidth={3} dot={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </section>
 
       {/* 2. Sleep Architecture */}
-      <section>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">🌙 Sleep Stage Breakdown</h3>
+      <section className="card-enhanced p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">🌙 Sleep Stage Breakdown</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={sortedBiometrics}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="dateLabel" />
-            <YAxis domain={[0, 100]} />
-            <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="dateLabel" stroke="#6b7280" />
+            <YAxis domain={[0, 100]} stroke="#6b7280" />
+            <Tooltip 
+              formatter={(v: number) => `${v.toFixed(1)}%`} 
+              contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', color: '#1f2937' }}
+            />
             <Legend />
-            <Line type="monotone" dataKey="deep_sleep_pct" name="Deep Sleep" stroke="#16a085" strokeWidth={3} dot={{ r: 4 }} />
-            <Line type="monotone" dataKey="rem_sleep_pct" name="REM Sleep" stroke="#9b59b6" strokeWidth={3} dot={{ r: 4 }} />
-            <Line type="monotone" dataKey="light_sleep_pct" name="Light Sleep" stroke="#f39c12" strokeDasharray="5 5" dot={false} />
+            <Line type="monotone" dataKey="deep_sleep_pct" name="Deep Sleep" stroke="#059669" strokeWidth={4} dot={{ r: 4 }} />
+            <Line type="monotone" dataKey="rem_sleep_pct" name="REM Sleep" stroke="#7c3aed" strokeWidth={4} dot={{ r: 4 }} />
+            <Line type="monotone" dataKey="light_sleep_pct" name="Light Sleep" stroke="#d97706" strokeWidth={4} strokeDasharray="5 5" dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </section>
 
       {/* 3. Recovery vs Training Load */}
-      <section>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">🔁 Recovery vs. Training Load</h3>
+      <section className="card-enhanced p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">🔁 Recovery vs. Training Load</h3>
         <ResponsiveContainer width="100%" height={300}>
           <ComposedChart data={sortedBiometrics}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="dateLabel" />
-            <YAxis yAxisId="left" label={{ value: 'Load %', angle: -90, position: 'insideLeft' }} />
-            <YAxis yAxisId="right" orientation="right" label={{ value: 'HRV', angle: 90, position: 'insideRight' }} />
-            <Tooltip />
-            <Legend />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <Bar yAxisId="left" dataKey="training_load_pct" name="Training Load" fill="#e74c3c" />
-            <Line yAxisId="right" type="monotone" dataKey="hrv_night" name="HRV (Recovery)" stroke="#2ecc71" strokeWidth={3} />
+            <Line yAxisId="right" type="monotone" dataKey="hrv_night" name="HRV (Recovery)" stroke="#2ecc71" strokeWidth={4} />
           </ComposedChart>
         </ResponsiveContainer>
       </section>
 
       {/* 4. HRV vs Resting HR Scatter */}
-      <section>
+      <section className="card-enhanced p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">🔄 HRV vs. Resting HR (Recovery State)</h3>
         <ResponsiveContainer width="100%" height={350}>
           <ScatterChart margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
@@ -219,6 +219,15 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             <Scatter name="Recovery State" data={sortedBiometrics} fill="#3498db" shape="circle" />
           </ScatterChart>
         </ResponsiveContainer>
+        <div className="mt-4 text-sm text-gray-600">
+          <p className="mb-2">This chart shows the relationship between Heart Rate Variability (HRV) and Resting Heart Rate (RHR):</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Higher HRV (right) indicates better recovery and parasympathetic nervous system activity</li>
+            <li>Lower RHR (top) indicates better cardiovascular fitness and recovery</li>
+            <li>Points in the top-right quadrant represent optimal recovery state</li>
+            <li>Points in the bottom-left quadrant may indicate fatigue or overtraining</li>
+          </ul>
+        </div>
       </section>
 
       {/* 5. Body Composition Trend */}
@@ -236,18 +245,18 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               <YAxis yAxisId="right" orientation="right" label={{ value: 'Mass (kg)', angle: 90, position: 'insideRight' }} />
               <Tooltip />
               <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="weight_kg" name="Weight" stroke="#3498db" />
-              <Line yAxisId="right" type="monotone" dataKey="muscle_mass_kg" name="Muscle Mass" stroke="#2ecc71" />
-              <Line yAxisId="right" type="monotone" dataKey="fat_mass_kg" name="Fat Mass" stroke="#e67e22" strokeDasharray="5 5" />
+              <Line yAxisId="left" type="monotone" dataKey="weight_kg" name="Weight" stroke="#3498db" strokeWidth={3} />
+              <Line yAxisId="right" type="monotone" dataKey="muscle_mass_kg" name="Muscle Mass" stroke="#2ecc71" strokeWidth={3} />
+              <Line yAxisId="right" type="monotone" dataKey="fat_mass_kg" name="Fat Mass" stroke="#e67e22" strokeWidth={3} strokeDasharray="5 5" />
             </LineChart>
           </ResponsiveContainer>
         </section>
       )}
 
       {/* 6. Readiness Calendar */}
-      <section>
+      <section className="card-enhanced p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">📅 Readiness Calendar (Last 7 Weeks)</h3>
-        <div className="grid grid-cols-7 gap-1 max-w-md mx-auto">
+        <div className="grid grid-cols-7 gap-1 max-w-md mx-auto mb-4">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className="text-center text-xs font-medium text-gray-600 py-1">
               {day}
@@ -256,12 +265,21 @@ export const TrendChart: React.FC<TrendChartProps> = ({
           {calendarData.map((d, i) => (
             <div
               key={i}
-              className={`w-full aspect-square flex items-center justify-center text-xs text-white font-bold rounded-sm transition-all ${getColor(d.value)}`}
+              className={`w-full aspect-square flex items-center justify-center text-xs text-white font-bold rounded-md transition-all ${getColor(d.value)}`}
               title={d.value ? `${d.value}% ready` : 'No data'}
             >
               {d.value !== null ? Math.round(d.value / 10) : ''}
             </div>
           ))}
+        </div>
+        <div className="text-sm text-gray-600">
+          <p className="mb-2">This calendar shows your daily readiness scores over the past 7 weeks:</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>🟢 Green (76-100%): Optimal recovery state</li>
+            <li>🟡 Yellow (51-75%): Moderate recovery, monitor trends</li>
+            <li>🔴 Red (0-50%): Fatigue detected, prioritize recovery</li>
+            <li>⚪ Gray: No data available for this date</li>
+          </ul>
         </div>
       </section>
 

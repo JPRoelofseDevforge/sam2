@@ -10,14 +10,14 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert }) => {
     switch (alert.type) {
       case 'inflammation':
       case 'airway':
-        return 'bg-red-900/20 border-red-500/30 text-red-300';
+        return 'bg-red-50 border-red-200 text-red-800';
       case 'circadian':
       case 'nutrition':
-        return 'bg-yellow-900/20 border-yellow-500/30 text-yellow-300';
+        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
       case 'green':
-        return 'bg-green-900/20 border-green-500/30 text-green-300';
+        return 'bg-green-50 border-green-200 text-green-800';
       default:
-        return 'bg-gray-800/20 border-gray-600/30 text-gray-300';
+        return 'bg-gray-50 border-gray-200 text-gray-800';
     }
   };
 
@@ -39,7 +39,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert }) => {
   };
 
   return (
-    <div className={`p-4 rounded-xl border-l-4 ${getAlertStyles()} mb-4`}>
+    <div className={`card-enhanced p-5 rounded-xl border-l-4 ${getAlertStyles()} mb-4`}>
       <div className="flex items-start">
         <div className="text-2xl mr-3 mt-1">{getAlertIcon()}</div>
         <div className="flex-1">

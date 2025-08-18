@@ -58,7 +58,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   }));
 
   // Determine domain for Y-axis
-  const allValues = [...sortedData.map(d => d.value), teamAverage, goalValue].filter(Boolean);
+  const allValues = [...sortedData.map(d => d.value), teamAverage, goalValue].filter(Boolean) as number[];
   const minValue = Math.min(...allValues) * 0.98;
   const maxValue = Math.max(...allValues) * 1.02;
 
@@ -75,9 +75,10 @@ const dotColor =
   'bg-red-500';
 
   return (
-    <div className="bg-white p-5 rounded-xl shadow-sm border hover:shadow transition-shadow duration-200 h-full flex flex-col">
+    <div className="card-enhanced p-5 h-full flex flex-col">
       {/* Header */}
-      <div className="mb-3">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-2xl">{icon}</div>
         <div className={`w-3 h-3 rounded-full ${dotColor}`} title={`Status: ${status}`} />
       </div>
 
@@ -86,6 +87,9 @@ const dotColor =
         <span className="text-2xl font-bold text-gray-900">{value.toFixed(1)}</span>
         <span className="text-sm text-gray-500 ml-1">{unit}</span>
       </div>
+      
+      {/* Title */}
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">{title}</h3>
 
       {/* Sparkline Chart */}
       <div className="flex-1 min-h-[70px] mb-3">
@@ -94,8 +98,8 @@ const dotColor =
             <XAxis hide dataKey="name" />
             <YAxis hide domain={[minValue, maxValue]} />
             <Tooltip
-              contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '6px' }}
-              itemStyle={{ color: '#fff' }}
+              contentStyle={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '8px' }}
+              itemStyle={{ color: '#1a202c' }}
               formatter={(val: number, name: string) => {
                 const unitMap: Record<string, string> = {
                   'HRV (Night)': 'ms',
@@ -118,12 +122,12 @@ const dotColor =
             {goalValue && (
               <ReferenceLine
                 y={goalValue}
-                stroke="#8884d8"
+                stroke="#6c00ff"
                 strokeDasharray="3 3"
                 label={{
                   value: goalLabel,
                   position: 'left',
-                  fill: '#8884d8',
+                  fill: '#6c00ff',
                   fontSize: 10,
                   offset: 5,
                 }}
@@ -134,12 +138,12 @@ const dotColor =
             {teamAverage && (
               <ReferenceLine
                 y={teamAverage}
-                stroke="#82ca9d"
+                stroke="#38bdf8"
                 strokeDasharray="4 2"
                 label={{
                   value: 'Team Avg',
                   position: 'right',
-                  fill: '#82ca9d',
+                  fill: '#38bdf8',
                   fontSize: 10,
                   offset: 5,
                 }}
@@ -171,13 +175,13 @@ const dotColor =
   <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-1">
     {goalValue && (
       <div className="flex items-center">
-        <div className="w-3 h-0.5 bg-[#8884d8] mr-1 border-dashed"></div>
+        <div className="w-3 h-0.5 bg-[#6c00ff] mr-1 border-dashed"></div>
         <span>{goalLabel}</span>
       </div>
     )}
     {teamAverage && (
       <div className="flex items-center">
-        <div className="w-3 h-0.5 bg-[#82ca9d] mr-1 border-dashed border-0.5"></div>
+        <div className="w-3 h-0.5 bg-[#38bdf8] mr-1 border-dashed border-0.5"></div>
         <span>Team Avg</span>
       </div>
     )}
