@@ -93,8 +93,13 @@ export const geneticProfiles: GeneticProfile[] = [
   // Generate genetic profiles for all 23 rugby players
   ...Array.from({ length: 23 }, (_, athleteIndex) => {
     const athleteId = `ATH${String(athleteIndex + 1).padStart(3, '0')}`;
-    // Common genetic markers relevant to athletic performance
-    const genes = ['ACTN3', 'ACE', 'PPARGC1A', 'ADRB2', 'VDR', 'COL1A1'];
+    // Common genetic markers relevant to athletic performance and recovery
+    const genes = [
+      'ACTN3', 'ACE', 'PPARGC1A', 'ADRB2', 'VDR', 'COL1A1',
+      // Additional genes for enhanced features
+      'IL6', 'TNF', 'IL10', 'ADRB1', 'CLOCK', 'HSD11B1', 'COMT',
+      'MTHFR', 'FTO', 'NOS3', 'SLCO1B1', 'VKORC1', 'CFTR', 'CYP2D6', 'CYP2C19'
+    ];
     return genes.map(gene => {
       // Generate random genotypes for each gene
       let genotype = '';
@@ -128,6 +133,81 @@ export const geneticProfiles: GeneticProfile[] = [
           // COL1A1 gene variants
           const col1a1Variants = ['SS', 'SP', 'PP'];
           genotype = col1a1Variants[Math.floor(Math.random() * col1a1Variants.length)];
+          break;
+        case 'IL6':
+          // IL6 gene variants (-174 G/C)
+          const il6Variants = ['GG', 'GC', 'CC'];
+          genotype = il6Variants[Math.floor(Math.random() * il6Variants.length)];
+          break;
+        case 'TNF':
+          // TNF gene variants (-308 G/A)
+          const tnfVariants = ['GG', 'GA', 'AA'];
+          genotype = tnfVariants[Math.floor(Math.random() * tnfVariants.length)];
+          break;
+        case 'IL10':
+          // IL10 gene variants (-1082 G/A)
+          const il10Variants = ['GG', 'GA', 'AA'];
+          genotype = il10Variants[Math.floor(Math.random() * il10Variants.length)];
+          break;
+        case 'ADRB1':
+          // ADRB1 gene variants (Arg389Gly)
+          const adrb1Variants = ['AA', 'AG', 'GG'];
+          genotype = adrb1Variants[Math.floor(Math.random() * adrb1Variants.length)];
+          break;
+        case 'CLOCK':
+          // CLOCK gene variants (3111 T/C)
+          const clockVariants = ['TT', 'TC', 'CC'];
+          genotype = clockVariants[Math.floor(Math.random() * clockVariants.length)];
+          break;
+        case 'HSD11B1':
+          // HSD11B1 gene variants (537 T/C)
+          const hsd11b1Variants = ['TT', 'TC', 'CC'];
+          genotype = hsd11b1Variants[Math.floor(Math.random() * hsd11b1Variants.length)];
+          break;
+        case 'COMT':
+          // COMT gene variants (Val158Met)
+          const comtVariants = ['AA', 'AG', 'GG']; // Val/Val, Val/Met, Met/Met
+          genotype = comtVariants[Math.floor(Math.random() * comtVariants.length)];
+          break;
+        case 'MTHFR':
+          // MTHFR gene variants (C677T)
+          const mthfrVariants = ['CC', 'CT', 'TT'];
+          genotype = mthfrVariants[Math.floor(Math.random() * mthfrVariants.length)];
+          break;
+        case 'FTO':
+          // FTO gene variants (rs9939609 A/T)
+          const ftoVariants = ['AA', 'AT', 'TT'];
+          genotype = ftoVariants[Math.floor(Math.random() * ftoVariants.length)];
+          break;
+        case 'NOS3':
+          // NOS3 gene variants (G894T)
+          const nos3Variants = ['GG', 'GT', 'TT'];
+          genotype = nos3Variants[Math.floor(Math.random() * nos3Variants.length)];
+          break;
+        case 'SLCO1B1':
+          // SLCO1B1 gene variants (521 T/C)
+          const slco1b1Variants = ['TT', 'TC', 'CC'];
+          genotype = slco1b1Variants[Math.floor(Math.random() * slco1b1Variants.length)];
+          break;
+        case 'VKORC1':
+          // VKORC1 gene variants (-1639 G/A)
+          const vkorc1Variants = ['GG', 'GA', 'AA'];
+          genotype = vkorc1Variants[Math.floor(Math.random() * vkorc1Variants.length)];
+          break;
+        case 'CFTR':
+          // CFTR gene variants (F508del)
+          const cftrVariants = ['FF', 'Fdel', 'deldel'];
+          genotype = cftrVariants[Math.floor(Math.random() * cftrVariants.length)];
+          break;
+        case 'CYP2D6':
+          // CYP2D6 gene variants (metabolizer status)
+          const cyp2d6Variants = ['Poor', 'Intermediate', 'Extensive', 'Ultra'];
+          genotype = cyp2d6Variants[Math.floor(Math.random() * cyp2d6Variants.length)] + ' Metabolizer';
+          break;
+        case 'CYP2C19':
+          // CYP2C19 gene variants (metabolizer status)
+          const cyp2c19Variants = ['Poor', 'Intermediate', 'Extensive', 'Ultra'];
+          genotype = cyp2c19Variants[Math.floor(Math.random() * cyp2c19Variants.length)] + ' Metabolizer';
           break;
         default:
           genotype = 'Unknown';

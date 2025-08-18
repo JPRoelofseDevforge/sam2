@@ -17,6 +17,12 @@ import { BodyComposition } from './BodyComposition';
 import { ArrowLeft } from 'lucide-react';
 import { getTeamAverage } from '../utils/analytics';
 import { DigitalTwin3D } from './DigitalTwin';
+import { TeamComparisonDashboard } from './TeamComparisonDashboard';
+import { TrainingLoadHeatmap } from './TrainingLoadHeatmap';
+import { RecoveryTimeline } from './RecoveryTimeline';
+import { Pharmacogenomics } from './Pharmacogenomics';
+import { Nutrigenomics } from './Nutrigenomics';
+import { RecoveryGenePanel } from './RecoveryGenePanel';
 
 interface AthleteProfileProps {
   athleteId: string;
@@ -27,7 +33,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
   athleteId, 
   onBack 
 }) => {
-  const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'body' | 'digitalTwin'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'body' | 'digitalTwin' | 'teamCompare' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes'>('metrics');
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
 
   const athlete = athletes.find(a => a.athlete_id === athleteId);
@@ -75,7 +81,13 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
     { id: 'trends' as const, label: 'Trends & Analysis', icon: '📈', count: athleteBiometrics.length },
     { id: 'insights' as const, label: 'Predictive Insights', icon: '🧠', count: geneticInsights.length },
     { id: 'body' as const, label: 'Body Composition', icon: '⚖️', count: athleteBodyComp ? 1 : 0 },
-    { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 }
+    { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 },
+    { id: 'teamCompare' as const, label: 'Team Compare', icon: '👥', count: 0 },
+    { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: 0 },
+    { id: 'recoveryTimeline' as const, label: 'Recovery Timeline', icon: '📅', count: 0 },
+    { id: 'pharmacogenomics' as const, label: 'Pharmacogenomics', icon: '💊', count: 0 },
+    { id: 'nutrigenomics' as const, label: 'Nutrigenomics', icon: '🥗', count: 0 },
+    { id: 'recoveryGenes' as const, label: 'Recovery Genes', icon: '🧬', count: 0 }
   ];
 
   // Helper for getting label color class
@@ -621,6 +633,30 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
 
         {activeTab === 'digitalTwin' && (
           <DigitalTwin3D athleteId={athleteId} />
+        )}
+        
+        {activeTab === 'teamCompare' && (
+          <TeamComparisonDashboard />
+        )}
+        
+        {activeTab === 'trainingLoad' && (
+          <TrainingLoadHeatmap />
+        )}
+        
+        {activeTab === 'recoveryTimeline' && (
+          <RecoveryTimeline />
+        )}
+        
+        {activeTab === 'pharmacogenomics' && (
+          <Pharmacogenomics athleteId={athleteId} />
+        )}
+        
+        {activeTab === 'nutrigenomics' && (
+          <Nutrigenomics athleteId={athleteId} />
+        )}
+        
+        {activeTab === 'recoveryGenes' && (
+          <RecoveryGenePanel athleteId={athleteId} />
         )}
       </div>
     </div>

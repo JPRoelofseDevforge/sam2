@@ -287,6 +287,9 @@ return (
         />
       </div>
 
+      {/* New Features Summary */}
+      
+
       {/* Athletes Grid */}
       <section className="athletes-section">
         <h2 className="section-title text-white">👥 Athlete Status</h2>
