@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   athletes, 
   biometricData, 
@@ -34,9 +34,10 @@ interface AthleteProfileProps {
 
 export const AthleteProfile: React.FC<AthleteProfileProps> = ({
     athleteId,
-    onBack
-  }) => {
-    const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'body' | 'digitalTwin' | 'teamCompare' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather'>('metrics');
+      onBack
+    }) => {
+      const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'body' | 'digitalTwin' | 'teamCompare' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather'>('metrics');
+    const tabContentRef = useRef<HTMLDivElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
 
   const athlete = athletes.find(a => a.athlete_id === athleteId);
@@ -160,7 +161,13 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  // Scroll to top of tab content with smooth animation
+                  if (tabContentRef.current) {
+                    tabContentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
                 className={`flex items-center justify-start sm:justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium transition-all duration-200 relative group
                   ${isActive
                     ? 'text-blue-600 bg-blue-50'
@@ -195,7 +202,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
       </div>
 
       {/* Tab Content */}
-      <div className="mt-6">
+      <div ref={tabContentRef} className="mt-6">
         {activeTab === 'metrics' && latest && (
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
