@@ -24,13 +24,14 @@ export const athletes: Athlete[] = [
   { athlete_id: 'ATH020', name: 'Siphiwe Mazibuko', sport: 'Rugby Sevens', age: 27, team: 'Rugby Sevens Team' },
   { athlete_id: 'ATH021', name: 'Souheil Tahiri', sport: 'Rugby Sevens', age: 18, team: 'Rugby Sevens Team' },
   { athlete_id: 'ATH022', name: 'Steffan De Jongh', sport: 'Rugby Sevens', age: 18, team: 'Rugby Sevens Team' },
-  { athlete_id: 'ATH023', name: 'Torbyn Visser', sport: 'Rugby Sevens', age: 22, team: 'Rugby Sevens Team' }
+  { athlete_id: 'ATH023', name: 'Torbyn Visser', sport: 'Rugby Sevens', age: 22, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH024', name: 'Emile Demant', sport: 'Rugby Sevens', age: 24, team: 'Rugby Sevens Team' }
 ];
 
 // === BIOMETRIC DATA (10 weeks: Jul 10 - Sep 18) ===
 export const biometricData: BiometricData[] = [
-  // Generate biometric data for all 23 rugby players
-  ...Array.from({ length: 23 }, (_, athleteIndex) => {
+  // Generate biometric data for all 24 rugby players
+  ...Array.from({ length: 24 }, (_, athleteIndex) => {
     const athleteId = `ATH${String(athleteIndex + 1).padStart(3, '0')}`;
     return Array.from({ length: 70 }, (_, i) => {
       const date = new Date(2025, 6, 10 + i).toISOString().split('T')[0]; // 2025-07-10 to 2025-09-18
@@ -90,8 +91,8 @@ export const biometricData: BiometricData[] = [
 
 // === GENETIC PROFILES (All 23 athletes) ===
 export const geneticProfiles: GeneticProfile[] = [
-  // Generate genetic profiles for all 23 rugby players
-  ...Array.from({ length: 23 }, (_, athleteIndex) => {
+  // Generate genetic profiles for all 24 rugby players
+  ...Array.from({ length: 24 }, (_, athleteIndex) => {
     const athleteId = `ATH${String(athleteIndex + 1).padStart(3, '0')}`;
     // Common genetic markers relevant to athletic performance and recovery
     const genes = [
@@ -223,8 +224,8 @@ export const geneticProfiles: GeneticProfile[] = [
 
 // === BODY COMPOSITION (Daily measurements from 2025-07-01) ===
 export const bodyCompositionData: BodyComposition[] = [
-  // Generate body composition data for all 23 rugby players
-  ...Array.from({ length: 23 }, (_, athleteIndex) => {
+  // Generate body composition data for all 24 rugby players
+  ...Array.from({ length: 24 }, (_, athleteIndex) => {
     const athleteId = `ATH${String(athleteIndex + 1).padStart(3, '0')}`;
     
     // Generate 30 days of data for each athlete (from 2025-07-01 to 2025-07-30)
@@ -289,7 +290,7 @@ export const bodyCompositionData: BodyComposition[] = [
       const smi = skeletalMuscle / (height * height);
       
       // Body age (typically close to chronological age for athletes)
-      const chronologicalAge = [22, 19, 23, 22, 19, 20, 18, 23, 20, 23, 19, 19, 18, 18, 23, 21, 18, 22, 20, 27, 18, 18, 22][athleteIndex];
+      const chronologicalAge = [22, 19, 23, 22, 19, 20, 18, 23, 20, 23, 19, 19, 18, 18, 23, 21, 18, 22, 20, 27, 18, 18, 22, 24][athleteIndex];
       const bodyAge = chronologicalAge + Math.floor(Math.random() * 3) - 1;
       
       // Symmetry measurements (arm and leg mass)
