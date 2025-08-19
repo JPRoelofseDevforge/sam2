@@ -294,7 +294,11 @@ return (
       {/* Header */}
       <header className="header-section">
         <h1 className="logo-text">
-          🧬 <span className="sam-text">SAM</span> Recovery
+          <img
+            src="/SAMLogo.png"
+            alt="SAM Recovery Logo"
+            className="h-8 md:h-10 lg:h-12 w-auto object-contain"
+          />
         </h1>
         <p className="tagline">
           Precision Recovery Through Genetics × Biometrics × Environment

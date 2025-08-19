@@ -78,14 +78,9 @@ body {
 }
 
 .logo-text {
-  font-size: 3rem;
-  font-weight: 800;
-  background: linear-gradient(90deg, #4c1d95, #0072ff, #38bdf8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: 0 4px 15px rgba(76, 29, 149, 0.3);
-  letter-spacing: -0.5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .sam-text {
@@ -644,6 +639,40 @@ body {
   
   .section-title {
     font-size: 1.75rem;
+  }
+
+  /* Mobile Navigation Menu */
+  .mobile-menu {
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  .mobile-menu-button {
+    color: #4a5568;
+  }
+
+  .mobile-menu-button:hover {
+    color: #2d3748;
+    background-color: rgba(0, 0, 0, 0.03);
+  }
+
+  .mobile-menu-item {
+    border-left-width: 4px;
+    border-left-color: transparent;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-menu-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-left-color: #cbd5e0;
+  }
+
+  .mobile-menu-item.active {
+    background-color: #eff6ff;
+    border-left-color: #3b82f6;
+    color: #1d4ed8;
   }
 }
 
