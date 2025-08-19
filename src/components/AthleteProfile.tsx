@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   athletes, 
   biometricData, 
@@ -23,17 +23,20 @@ import { RecoveryTimeline } from './RecoveryTimeline';
 import { Pharmacogenomics } from './Pharmacogenomics';
 import { Nutrigenomics } from './Nutrigenomics';
 import { RecoveryGenePanel } from './RecoveryGenePanel';
+import { PredictiveAnalytics } from './PredictiveAnalytics';
+import { SleepMetrics } from './SleepMetrics';
+import { StressManagement } from './StressManagement';
 
 interface AthleteProfileProps {
   athleteId: string;
   onBack: () => void;
 }
 
-export const AthleteProfile: React.FC<AthleteProfileProps> = ({ 
-  athleteId, 
-  onBack 
-}) => {
-  const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'body' | 'digitalTwin' | 'teamCompare' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes'>('metrics');
+export const AthleteProfile: React.FC<AthleteProfileProps> = ({
+    athleteId,
+    onBack
+  }) => {
+    const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'body' | 'digitalTwin' | 'teamCompare' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather'>('metrics');
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
 
   const athlete = athletes.find(a => a.athlete_id === athleteId);
@@ -77,18 +80,22 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
   ];
 
   const tabs = [
-    { id: 'metrics' as const, label: 'Current Metrics', icon: '📊', count: latest ? 9 : 0 },
-    { id: 'trends' as const, label: 'Trends & Analysis', icon: '📈', count: athleteBiometrics.length },
-    { id: 'insights' as const, label: 'Predictive Insights', icon: '🧠', count: geneticInsights.length },
-    { id: 'body' as const, label: 'Body Composition', icon: '⚖️', count: athleteBodyComp ? 1 : 0 },
-    { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 },
-    { id: 'teamCompare' as const, label: 'Team Compare', icon: '👥', count: 0 },
-    { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: 0 },
-    { id: 'recoveryTimeline' as const, label: 'Recovery Timeline', icon: '📅', count: 0 },
-    { id: 'pharmacogenomics' as const, label: 'Pharmacogenomics', icon: '💊', count: 0 },
-    { id: 'nutrigenomics' as const, label: 'Nutrigenomics', icon: '🥗', count: 0 },
-    { id: 'recoveryGenes' as const, label: 'Recovery Genes', icon: '🧬', count: 0 }
-  ];
+      { id: 'metrics' as const, label: 'Current Metrics', icon: '📊', count: latest ? 9 : 0 },
+      { id: 'trends' as const, label: 'Trends & Analysis', icon: '📈', count: athleteBiometrics.length },
+      { id: 'insights' as const, label: 'Predictive Insights', icon: '🧠', count: geneticInsights.length },
+      { id: 'body' as const, label: 'Body Composition', icon: '⚖️', count: athleteBodyComp ? 1 : 0 },
+      { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 },
+      { id: 'teamCompare' as const, label: 'Team Compare', icon: '👥', count: 0 },
+      { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: 0 },
+      { id: 'recoveryTimeline' as const, label: 'Recovery Timeline', icon: '📅', count: 0 },
+      { id: 'pharmacogenomics' as const, label: 'Pharmacogenomics', icon: '💊', count: 0 },
+      { id: 'nutrigenomics' as const, label: 'Nutrigenomics', icon: '🥗', count: 0 },
+      { id: 'recoveryGenes' as const, label: 'Recovery Genes', icon: '🧬', count: 0 },
+      { id: 'sleep' as const, label: 'Sleep Metrics', icon: '🌙', count: 0 },
+      { id: 'stress' as const, label: 'Stress Management', icon: '🧘', count: 0 },
+      { id: 'predictive' as const, label: 'Predictive Analytics', icon: '🔮', count: 0 },
+      { id: 'weather' as const, label: 'Weather Impact', icon: '🌤️', count: 0 }
+    ];
 
   // Helper for getting label color class
   const getLabelColorClass = (id: string) => {
@@ -118,11 +125,18 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
           
           <div>
             <h3 className="text-lg font-semibold mb-2 text-gray-900">🧬 Genetic Profile</h3>
-            {Object.entries(geneticDict).map(([gene, genotype]) => (
-              <div key={gene} className="text-sm text-gray-700">
-                <strong>{gene}:</strong> {genotype}
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(geneticDict).slice(0, 10).map(([gene, genotype], index) => (
+                <div key={gene} className="text-sm text-gray-700">
+                  <strong>{gene}:</strong> {genotype}
+                </div>
+              ))}
+            </div>
+            {Object.entries(geneticDict).length > 10 && (
+              <div className="text-xs text-gray-500 mt-2">
+                Showing top 10 of {Object.entries(geneticDict).length} genes
               </div>
-            ))}
+            )}
           </div>
           
           <div className="text-center">
@@ -207,7 +221,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 goalValue={50}
                 goalLabel="Target"
               />
-
+              
               {/* Resting HR */}
               <MetricCard
                 title="Resting HR"
@@ -221,7 +235,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 goalValue={60}
                 goalLabel="Ideal"
               />
-
+              
               {/* Deep Sleep */}
               <MetricCard
                 title="Deep Sleep"
@@ -235,7 +249,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 goalValue={20}
                 goalLabel="Min"
               />
-
+              
               {/* REM Sleep */}
               <MetricCard
                 title="REM Sleep"
@@ -249,7 +263,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 goalValue={18}
                 goalLabel="Target"
               />
-
+              
               {/* Sleep Duration */}
               <MetricCard
                 title="Sleep Duration"
@@ -263,7 +277,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 goalValue={7}
                 goalLabel="Recommended"
               />
-
+              
               {/* SpO₂ */}
               <MetricCard
                 title="SpO₂ (Night)"
@@ -277,7 +291,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 goalValue={96}
                 goalLabel="Healthy"
               />
-
+              
               {/* Respiratory Rate */}
               <MetricCard
                 title="Respiratory Rate"
@@ -291,7 +305,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 goalValue={16}
                 goalLabel="Max"
               />
-
+              
               {/* Body Temp */}
               <MetricCard
                 title="Body Temp"
@@ -305,7 +319,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 goalValue={36.8}
                 goalLabel="Normal"
               />
-
+              
               {/* Training Load */}
               <MetricCard
                 title="Training Load"
@@ -658,6 +672,311 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
         {activeTab === 'recoveryGenes' && (
           <RecoveryGenePanel athleteId={athleteId} />
         )}
+        
+        {activeTab === 'predictive' && (
+                <PredictiveAnalytics athleteId={athleteId} />
+              )}
+        
+              {activeTab === 'sleep' && (
+                <SleepMetrics
+                  biometricData={athleteBiometrics}
+                  athleteId={athleteId}
+                />
+              )}
+              
+              {activeTab === 'stress' && (
+                <StressManagement
+                  athleteId={athleteId}
+                  biometricData={athleteBiometrics}
+                />
+              )}
+              
+              {activeTab === 'weather' && (
+                <WeatherImpact
+                  athleteId={athleteId}
+                  geneticData={athleteGenetics}
+                />
+              )}
+      </div>
+    </div>
+  );
+};
+
+// Weather Impact Component
+const WeatherImpact: React.FC<{ athleteId: string; geneticData: any[] }> = ({ athleteId, geneticData }) => {
+  const [airQuality, setAirQuality] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔧 CONFIG: Replace with your actual location and IQAir API key
+  const IQAIR_API_KEY = import.meta.env.VITE_IQAIR_API_KEY || 'f8e6fb6c-6ec0-4064-a46b-a173e4137718';
+  const CITY = import.meta.env.VITE_CITY || 'Pretoria';
+  const STATE = import.meta.env.VITE_STATE || 'Gauteng';
+  const COUNTRY = import.meta.env.VITE_COUNTRY || 'South Africa';
+
+  // Fetch Air Quality from IQAir
+  useEffect(() => {
+    const fetchAirQuality = async () => {
+      try {
+        setLoading(true);
+        const url = new URL('https://api.airvisual.com/v2/city');
+        url.searchParams.append('city', CITY);
+        url.searchParams.append('state', STATE);
+        url.searchParams.append('country', COUNTRY);
+        url.searchParams.append('key', IQAIR_API_KEY);
+
+        const res = await fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+        const json = await res.json();
+        const current = json.data.current;
+
+        setAirQuality({
+          temperature: current.weather.tp,
+          humidity: current.weather.hu,
+          aqi: current.pollution.aqius,
+          co: current.pollution.co,
+          pm25: current.pollution.pm25,
+          pm10: current.pollution.pm10,
+          windSpeed: current.weather.ws,
+          pressure: current.weather.pr,
+          weatherCondition: current.weather.ic,
+          lastUpdated: new Date().toLocaleTimeString(),
+        });
+        setError(null);
+      } catch (err: any) {
+        console.error('AirQuality API Error:', err);
+        setError(err.message || 'Failed to load air quality');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAirQuality();
+    const interval = setInterval(fetchAirQuality, 300000); // Refresh every 5 minutes
+    return () => clearInterval(interval);
+  }, []);
+
+  const getWeatherIcon = (condition: string | undefined) => {
+    if (!condition) return '☁️';
+    switch (condition) {
+      case '01d': return '☀️'; // clear sky
+      case '01n': return '🌙'; // clear sky (night)
+      case '02d': return '⛅'; // few clouds
+      case '02n': return '☁️'; // few clouds (night)
+      case '03d':
+      case '03n': return '☁️'; // scattered clouds
+      case '04d':
+      case '04n': return '☁️'; // broken clouds
+      case '09d':
+      case '09n': return '🌧️'; // shower rain
+      case '10d':
+      case '10n': return '🌧️'; // rain
+      case '11d':
+      case '11n': return '⛈️'; // thunderstorm
+      case '13d':
+      case '13n': return '❄️'; // snow
+      case '50d':
+      case '50n': return '🌫️'; // mist
+      default: return '☁️';
+    }
+  };
+
+  const getWeatherDescription = (condition: string | undefined) => {
+    if (!condition) return 'Unknown';
+    switch (condition) {
+      case '01d':
+      case '01n': return 'Clear';
+      case '02d':
+      case '02n': return 'Few Clouds';
+      case '03d':
+      case '03n': return 'Scattered Clouds';
+      case '04d':
+      case '04n': return 'Broken Clouds';
+      case '09d':
+      case '09n': return 'Shower Rain';
+      case '10d':
+      case '10n': return 'Rain';
+      case '11d':
+      case '11n': return 'Thunderstorm';
+      case '13d':
+      case '13n': return 'Snow';
+      case '50d':
+      case '50n': return 'Mist';
+      default: return 'Cloudy';
+    }
+  };
+
+  const getWeatherImpact = (temperature: number | undefined, humidity: number | undefined, windSpeed: number | undefined, geneticData: any[]) => {
+    const impacts = [];
+    
+    // Check for genetic factors that affect heat tolerance
+    const actn3Genotype = geneticData.find(g => g.gene === 'ACTN3')?.genotype;
+    const adrb2Genotype = geneticData.find(g => g.gene === 'ADRB2')?.genotype;
+    
+    if (temperature && temperature > 30) {
+      if (actn3Genotype === 'XX') {
+        impacts.push("Heat stress risk - ACTN3 XX genotype has reduced heat tolerance");
+      } else {
+        impacts.push("Heat stress risk");
+      }
+    }
+    
+    if (temperature && temperature < 5) {
+      impacts.push("Cold stress risk");
+    }
+    
+    if (humidity && humidity > 80) {
+      if (adrb2Genotype === 'Gly16Gly') {
+        impacts.push("High humidity impact - ADRB2 Gly16Gly genotype affects sweat response");
+      } else {
+        impacts.push("High humidity impact");
+      }
+    }
+    
+    if (windSpeed && windSpeed > 10) {
+      impacts.push("High wind resistance");
+    }
+    
+    return impacts.length > 0 ? impacts : ["Optimal conditions"];
+  };
+
+  const getWeatherRecommendations = (temperature: number | undefined, humidity: number | undefined, windSpeed: number | undefined, geneticData: any[]) => {
+    const recommendations = [];
+    
+    // Check for genetic factors that affect heat tolerance
+    const actn3Genotype = geneticData.find(g => g.gene === 'ACTN3')?.genotype;
+    const adrb2Genotype = geneticData.find(g => g.gene === 'ADRB2')?.genotype;
+    const cftrGenotype = geneticData.find(g => g.gene === 'CFTR')?.genotype;
+    
+    if (temperature && temperature > 30) {
+      if (actn3Genotype === 'XX') {
+        recommendations.push("Extended cooling protocols - ACTN3 XX genotype has reduced heat tolerance");
+      }
+      recommendations.push("Increase hydration, consider electrolyte supplementation");
+    }
+    
+    if (temperature && temperature < 5) {
+      recommendations.push("Extended warm-up, layer clothing appropriately");
+    }
+    
+    if (humidity && humidity > 80) {
+      if (adrb2Genotype === 'Gly16Gly') {
+        recommendations.push("Monitor hydration closely - ADRB2 Gly16Gly genotype affects sweat response");
+      } else {
+        recommendations.push("Monitor hydration closely, expect reduced evaporative cooling");
+      }
+    }
+    
+    if (windSpeed && windSpeed > 10) {
+      recommendations.push("Adjust pacing strategy, expect increased energy expenditure");
+    }
+    
+    if (cftrGenotype && cftrGenotype.includes('del') && (temperature && temperature > 25)) {
+      recommendations.push("Monitor for dehydration - CFTR mutations affect sweat composition");
+    }
+    
+    if (temperature && temperature >= 20 && temperature <= 25) {
+      recommendations.push("Optimal performance conditions");
+    }
+    
+    return recommendations.length > 0 ? recommendations : ["Standard training protocols apply"];
+  };
+
+  const getWeatherAlert = (temperature: number | undefined, humidity: number | undefined, windSpeed: number | undefined, aqi: number | undefined) => {
+    if (aqi && aqi > 150) return { type: 'high', message: 'Poor air quality - increased respiratory stress risk' };
+    if (temperature && temperature > 35) return { type: 'high', message: 'Extreme heat - heat illness risk' };
+    if (temperature && temperature < 0) return { type: 'high', message: 'Extreme cold - hypothermia risk' };
+    if (windSpeed && windSpeed > 15) return { type: 'medium', message: 'Strong winds - increased injury risk' };
+    if (humidity && humidity > 90) return { type: 'medium', message: 'Very high humidity - heat dissipation impaired' };
+    if (aqi && aqi > 100) return { type: 'medium', message: 'Moderate air quality - some respiratory sensitivity' };
+    return { type: 'low', message: 'Weather conditions are favorable for training' };
+  };
+
+  if (loading) return <div className="text-center py-12">Loading weather data...</div>;
+  if (error) return <div className="text-center py-12 text-red-600">Error: {error}</div>;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-white mb-6">🌤️ Weather Impact Analysis</h2>
+      
+      <div className="card-enhanced p-6">
+        <h3 className="text-xl font-semibold mb-4">Current Conditions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-3xl mb-2">{getWeatherIcon(airQuality?.weatherCondition)}</div>
+            <div className="text-lg font-semibold">{getWeatherDescription(airQuality?.weatherCondition)}</div>
+            <div className="text-gray-600">Condition</div>
+          </div>
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-3xl mb-2">🌡️</div>
+            <div className="text-lg font-semibold">{airQuality?.temperature}°C</div>
+            <div className="text-gray-600">Temperature</div>
+          </div>
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-3xl mb-2">💧</div>
+            <div className="text-lg font-semibold">{airQuality?.humidity}%</div>
+            <div className="text-gray-600">Humidity</div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="card-enhanced p-6">
+        <h3 className="text-xl font-semibold mb-4">Weather Alert</h3>
+        <div className={`p-4 rounded-lg text-center ${
+          getWeatherAlert(airQuality?.temperature, airQuality?.humidity, airQuality?.windSpeed, airQuality?.aqi).type === 'high'
+            ? 'bg-red-100 text-red-800'
+            : getWeatherAlert(airQuality?.temperature, airQuality?.humidity, airQuality?.windSpeed, airQuality?.aqi).type === 'medium'
+              ? 'bg-yellow-100 text-yellow-800'
+              : 'bg-green-100 text-green-800'
+        }`}>
+          {getWeatherAlert(airQuality?.temperature, airQuality?.humidity, airQuality?.windSpeed, airQuality?.aqi).message}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="card-enhanced p-6">
+          <h3 className="text-xl font-semibold mb-4">Potential Impacts</h3>
+          <ul className="space-y-2">
+            {getWeatherImpact(airQuality?.temperature, airQuality?.humidity, airQuality?.windSpeed, geneticData).map((impact, index) => (
+              <li key={index} className="flex items-start">
+                <span className="text-yellow-500 mr-2">⚠️</span>
+                <span>{impact}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        
+        <div className="card-enhanced p-6">
+          <h3 className="text-xl font-semibold mb-4">Recommendations</h3>
+          <ul className="space-y-2">
+            {getWeatherRecommendations(airQuality?.temperature, airQuality?.humidity, airQuality?.windSpeed, geneticData).map((rec, index) => (
+              <li key={index} className="flex items-start">
+                <span className="text-blue-500 mr-2">💡</span>
+                <span>{rec}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      
+      <div className="card-enhanced p-6">
+        <h3 className="text-xl font-semibold mb-4">Genetic Considerations</h3>
+        <div className="text-sm text-gray-700">
+          <p className="mb-2">
+            Your genetic profile affects how weather conditions impact your performance and recovery:
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>ACTN3 XX genotype: Reduced power output in heat</li>
+            <li>ADRB2 Gly16Gly genotype: Altered sweat response in humidity</li>
+            <li>CFTR mutations: Increased dehydration risk in heat</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

@@ -212,6 +212,21 @@ body {
   border-radius: 24px;
 }
 
+.metric-item-wind {
+  border-image: linear-gradient(45deg, #8b5cf6, #6366f1) 1;
+  border-radius: 24px;
+}
+
+.metric-item-pressure {
+  border-image: linear-gradient(45deg, #10b981, #059669) 1;
+  border-radius: 24px;
+}
+
+.metric-item-condition {
+  border-image: linear-gradient(45deg, #06b6d4, #0891b2) 1;
+  border-radius: 24px;
+}
+
 .metric-value {
   font-size: 1.8rem;
   font-weight: 800;
@@ -641,6 +656,95 @@ body {
   .athletes-grid {
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   }
+}
+
+/* Weather Impact Card */
+.weather-impact-card {
+  @apply card-enhanced;
+  padding: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.weather-impact-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.weather-impact-summary h3,
+.weather-impacts h3,
+.weather-recommendations h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 1rem;
+}
+
+.weather-impact-summary p {
+  font-size: 1.1rem;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.weather-impacts ul,
+.weather-recommendations ul {
+  list-style: none;
+}
+
+.impact-item,
+.recommendation-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(245, 245, 255, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(108, 0, 255, 0.1);
+}
+
+.impact-icon,
+.rec-icon {
+  margin-right: 0.75rem;
+  font-size: 1.2rem;
+}
+
+.impact-text,
+.rec-text {
+  color: #4a5568;
+  font-weight: 500;
+  flex: 1;
+}
+
+.weather-alert h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 1rem;
+}
+
+.alert-message {
+  padding: 1rem;
+  border-radius: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.alert-high {
+  background: rgba(254, 242, 242, 0.95);
+  border: 2px solid #fecaca;
+  color: #dc2626;
+}
+
+.alert-medium {
+  background: rgba(254, 252, 232, 0.95);
+  border: 2px solid #fef08a;
+  color: #d97706;
+}
+
+.alert-low {
+  background: rgba(240, 253, 244, 0.95);
+  border: 2px solid #bbf7d0;
+  color: #16a34a;
 }
 
 /* Optional: Subtle glow on interactive elements */
