@@ -5,11 +5,13 @@ import { TeamComparisonDashboard } from './components/TeamComparisonDashboard';
 import { TrainingLoadHeatmap } from './components/TrainingLoadHeatmap';
 import { RecoveryTimeline } from './components/RecoveryTimeline';
 import { PredictiveAnalytics } from './components/PredictiveAnalytics';
+import { useAuth } from './auth/AuthContext';
 
 function App() {
   const [currentView, setCurrentView] = useState<'team' | 'athlete' | 'comparison' | 'trainingLoad' | 'recoveryTimeline' | 'predictive' | 'whoopStress'>('team');
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { logout } = useAuth();
 
   const handleAthleteClick = (athleteId: string) => {
     setSelectedAthleteId(athleteId);
@@ -120,6 +122,12 @@ return (
             >
               Predictive Analytics
             </button>
+            <button
+              onClick={logout}
+              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>
@@ -191,6 +199,15 @@ return (
             }`}
           >
             Predictive Analytics
+          </button>
+          <button
+            onClick={() => {
+              logout();
+              setIsMobileMenuOpen(false);
+            }}
+            className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-red-600 hover:bg-red-50 hover:border-red-300"
+          >
+            Logout
           </button>
         </div>
       </div>
