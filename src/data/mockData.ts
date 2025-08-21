@@ -9,7 +9,7 @@ export const athletes: Athlete[] = [
   { athlete_id: 'ATH005', name: 'Dijan Labuschagne', sport: 'Rugby Sevens', age: 19, team: 'Rugby Sevens Team' },
   { athlete_id: 'ATH006', name: 'Ethan Gordon', sport: 'Rugby Sevens', age: 20, team: 'Rugby Sevens Team' },
   { athlete_id: 'ATH007', name: 'George Evans', sport: 'Rugby Sevens', age: 18, team: 'Rugby Sevens Team' },
-  { athlete_id: 'ATH008', name: 'Gregan Kerneels', sport: 'Rugby Sevens', age: 23, team: 'Rugby Sevens Team' },
+  { athlete_id: 'ATH008', name: 'Ethan Isaacs', sport: 'Rugby Sevens', age: 21, team: 'Rugby Sevens Team', date_of_birth: '2003/09/09' },
   { athlete_id: 'ATH009', name: 'James Nero', sport: 'Rugby Sevens', age: 20, team: 'Rugby Sevens Team' },
   { athlete_id: 'ATH010', name: 'Joshua De Kock', sport: 'Rugby Sevens', age: 23, team: 'Rugby Sevens Team' },
   { athlete_id: 'ATH011', name: 'Juanre De Klerk', sport: 'Rugby Sevens', age: 19, team: 'Rugby Sevens Team' },

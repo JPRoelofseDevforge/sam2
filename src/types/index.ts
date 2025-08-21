@@ -5,6 +5,7 @@ export interface Athlete {
   age: number;
   team: string;
   baseline_start_date?: string;
+  date_of_birth?: string;
 }
 
 export interface BiometricData {
