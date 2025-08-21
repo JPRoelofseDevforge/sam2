@@ -256,6 +256,9 @@ export const bodyCompositionData: BodyComposition[] = [
       // Weight range (target weight +/- 0.5-1 kg)
       const weightRangeMin = weight - 0.5 - Math.random() * 0.5;
       const weightRangeMax = weight + 0.5 + Math.random() * 0.5;
+
+      // Create target weight that's higher than current weight to show progress
+      const targetWeight = weight + 2 + Math.random() * 3; // 2-5 kg higher than current
       
       // Fat mass range
       const fatMassRangeMin = fatMass * 0.9;
@@ -325,7 +328,7 @@ export const bodyCompositionData: BodyComposition[] = [
         skeletal_muscle_kg: parseFloat(skeletalMuscle.toFixed(1)),
         body_fat_rate: parseFloat(bodyFatRate.toFixed(1)),
         bmi: parseFloat(bmi.toFixed(1)),
-        target_weight_kg: parseFloat(weight.toFixed(1)),
+        target_weight_kg: parseFloat(targetWeight.toFixed(1)),
         weight_control_kg: parseFloat(weightControl.toFixed(1)),
         fat_control_kg: parseFloat(fatControl.toFixed(1)),
         muscle_control_kg: parseFloat(muscleControl.toFixed(1)),

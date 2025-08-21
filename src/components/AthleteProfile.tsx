@@ -14,6 +14,7 @@ import { MetricCard } from './MetricCard';
 import { AlertCard } from './AlertCard';
 import { TrendChart } from './TrendChart';
 import { BodyComposition } from './BodyComposition';
+import ScaleReport from './ScaleReport';
 import { ArrowLeft } from 'lucide-react';
 import { getTeamAverage } from '../utils/analytics';
 import { DigitalTwin3D } from './DigitalTwin';
@@ -36,7 +37,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
     athleteId,
       onBack
     }) => {
-      const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'body' | 'digitalTwin' | 'teamCompare' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather'>('metrics');
+      const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'body' | 'digitalTwin' | 'teamCompare' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport'>('metrics');
     const tabContentRef = useRef<HTMLDivElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
 
@@ -85,6 +86,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
       { id: 'trends' as const, label: 'Trends & Analysis', icon: '📈', count: athleteBiometrics.length },
       { id: 'insights' as const, label: 'Predictive Insights', icon: '🧠', count: geneticInsights.length },
       { id: 'body' as const, label: 'Body Composition', icon: '⚖️', count: athleteBodyComp ? 1 : 0 },
+      { id: 'scaleReport' as const, label: 'Scale Report', icon: '⚖️', count: athleteBodyComp ? 1 : 0 },
       { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 },
       { id: 'teamCompare' as const, label: 'Team Compare', icon: '👥', count: 0 },
       { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: 0 },
@@ -636,11 +638,27 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
           <div>
             <h2 className="text-2xl font-bold text-white mb-6">⚖️ Body Composition Analysis</h2>
             {athleteBodyComp ? (
-              <BodyComposition 
-                data={athleteBodyComp} 
-                history={athleteBodyCompHistory} 
-                geneticData={athleteGenetics} 
+              <BodyComposition
+                data={athleteBodyComp}
+                history={athleteBodyCompHistory}
+                geneticData={athleteGenetics}
               />
+            ) : (
+              <div className="text-center py-12 card-enhanced rounded-xl">
+                <p className="text-gray-600 mb-2">⚖️ No body composition data available</p>
+                <p className="text-sm text-gray-500">
+                  Please ensure body composition measurements are recorded
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'scaleReport' && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-6">⚖️ Scale Report</h2>
+            {athleteBodyComp ? (
+              <ScaleReport athleteId={athleteId} />
             ) : (
               <div className="text-center py-12 card-enhanced rounded-xl">
                 <p className="text-gray-600 mb-2">⚖️ No body composition data available</p>
