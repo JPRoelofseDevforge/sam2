@@ -174,11 +174,39 @@
         }
 
         async function testCORSHeaders() {
-            // Test the current page's CORS headers by making a request to ourselves
-            const currentUrl = window.location.href;
-            const result = await makeRequest(currentUrl);
-            displayResult('cors-headers-result', result, 'CORS Headers Test');
-            updateSummary();
+            // Test CORS headers by making a simple request to a test endpoint
+            // Since we're using static files, we'll test against a simple endpoint
+            const testUrl = window.location.origin + '/favicon.ico';
+            try {
+                const response = await fetch(testUrl, {
+                    method: 'HEAD' // Use HEAD to avoid body content issues
+                });
+
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+
+                const result = {
+                    ok: response.ok,
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers,
+                    data: 'HEAD request - no body content',
+                    url: testUrl
+                };
+
+                displayResult('cors-headers-result', result, 'CORS Headers Test');
+                updateSummary();
+            } catch (error) {
+                const result = {
+                    ok: false,
+                    error: error.message,
+                    url: testUrl
+                };
+                displayResult('cors-headers-result', result, 'CORS Headers Test');
+                updateSummary();
+            }
         }
 
         async function testExternalAPI() {
