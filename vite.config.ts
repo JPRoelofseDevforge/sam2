@@ -24,6 +24,6 @@ export default defineConfig({
     // Define process.env for browser compatibility
     'process.env': {},
     // Mock process.cwd for browser compatibility
-    'process.cwd': '(() => "/")',
+    'process.cwd': '"/"',
   },
 });
