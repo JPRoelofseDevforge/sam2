@@ -733,65 +733,6 @@ app.get('/api/sports/:id', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
-// =====================================================
-// ORGANIZATIONS ENDPOINTS
-// =====================================================
-
-// Get all organizations
-app.get('/api/organizations', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const organizations = await OrganizationModel.getAllOrganizations();
-    res.json(organizations);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get single organization
-app.get('/api/organizations/:id', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const organization = await OrganizationModel.getOrganizationById(parseInt(id));
-
-    if (!organization) {
-      return res.status(404).json({ error: 'Organization not found' });
-    }
-
-    res.json(organization);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// =====================================================
-// SPORTS ENDPOINTS
-// =====================================================
-
-// Get all sports
-app.get('/api/sports', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const sports = await SportModel.getAllSports();
-    res.json(sports);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get single sport
-app.get('/api/sports/:id', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const sport = await SportModel.getSportById(parseInt(id));
-
-    if (!sport) {
-      return res.status(404).json({ error: 'Sport not found' });
-    }
-
-    res.json(sport);
-  } catch (error) {
-    next(error);
-  }
-});
 
 // =====================================================
 // ADMIN ENDPOINTS - ORGANIZATIONS
