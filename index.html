@@ -1,18 +1,206 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link href="https://fonts.cdnfonts.com/css/rockwell-nova" rel="stylesheet">
-                
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SAM Recovery Intelligence Dashboard</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/loaders/GLTFLoader.js"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test - SAM Health</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            border-left: 4px solid #dc3545;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CORS Test - SAM Health API</h1>
+        <p>This page tests CORS functionality with the SAM Health API endpoints.</p>
+
+        <div class="test-section">
+            <h3>🔍 Health Check Test</h3>
+            <button onclick="testHealth()">Test /api/health</button>
+            <div id="health-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 CORS Test</h3>
+            <button onclick="testCORS()">Test /api/test-cors</button>
+            <div id="cors-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔐 Login Test</h3>
+            <input type="text" id="username" placeholder="Username" value="test">
+            <input type="password" id="password" placeholder="Password" value="test">
+            <button onclick="testLogin()">Test /api/auth/login</button>
+            <div id="login-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results Summary</h3>
+            <div id="summary-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://samapigene.azurewebsites.net';
+
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = await response.text();
+                }
+
+                return {
+                    ok: response.ok,
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers,
+                    data
+                };
+            } catch (error) {
+                return {
+                    ok: false,
+                    error: error.message
+                };
+            }
+        }
+
+        function displayResult(elementId, result, title) {
+            const element = document.getElementById(elementId);
+            if (result.ok) {
+                element.className = 'result success';
+                element.innerHTML = `✅ ${title} - SUCCESS\n\n` +
+                    `Status: ${result.status} ${result.statusText}\n\n` +
+                    `CORS Headers:\n` +
+                    `- Access-Control-Allow-Origin: ${result.headers['access-control-allow-origin'] || 'NOT SET'}\n` +
+                    `- Access-Control-Allow-Credentials: ${result.headers['access-control-allow-credentials'] || 'NOT SET'}\n` +
+                    `- Access-Control-Allow-Methods: ${result.headers['access-control-allow-methods'] || 'NOT SET'}\n\n` +
+                    `Response Data:\n${JSON.stringify(result.data, null, 2)}`;
+            } else {
+                element.className = 'result error';
+                element.innerHTML = `❌ ${title} - FAILED\n\n` +
+                    `Error: ${result.error || 'Unknown error'}\n\n` +
+                    `Status: ${result.status || 'N/A'} ${result.statusText || ''}\n\n` +
+                    `This indicates a CORS or server error.`;
+            }
+        }
+
+        async function testHealth() {
+            const result = await makeRequest(`${API_BASE}/api/health`);
+            displayResult('health-result', result, 'Health Check');
+            updateSummary();
+        }
+
+        async function testCORS() {
+            const result = await makeRequest(`${API_BASE}/api/test-cors`);
+            displayResult('cors-result', result, 'CORS Test');
+            updateSummary();
+        }
+
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const result = await makeRequest(`${API_BASE}/api/auth/login`, {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
+            });
+            displayResult('login-result', result, 'Login Test');
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('summary-result');
+            const healthSuccess = document.getElementById('health-result').classList.contains('success');
+            const corsSuccess = document.getElementById('cors-result').classList.contains('success');
+            const loginSuccess = document.getElementById('login-result').classList.contains('success');
+
+            const totalTests = 3;
+            const passedTests = [healthSuccess, corsSuccess, loginSuccess].filter(Boolean).length;
+
+            summary.className = passedTests === totalTests ? 'result success' : 'result error';
+            summary.innerHTML = `📊 Test Summary: ${passedTests}/${totalTests} tests passed\n\n` +
+                `Health Check: ${healthSuccess ? '✅ PASS' : '❌ FAIL'}\n` +
+                `CORS Test: ${corsSuccess ? '✅ PASS' : '❌ FAIL'}\n` +
+                `Login Test: ${loginSuccess ? '✅ PASS' : '❌ FAIL'}\n\n` +
+                (passedTests === totalTests ?
+                    '🎉 All tests passed! CORS is working correctly.' :
+                    '⚠️ Some tests failed. Check the individual test results above.');
+        }
+
+        // Auto-run health check on page load
+        window.onload = function() {
+            setTimeout(testHealth, 1000);
+        };
+    </script>
+</body>
 </html>
