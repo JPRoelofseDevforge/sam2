@@ -4,8 +4,8 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
-// Start the server using tsx
-const serverProcess = spawn('npx', ['tsx', 'src/api/server.ts'], {
+// Start the minimal server using tsx (no database dependencies)
+const serverProcess = spawn('npx', ['tsx', 'src/minimal-server.ts'], {
   stdio: 'inherit',
   cwd: process.cwd(),
   env: process.env
