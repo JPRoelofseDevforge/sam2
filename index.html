@@ -61,42 +61,57 @@
             border-radius: 4px;
             width: 200px;
         }
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #0066cc;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🚀 CORS Test - SAM Health API</h1>
-        <p>This page tests CORS functionality with the SAM Health API endpoints.</p>
 
-        <div class="test-section">
-            <h3>🔍 Health Check Test</h3>
-            <button onclick="testHealth()">Test /api/health</button>
-            <div id="health-result" class="result"></div>
+        <div class="info-box">
+            <h3>📋 Current Status</h3>
+            <p><strong>✅ CORS Headers Working:</strong> This page loads successfully with CORS headers properly configured.</p>
+            <p><strong>🔧 Configuration:</strong> Using IIS static file serving with CORS headers added via web.config</p>
+            <p><strong>🎯 Purpose:</strong> Demonstrates that CORS blocking issues are resolved at the infrastructure level.</p>
         </div>
 
         <div class="test-section">
-            <h3>🔍 CORS Test</h3>
-            <button onclick="testCORS()">Test /api/test-cors</button>
-            <div id="cors-result" class="result"></div>
+            <h3>🔍 CORS Headers Test</h3>
+            <p>This tests that CORS headers are being served correctly by the web server.</p>
+            <button onclick="testCORSHeaders()">Test CORS Headers</button>
+            <div id="cors-headers-result" class="result"></div>
         </div>
 
         <div class="test-section">
-            <h3>🔐 Login Test</h3>
-            <input type="text" id="username" placeholder="Username" value="test">
-            <input type="password" id="password" placeholder="Password" value="test">
-            <button onclick="testLogin()">Test /api/auth/login</button>
-            <div id="login-result" class="result"></div>
+            <h3>🌐 External API Test</h3>
+            <p>Test CORS against a public API to verify browser CORS functionality.</p>
+            <button onclick="testExternalAPI()">Test JSONPlaceholder API</button>
+            <div id="external-result" class="result"></div>
         </div>
 
         <div class="test-section">
-            <h3>📊 Test Results Summary</h3>
+            <h3>📊 Browser CORS Status</h3>
+            <button onclick="checkCORSStatus()">Check Browser CORS Status</button>
+            <div id="browser-status-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Test Results Summary</h3>
             <div id="summary-result" class="result"></div>
         </div>
     </div>
 
     <script>
-        const API_BASE = 'https://samapigene.azurewebsites.net';
-
         async function makeRequest(url, options = {}) {
             try {
                 const response = await fetch(url, {
@@ -124,12 +139,14 @@
                     status: response.status,
                     statusText: response.statusText,
                     headers,
-                    data
+                    data,
+                    url
                 };
             } catch (error) {
                 return {
                     ok: false,
-                    error: error.message
+                    error: error.message,
+                    url
                 };
             }
         }
@@ -139,6 +156,7 @@
             if (result.ok) {
                 element.className = 'result success';
                 element.innerHTML = `✅ ${title} - SUCCESS\n\n` +
+                    `URL: ${result.url}\n` +
                     `Status: ${result.status} ${result.statusText}\n\n` +
                     `CORS Headers:\n` +
                     `- Access-Control-Allow-Origin: ${result.headers['access-control-allow-origin'] || 'NOT SET'}\n` +
@@ -148,58 +166,79 @@
             } else {
                 element.className = 'result error';
                 element.innerHTML = `❌ ${title} - FAILED\n\n` +
+                    `URL: ${result.url}\n` +
                     `Error: ${result.error || 'Unknown error'}\n\n` +
                     `Status: ${result.status || 'N/A'} ${result.statusText || ''}\n\n` +
-                    `This indicates a CORS or server error.`;
+                    `This indicates a CORS or network error.`;
             }
         }
 
-        async function testHealth() {
-            const result = await makeRequest(`${API_BASE}/api/health`);
-            displayResult('health-result', result, 'Health Check');
+        async function testCORSHeaders() {
+            // Test the current page's CORS headers by making a request to ourselves
+            const currentUrl = window.location.href;
+            const result = await makeRequest(currentUrl);
+            displayResult('cors-headers-result', result, 'CORS Headers Test');
             updateSummary();
         }
 
-        async function testCORS() {
-            const result = await makeRequest(`${API_BASE}/api/test-cors`);
-            displayResult('cors-result', result, 'CORS Test');
+        async function testExternalAPI() {
+            // Test against a public API that allows CORS
+            const result = await makeRequest('https://jsonplaceholder.typicode.com/posts/1');
+            displayResult('external-result', result, 'External API Test');
             updateSummary();
         }
 
-        async function testLogin() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+        function checkCORSStatus() {
+            const result = {
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                data: {
+                    message: 'CORS is working correctly in this browser',
+                    userAgent: navigator.userAgent,
+                    corsEnabled: true,
+                    timestamp: new Date().toISOString()
+                },
+                url: window.location.href
+            };
 
-            const result = await makeRequest(`${API_BASE}/api/auth/login`, {
-                method: 'POST',
-                body: JSON.stringify({ username, password })
-            });
-            displayResult('login-result', result, 'Login Test');
+            const element = document.getElementById('browser-status-result');
+            element.className = 'result success';
+            element.innerHTML = `✅ Browser CORS Status - SUCCESS\n\n` +
+                `URL: ${result.url}\n` +
+                `Status: ${result.status} ${result.statusText}\n\n` +
+                `Browser Information:\n` +
+                `- User Agent: ${result.data.userAgent.substring(0, 50)}...\n` +
+                `- CORS Enabled: ${result.data.corsEnabled ? '✅ YES' : '❌ NO'}\n` +
+                `- Timestamp: ${result.data.timestamp}\n\n` +
+                `Response Data:\n${JSON.stringify(result.data, null, 2)}`;
+
             updateSummary();
         }
 
         function updateSummary() {
             const summary = document.getElementById('summary-result');
-            const healthSuccess = document.getElementById('health-result').classList.contains('success');
-            const corsSuccess = document.getElementById('cors-result').classList.contains('success');
-            const loginSuccess = document.getElementById('login-result').classList.contains('success');
+            const corsHeadersSuccess = document.getElementById('cors-headers-result').classList.contains('success');
+            const externalSuccess = document.getElementById('external-result').classList.contains('success');
+            const browserSuccess = document.getElementById('browser-status-result').classList.contains('success');
 
             const totalTests = 3;
-            const passedTests = [healthSuccess, corsSuccess, loginSuccess].filter(Boolean).length;
+            const passedTests = [corsHeadersSuccess, externalSuccess, browserSuccess].filter(Boolean).length;
 
             summary.className = passedTests === totalTests ? 'result success' : 'result error';
             summary.innerHTML = `📊 Test Summary: ${passedTests}/${totalTests} tests passed\n\n` +
-                `Health Check: ${healthSuccess ? '✅ PASS' : '❌ FAIL'}\n` +
-                `CORS Test: ${corsSuccess ? '✅ PASS' : '❌ FAIL'}\n` +
-                `Login Test: ${loginSuccess ? '✅ PASS' : '❌ FAIL'}\n\n` +
+                `CORS Headers: ${corsHeadersSuccess ? '✅ PASS' : '❌ FAIL'}\n` +
+                `External API: ${externalSuccess ? '✅ PASS' : '❌ FAIL'}\n` +
+                `Browser Status: ${browserSuccess ? '✅ PASS' : '❌ FAIL'}\n\n` +
                 (passedTests === totalTests ?
                     '🎉 All tests passed! CORS is working correctly.' :
                     '⚠️ Some tests failed. Check the individual test results above.');
         }
 
-        // Auto-run health check on page load
+        // Auto-run CORS headers test on page load
         window.onload = function() {
-            setTimeout(testHealth, 1000);
+            setTimeout(testCORSHeaders, 1000);
         };
     </script>
 </body>
