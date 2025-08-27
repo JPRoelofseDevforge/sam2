@@ -2272,12 +2272,39 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
+// Start server with error handling
+const server = app.listen(PORT, () => {
   console.log(`API Server running on http://localhost:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Database: ${process.env.DB_NAME} @ ${process.env.DB_HOST}:${process.env.DB_PORT}`);
   console.log(`CORS Origins: https://app.samhealth.co.za, https://samapigene.azurewebsites.net`);
+});
+
+// Handle server startup errors
+server.on('error', (error: any) => {
+  console.error('Server failed to start:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  } else if (error.code === 'EACCES') {
+    console.error(`Permission denied to bind to port ${PORT}`);
+  }
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  server.close(() => {
+    process.exit(1);
+  });
 });
 
 // Add a simple test endpoint to verify CORS is working

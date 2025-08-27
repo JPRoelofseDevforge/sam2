@@ -63,9 +63,11 @@ async function initializePool(): Promise<any> {
 }
 
 if (isNodeEnvironment) {
-  // Initialize pool asynchronously
+  // Initialize pool asynchronously with better error handling
   initializePool().catch(error => {
     console.error('Failed to initialize database connection:', error);
+    console.warn('Server will continue running but database operations will fail');
+    // Don't exit the process - let the server start even without database
   });
 } else {
   console.warn('Database connection skipped - not in Node.js environment');
@@ -75,16 +77,19 @@ export default pool;
 
 // Helper function to execute queries
 export async function query(text: string, params?: any[]) {
-  const dbPool = await getPool();
-
-  const start = Date.now();
   try {
+    const dbPool = await getPool();
+    const start = Date.now();
     const res = await dbPool.query(text, params);
     const duration = Date.now() - start;
     console.log('Executed query', { text, duration, rows: res.rowCount });
     return res;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Database query error:', error);
+    // Check if it's a connection error
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.message?.includes('connection')) {
+      throw new Error('Database connection failed. Please check your database configuration.');
+    }
     throw error;
   }
 }
