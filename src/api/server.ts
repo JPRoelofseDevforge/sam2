@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import path from 'path';
 import { AthleteModel } from '../db/models/athletes';
 import { BiometricDataModel } from '../db/models/biometricData';
 import { GeneticProfileModel } from '../db/models/geneticProfiles';
@@ -42,6 +43,11 @@ app.use(express.json({
   limit: '10mb'
 }));
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from the React app build directory
+const __dirname = path.dirname(new URL(import.meta.url).pathname.replace(/^\/[a-zA-Z]:\//, '/'));
+const distPath = path.join(process.cwd(), 'dist');
+app.use(express.static(distPath));
 
 // Extended Request interface to include user
 interface AuthRequest extends Request {
@@ -2299,6 +2305,15 @@ app.get('/api/health', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Catch-all handler: send back React's index.html file for any non-API routes
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // Error handling middleware (must be last)
