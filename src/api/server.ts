@@ -33,7 +33,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// CORS middleware - simple and direct approach
+// CORS middleware - comprehensive approach
 app.use((req: Request, res: Response, next: NextFunction) => {
   // Set CORS headers for all requests
   const allowedOrigins = [
@@ -45,19 +45,28 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   const origin = req.headers.origin;
 
-  // Allow if origin is in allowed list or if no origin (server-to-server)
+  // Check if origin is allowed
   if (!origin || allowedOrigins.includes(origin)) {
+    // Set CORS headers for allowed origins
     res.header('Access-Control-Allow-Origin', origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
     res.header('Access-Control-Expose-Headers', 'Content-Length, X-Kuma-Revision');
-  }
 
-  // Handle preflight OPTIONS requests
-  if (req.method === 'OPTIONS') {
-    res.status(200).send();
-    return;
+    // Handle preflight OPTIONS requests
+    if (req.method === 'OPTIONS') {
+      res.status(200).send();
+      return;
+    }
+  } else {
+    // For disallowed origins, still handle OPTIONS but don't set allow-origin
+    if (req.method === 'OPTIONS') {
+      res.status(200).send();
+      return;
+    }
+    // For non-OPTIONS requests from disallowed origins, continue without CORS headers
+    // The browser will block these, which is the intended behavior
   }
 
   next();

@@ -1,16 +1,25 @@
-const express = require("express");
-const path = require("path");
-const app = express();
+#!/usr/bin/env node
 
-// Serve static files from the dist folder
-app.use(express.static(path.join(__dirname, "dist")));
+// Production server entry point
+const { spawn } = require('child_process');
+const path = require('path');
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+// Start the server using tsx
+const serverProcess = spawn('npx', ['tsx', 'src/api/server.ts'], {
+  stdio: 'inherit',
+  cwd: process.cwd(),
+  env: process.env
 });
 
-// Azure provides the port in process.env.PORT
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Handle process termination
+process.on('SIGTERM', () => {
+  serverProcess.kill('SIGTERM');
+});
+
+process.on('SIGINT', () => {
+  serverProcess.kill('SIGINT');
+});
+
+serverProcess.on('exit', (code) => {
+  process.exit(code);
 });
