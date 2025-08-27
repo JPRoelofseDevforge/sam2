@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "server": "tsx src/api/server.ts",
     "server:watch": "tsx watch src/api/server.ts",
-    "dev:all": "concurrently \"npm run server:watch\" \"npm run dev\""
+    "dev:all": "concurrently \"npm run server:watch\" \"npm run dev\"",
+    "start": "tsx src/api/server.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
