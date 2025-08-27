@@ -33,53 +33,33 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// Middleware
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-
-    const allowedOrigins = [
-      'https://app.samhealth.co.za',
-      'https://samapigene.azurewebsites.net',
-      'http://localhost:3000',
-      'http://localhost:5173'
-    ];
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-  exposedHeaders: ['Content-Length', 'X-Kuma-Revision'],
-  optionsSuccessStatus: 200
-}));
-
-// Handle preflight OPTIONS requests for all routes
+// CORS middleware - simple and direct approach
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.method === 'OPTIONS') {
-    const origin = req.headers.origin;
-    const allowedOrigins = [
-      'https://app.samhealth.co.za',
-      'https://samapigene.azurewebsites.net',
-      'http://localhost:3000',
-      'http://localhost:5173'
-    ];
+  // Set CORS headers for all requests
+  const allowedOrigins = [
+    'https://app.samhealth.co.za',
+    'https://samapigene.azurewebsites.net',
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ];
 
-    if (!origin || allowedOrigins.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin || 'https://app.samhealth.co.za');
-      res.header('Access-Control-Allow-Credentials', 'true');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
-      res.header('Access-Control-Expose-Headers', 'Content-Length, X-Kuma-Revision');
-      res.status(200).send();
-      return;
-    }
+  const origin = req.headers.origin;
+
+  // Allow if origin is in allowed list or if no origin (server-to-server)
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+    res.header('Access-Control-Expose-Headers', 'Content-Length, X-Kuma-Revision');
   }
+
+  // Handle preflight OPTIONS requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).send();
+    return;
+  }
+
   next();
 });
 app.use(express.json({
@@ -2309,6 +2289,16 @@ app.listen(PORT, () => {
   console.log(`API Server running on http://localhost:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Database: ${process.env.DB_NAME} @ ${process.env.DB_HOST}:${process.env.DB_PORT}`);
+  console.log(`CORS Origins: https://app.samhealth.co.za, https://samapigene.azurewebsites.net`);
+});
+
+// Add a simple test endpoint to verify CORS is working
+app.get('/api/test-cors', (req: Request, res: Response) => {
+  res.json({
+    message: 'CORS test successful',
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString()
+  });
 });
 
 export default app;
