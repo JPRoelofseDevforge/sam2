@@ -35,7 +35,23 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 // Middleware
 app.use(cors({
-  origin: ['https://app.samhealth.co.za', 'https://samapigene.azurewebsites.net'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      'https://app.samhealth.co.za',
+      'https://samapigene.azurewebsites.net',
+      'http://localhost:3000',
+      'http://localhost:5173'
+    ];
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -46,13 +62,23 @@ app.use(cors({
 // Handle preflight OPTIONS requests for all routes
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://app.samhealth.co.za');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
-    res.header('Access-Control-Expose-Headers', 'Content-Length, X-Kuma-Revision');
-    res.status(200).send();
-    return;
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      'https://app.samhealth.co.za',
+      'https://samapigene.azurewebsites.net',
+      'http://localhost:3000',
+      'http://localhost:5173'
+    ];
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin || 'https://app.samhealth.co.za');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+      res.header('Access-Control-Expose-Headers', 'Content-Length, X-Kuma-Revision');
+      res.status(200).send();
+      return;
+    }
   }
   next();
 });
