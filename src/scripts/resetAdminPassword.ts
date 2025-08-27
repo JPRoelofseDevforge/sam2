@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
-import pool from '../db/connection';
+import { getClient } from '../db/connection';
 
 async function resetAdminPassword() {
-  const client = await pool.connect();
+  const { query, release } = await getClient();
+  const client = { query, release };
   
   try {
     // Check if admin user exists
