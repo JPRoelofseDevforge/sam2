@@ -14,55 +14,48 @@
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  background-color: #0f0f15; /* Deeper, more professional dark background */
-  color: #2d3748;
-  line-height: 1.6;
-  overflow-x: hidden;
+   font-family: 'Segoe UI', system-ui, sans-serif;
+   background: linear-gradient(135deg, #0f0f15 0%, #1a1a2e 50%, #16213e 100%);
+   color: #ffffff;
+   line-height: 1.6;
+   overflow-x: hidden;
+   margin: 0;
+   padding: 0;
+   min-height: 100vh;
+  }
+ 
+ /* Center the main content */
+ .main-content {
+   width: 100%;
+   max-width: 1600px; /* Limit max width for large screens */
+   padding: 2rem;
+   margin: 0 auto; /* Center the content */
+ }
+ 
+ .app-container {
+   min-height: 100vh;
+ }
+
+/* Dark theme utilities */
+.glass-card {
+   background: rgba(255, 255, 255, 0.1);
+   backdrop-filter: blur(16px);
+   border: 1px solid rgba(255, 255, 255, 0.2);
+   border-radius: 16px;
 }
 
-.app-container {
-  min-height: 100vh;
-  position: relative;
-  overflow: hidden;
+.glass-card-dark {
+   background: rgba(0, 0, 0, 0.3);
+   backdrop-filter: blur(16px);
+   border: 1px solid rgba(255, 255, 255, 0.1);
+   border-radius: 16px;
 }
 
-/* Background Effects */
-.background-gradient {
-  position: fixed;
-  inset: 0;
-  background: linear-gradient(135deg, #6c00ff, #9b00ff, #0072ff);
-  filter: blur(100px);
-  opacity: 0.25;
-  z-index: -2;
-  pointer-events: none;
-}
-
-.background-rings {
-  position: fixed;
-  inset: 0;
-  background: 
-    radial-gradient(circle at 20% 80%, rgba(108, 0, 255, 0.2), transparent 30%),
-    radial-gradient(circle at 80% 20%, rgba(0, 114, 255, 0.2), transparent 30%);
-  z-index: -1;
-  pointer-events: none;
-}
-
-/* Main Content Container */
-.main-content {
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  position: relative;
-  z-index: 10;
-  background: rgba(18, 18, 25, 0.75);
-  backdrop-filter: blur(16px);
-  border-radius: 24px;
-  box-shadow: 
-    0 25px 60px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(108, 0, 255, 0.15);
-  overflow: hidden;
-  border: 1px solid rgba(108, 0, 255, 0.2);
+.text-gradient {
+   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+   -webkit-background-clip: text;
+   -webkit-text-fill-color: transparent;
+   background-clip: text;
 }
 
 /* Header Section */

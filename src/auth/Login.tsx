@@ -7,15 +7,15 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    if (login(username, password)) {
-      // Login successful, component will re-render due to context change
-    } else {
+    const success = await login(username, password);
+    if (!success) {
       setError('Invalid username or password');
     }
+    // If login successful, component will re-render due to context change
   };
 
   return (

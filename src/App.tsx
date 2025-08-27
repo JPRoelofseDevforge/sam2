@@ -5,10 +5,12 @@ import { TeamComparisonDashboard } from './components/TeamComparisonDashboard';
 import { TrainingLoadHeatmap } from './components/TrainingLoadHeatmap';
 import { RecoveryTimeline } from './components/RecoveryTimeline';
 import { PredictiveAnalytics } from './components/PredictiveAnalytics';
+import { UserManagement } from './components/UserManagement';
+import { AdminDashboard } from './components/AdminDashboard';
 import { useAuth } from './auth/AuthContext';
 
 function App() {
-  const [currentView, setCurrentView] = useState<'team' | 'athlete' | 'comparison' | 'trainingLoad' | 'recoveryTimeline' | 'predictive' | 'whoopStress'>('team');
+  const [currentView, setCurrentView] = useState<'team' | 'athlete' | 'comparison' | 'trainingLoad' | 'recoveryTimeline' | 'predictive' | 'whoopStress' | 'userManagement' | 'admin'>('team');
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { logout } = useAuth();
@@ -23,7 +25,7 @@ function App() {
     setSelectedAthleteId(null);
   };
 
-  const handleNavClick = (view: 'team' | 'comparison' | 'trainingLoad' | 'recoveryTimeline' | 'predictive' | 'whoopStress') => {
+  const handleNavClick = (view: 'team' | 'comparison' | 'trainingLoad' | 'recoveryTimeline' | 'predictive' | 'whoopStress' | 'userManagement' | 'admin') => {
     setCurrentView(view);
   };
 
@@ -123,6 +125,26 @@ return (
               Predictive Analytics
             </button>
             <button
+              onClick={() => handleNavClick('userManagement')}
+              className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                currentView === 'userManagement'
+                  ? 'border-blue-500 text-gray-900'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              User Management
+            </button>
+            <button
+              onClick={() => handleNavClick('admin')}
+              className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                currentView === 'admin'
+                  ? 'border-blue-500 text-gray-900'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Admin Dashboard
+            </button>
+            <button
               onClick={logout}
               className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
@@ -202,6 +224,32 @@ return (
           </button>
           <button
             onClick={() => {
+              handleNavClick('userManagement');
+              setIsMobileMenuOpen(false);
+            }}
+            className={`mobile-menu-item block pl-3 pr-4 py-2 border-l-4 text-base font-medium w-full text-left ${
+              currentView === 'userManagement'
+                ? 'mobile-menu-item active bg-blue-50 border-blue-500 text-blue-700'
+                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
+            }`}
+          >
+            User Management
+          </button>
+          <button
+            onClick={() => {
+              handleNavClick('admin');
+              setIsMobileMenuOpen(false);
+            }}
+            className={`mobile-menu-item block pl-3 pr-4 py-2 border-l-4 text-base font-medium w-full text-left ${
+              currentView === 'admin'
+                ? 'mobile-menu-item active bg-blue-50 border-blue-500 text-blue-700'
+                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
+            }`}
+          >
+            Admin Dashboard
+          </button>
+          <button
+            onClick={() => {
               logout();
               setIsMobileMenuOpen(false);
             }}
@@ -240,6 +288,10 @@ return (
             </p>
           </div>
         </div>
+      ) : currentView === 'userManagement' ? (
+        <UserManagement />
+      ) : currentView === 'admin' ? (
+        <AdminDashboard />
       ) : null}
     </div>
   </div>

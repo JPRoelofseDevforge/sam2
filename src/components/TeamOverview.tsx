@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { athletes, biometricData, geneticProfiles } from '../data/mockData';
 import { generateAlert, calculateReadinessScore } from '../utils/analytics';
-import { Athlete } from '../types';
+import { Athlete, BiometricData, GeneticProfile } from '../types';
+import dataService from '../services/dataService';
 
 const date = new Date();
     // Format date as YYYY-MM-DD (or customize as needed)
@@ -71,6 +71,33 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
   const [airQuality, setAirQuality] = useState<AirQualityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [athletes, setAthletes] = useState<Athlete[]>([]);
+  const [biometricData, setBiometricData] = useState<BiometricData[]>([]);
+  const [geneticProfiles, setGeneticProfiles] = useState<GeneticProfile[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Fetch data from database
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setDataLoading(true);
+        const data = await dataService.getData(true); // true = use database
+        setAthletes(data.athletes);
+        setBiometricData(data.biometricData);
+        setGeneticProfiles(data.geneticProfiles);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+        // Data service will automatically fall back to mock data
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchData();
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const getAthleteData = (athleteId: string) => {
     const data = biometricData.filter(d => d.athlete_id === athleteId);
@@ -113,7 +140,7 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
       alertCounts,
       athleteMetrics,
     };
-  }, []);
+  }, [athletes, biometricData, geneticProfiles]);
 
   // Fetch Air Quality from IQAir
   useEffect(() => {
@@ -282,6 +309,21 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
     return { type: 'low', message: 'Weather conditions are favorable for training' };
   };
 
+  
+  // Show loading state while fetching data
+  if (dataLoading) {
+    return (
+      <div className="app-container">
+        <div className="background-gradient"></div>
+        <div className="background-rings"></div>
+        <div className="main-content">
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-white text-2xl">Loading athlete data...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
 return (
   <div className="app-container">
