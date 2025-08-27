@@ -33,40 +33,19 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// CORS middleware - comprehensive approach
+// CORS middleware - allow all origins for testing
 app.use((req: Request, res: Response, next: NextFunction) => {
-  // Set CORS headers for all requests
-  const allowedOrigins = [
-    'https://app.samhealth.co.za',
-    'https://samapigene.azurewebsites.net',
-    'http://localhost:3000',
-    'http://localhost:5173'
-  ];
+  // Allow all origins temporarily to test
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+  res.header('Access-Control-Expose-Headers', 'Content-Length, X-Kuma-Revision');
 
-  const origin = req.headers.origin;
-
-  // Check if origin is allowed
-  if (!origin || allowedOrigins.includes(origin)) {
-    // Set CORS headers for allowed origins
-    res.header('Access-Control-Allow-Origin', origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
-    res.header('Access-Control-Expose-Headers', 'Content-Length, X-Kuma-Revision');
-
-    // Handle preflight OPTIONS requests
-    if (req.method === 'OPTIONS') {
-      res.status(200).send();
-      return;
-    }
-  } else {
-    // For disallowed origins, still handle OPTIONS but don't set allow-origin
-    if (req.method === 'OPTIONS') {
-      res.status(200).send();
-      return;
-    }
-    // For non-OPTIONS requests from disallowed origins, continue without CORS headers
-    // The browser will block these, which is the intended behavior
+  // Handle preflight OPTIONS requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).send();
+    return;
   }
 
   next();
