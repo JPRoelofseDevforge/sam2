@@ -7,8 +7,8 @@ const path = require('path');
 // Set production environment
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
-// Start the minimal server using tsx (no database dependencies)
-const serverProcess = spawn('npx', ['tsx', 'src/minimal-server.ts'], {
+// Start the ultra-minimal server (plain JavaScript, no dependencies)
+const serverProcess = spawn('node', ['ultra-minimal.cjs'], {
   stdio: ['pipe', 'pipe', 'pipe'],
   cwd: process.cwd(),
   env: process.env
