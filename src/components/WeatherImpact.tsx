@@ -450,7 +450,7 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
 
           <div className="flex-1">
             <div className="space-y-2">
-              {performanceImpact.factors.map((factor, index) => (
+              {performanceImpact.factors?.map((factor, index) => (
                 <div key={index} className="flex items-start space-x-2">
                   <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700 text-sm">{factor}</span>
@@ -589,7 +589,7 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
               <h3 className="text-xl font-semibold text-gray-900 mb-4">Genetic Impact Analysis</h3>
               {geneticImpacts.length > 0 ? (
                 <div className="space-y-4">
-                  {geneticImpacts.map((impact, index) => (
+                  {geneticImpacts?.map((impact, index) => (
                     <div key={index} className="border border-gray-300 rounded-lg p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -627,7 +627,7 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
                 <div>
                   <h4 className="font-semibold text-green-600 mb-3">Do's</h4>
                   <ul className="space-y-2">
-                    {performanceImpact.recommendations.map((rec, index) => (
+                    {performanceImpact.recommendations?.map((rec, index) => (
                       <li key={index} className="flex items-start space-x-2">
                         <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700 text-sm">{rec}</span>

@@ -456,7 +456,7 @@ return (
       <section className="athletes-section">
         <h2 className="section-title text-white">👥 Athlete Status</h2>
         <div className="athletes-grid">
-          {teamStats.athleteMetrics.map(({ athlete, latest, alert, readinessScore }) => (
+          {teamStats.athleteMetrics?.map(({ athlete, latest, alert, readinessScore }) => (
             <div
               key={athlete.athlete_id}
               className={`athlete-card ${getStatusColorClass(alert.type)} card-hover`}
