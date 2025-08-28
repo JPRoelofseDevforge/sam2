@@ -7,13 +7,14 @@ import { RecoveryTimeline } from './components/RecoveryTimeline';
 import { PredictiveAnalytics } from './components/PredictiveAnalytics';
 import { UserManagement } from './components/UserManagement';
 import { AdminDashboard } from './components/AdminDashboard';
+import { Login } from './auth/Login';
 import { useAuth } from './auth/AuthContext';
 
 function App() {
   const [currentView, setCurrentView] = useState<'team' | 'athlete' | 'comparison' | 'trainingLoad' | 'recoveryTimeline' | 'predictive' | 'whoopStress' | 'userManagement' | 'admin'>('team');
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   const handleAthleteClick = (athleteId: string) => {
     setSelectedAthleteId(athleteId);
@@ -29,14 +30,19 @@ function App() {
     setCurrentView(view);
   };
 
-return (
-  <div className="app-container">
-    {/* Full-Screen Purple Gradient Background (Soft Glow) */}
-    <div className="background-gradient"></div>
-    <div className="background-rings"></div>
+  // If not authenticated, show login page
+  if (!isAuthenticated) {
+    return <Login />;
+  }
 
-    {/* Navigation */}
-    <nav className="bg-white/90 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
+  return (
+    <div className="app-container">
+      {/* Full-Screen Purple Gradient Background (Soft Glow) */}
+      <div className="background-gradient"></div>
+      <div className="background-rings"></div>
+
+      {/* Navigation */}
+      <nav className="bg-white/90 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Mobile menu button */}
