@@ -5,7 +5,8 @@ import './index.css';
 import { AuthProvider } from './auth/AuthContext.tsx';
 import { ProtectedRoute } from './auth/ProtectedRoute.tsx';
 
-createRoot(document.getElementById('root')!).render(
+const root = createRoot(document.getElementById('root')!);
+root.render(
   <StrictMode>
     <AuthProvider>
       <ProtectedRoute>
