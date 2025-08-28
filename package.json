@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run prepare-deployment && vite build",
+    "build": "npm run prepare-deployment && npm run build:server && vite build",
     "build:frontend": "vite build",
+    "build:server": "tsx src/api/server.ts --outDir dist --target es2020",
     "prepare-deployment": "node scripts/prepare-deployment.cjs",
     "preview": "vite preview",
     "server": "tsx src/api/server.ts",
     "server:watch": "tsx watch src/api/server.ts",
     "dev:all": "concurrently \"npm run server:watch\" \"npm run dev\"",
-    "start": "tsx src/api/server.ts",
+    "start": "node dist/server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

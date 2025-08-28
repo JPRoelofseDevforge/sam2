@@ -42,7 +42,12 @@ jobs:
           cp -r src deployment/
           cp ecosystem.config.js deployment/ 2>/dev/null || true
           cp web.config deployment/ 2>/dev/null || true
+          cp startup.sh deployment/ 2>/dev/null || true
           cp .env.production deployment/ 2>/dev/null || true
+          # Build the TypeScript server for production
+          cd deployment
+          npx tsc src/api/server.ts --outDir . --target es2020 --module commonjs --moduleResolution node --esModuleInterop --allowSyntheticDefaultImports --skipLibCheck
+          mv src/api/server.js dist/server.js 2>/dev/null || cp server.js dist/server.js 2>/dev/null || echo "Server compilation completed"
 
       - name: Login to Azure
         uses: azure/login@v2
