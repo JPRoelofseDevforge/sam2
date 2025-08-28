@@ -12,7 +12,9 @@
     "server": "tsx src/api/server.ts",
     "server:watch": "tsx watch src/api/server.ts",
     "dev:all": "concurrently \"npm run server:watch\" \"npm run dev\"",
-    "start": "tsx src/api/server.ts"
+    "start": "tsx src/api/server.ts",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

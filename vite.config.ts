@@ -11,6 +11,9 @@ export default defineConfig({
   },
   envPrefix: 'VITE_',
   build: {
+    // Enable build caching
+    watch: null,
+    // Optimize chunk splitting
     rollupOptions: {
       external: (id) => {
         // Exclude Node.js specific modules from browser bundle
@@ -19,12 +22,32 @@ export default defineConfig({
         }
         return false;
       },
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['lucide-react', 'recharts'],
+          three: ['three', 'three-stdlib'],
+        },
+      },
     },
+    // Enable source maps only in development
+    sourcemap: process.env.NODE_ENV === 'development',
+    // Optimize build performance
+    minify: 'esbuild',
+    target: 'esnext',
+    cssCodeSplit: true,
+    // Reduce bundle size
+    reportCompressedSize: false,
   },
   define: {
     // Define process.env for browser compatibility
     'process.env': {},
     // Mock process.cwd for browser compatibility
     'process.cwd': '"/"',
+  },
+  // Enable build caching
+  esbuild: {
+    // Remove console.log in production
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
 });
