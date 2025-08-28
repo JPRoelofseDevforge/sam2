@@ -1,0 +1,47 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "lib": ["ES2023"],
+    "outDir": "./dist",
+    "rootDir": "./",
+    "moduleResolution": "node",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": false,
+    "removeComments": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "noImplicitThis": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": [
+    "src/api/server.ts",
+    "src/db/**/*",
+    "src/types/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/components",
+    "src/hooks",
+    "src/pages",
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/index.css",
+    "src/utils/api.ts",
+    "vite.config.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}

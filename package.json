@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run prepare-deployment && npm run build:server && vite build",
+    "build": "npm run prepare-deployment && vite build && npm run build:server",
     "build:frontend": "vite build",
-    "build:server": "tsx src/api/server.ts --outDir dist --target es2020",
+    "build:server": "tsc --project tsconfig.server.json --outDir dist && mv dist/src/api/server.js dist/src/api/server.cjs && cp dist/src/api/server.cjs dist/server.cjs && mkdir -p dist/db && cp -r dist/src/db/* dist/db/ 2>/dev/null || true && mkdir -p dist/types && cp -r dist/src/types/* dist/types/ 2>/dev/null || true",
     "prepare-deployment": "node scripts/prepare-deployment.cjs",
     "preview": "vite preview",
     "server": "tsx src/api/server.ts",
