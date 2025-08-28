@@ -31,7 +31,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
 
   // API Base URL configuration
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  const getApiBaseUrl = () => {
+    // In production, use relative URLs since frontend and backend are on the same domain
+    if (import.meta.env.PROD) {
+      return '/api';
+    }
+    // In development, use the configured API URL or localhost
+    return import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  };
+
+  const API_BASE_URL = getApiBaseUrl();
 
   useEffect(() => {
     // Check if user is already logged in (from localStorage)
