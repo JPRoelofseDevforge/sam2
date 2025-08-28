@@ -39,9 +39,10 @@ jobs:
           cp -r dist deployment/
           cp package.json deployment/
           cp package-lock.json deployment/
-          cp server.js deployment/ 2>/dev/null || true
+          cp -r src deployment/
           cp ecosystem.config.js deployment/ 2>/dev/null || true
           cp web.config deployment/ 2>/dev/null || true
+          cp .env.production deployment/ 2>/dev/null || true
 
       - name: Login to Azure
         uses: azure/login@v2

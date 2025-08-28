@@ -35,14 +35,17 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// CORS middleware - allow specific origin for production
+// CORS middleware - allow multiple origins for production
 app.use((req: Request, res: Response, next: NextFunction) => {
-  const allowedOrigin = 'https://app.samhealth.co.za';
+  const allowedOrigins = [
+    'https://app.samhealth.co.za',
+    'https://samapigene.azurewebsites.net'
+  ];
   const origin = req.headers.origin;
 
-  // Allow the specific origin or if no origin header (for same-origin requests)
-  if (origin === allowedOrigin || !origin) {
-    res.header('Access-Control-Allow-Origin', allowedOrigin);
+  // Allow the specific origins or if no origin header (for same-origin requests)
+  if ((origin && allowedOrigins.includes(origin)) || !origin) {
+    res.header('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
   }
 
   res.header('Access-Control-Allow-Credentials', 'true');
