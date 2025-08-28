@@ -2,9 +2,16 @@
 const express = require('express');
 const app = express();
 
-// CORS middleware - allow all origins
+// CORS middleware - allow specific origin
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const allowedOrigin = 'https://app.samhealth.co.za';
+  const origin = req.headers.origin;
+
+  // Allow the specific origin or if no origin header (for same-origin requests)
+  if (origin === allowedOrigin || !origin) {
+    res.header('Access-Control-Allow-Origin', allowedOrigin);
+  }
+
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');

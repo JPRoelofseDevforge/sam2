@@ -3,8 +3,15 @@ const http = require('http');
 const url = require('url');
 
 const server = http.createServer((req, res) => {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Set CORS headers - allow specific origin
+  const allowedOrigin = 'https://app.samhealth.co.za';
+  const origin = req.headers.origin;
+
+  // Allow the specific origin or if no origin header (for same-origin requests)
+  if (origin === allowedOrigin || !origin) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  }
+
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');

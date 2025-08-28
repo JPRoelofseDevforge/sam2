@@ -33,10 +33,16 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// CORS middleware - allow all origins for testing
+// CORS middleware - allow specific origin for production
 app.use((req: Request, res: Response, next: NextFunction) => {
-  // Allow all origins temporarily to test
-  res.header('Access-Control-Allow-Origin', '*');
+  const allowedOrigin = 'https://app.samhealth.co.za';
+  const origin = req.headers.origin;
+
+  // Allow the specific origin or if no origin header (for same-origin requests)
+  if (origin === allowedOrigin || !origin) {
+    res.header('Access-Control-Allow-Origin', allowedOrigin);
+  }
+
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
