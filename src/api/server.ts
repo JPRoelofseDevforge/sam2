@@ -39,13 +39,22 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 app.use((req: Request, res: Response, next: NextFunction) => {
   const allowedOrigins = [
     'https://app.samhealth.co.za',
-    'https://samapigene.azurewebsites.net'
+    'https://samapigene.azurewebsites.net',
+    'http://localhost:5173', // Vite dev server
+    'http://localhost:3000', // Alternative dev port
+    'http://127.0.0.1:5173', // Alternative localhost
+    'http://127.0.0.1:3000'  // Alternative localhost
   ];
   const origin = req.headers.origin;
+
+  console.log(`[CORS] Request from origin: ${origin}, method: ${req.method}, path: ${req.path}`);
 
   // Allow the specific origins or if no origin header (for same-origin requests)
   if ((origin && allowedOrigins.includes(origin)) || !origin) {
     res.header('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
+    console.log(`[CORS] ✅ Allowed origin: ${origin || allowedOrigins[0]}`);
+  } else {
+    console.log(`[CORS] ❌ Blocked origin: ${origin}`);
   }
 
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -55,6 +64,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
+    console.log(`[CORS] Handling OPTIONS preflight for: ${req.path}`);
     res.status(200).send();
     return;
   }
@@ -116,15 +126,20 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log(`[AUTH] ${req.method} ${req.path} - Auth header present: ${!!authHeader}, Token present: ${!!token}`);
+
   if (!token) {
+    console.log(`[AUTH] ❌ No token provided for: ${req.path}`);
     return res.status(401).json({ error: 'Access token required' });
   }
 
   try {
     const user = jwt.verify(token, JWT_SECRET);
     req.user = user;
+    console.log(`[AUTH] ✅ Token verified for user: ${(user as any).user_id}`);
     next();
   } catch (err) {
+    console.log(`[AUTH] ❌ Invalid token for: ${req.path} - ${err}`);
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
@@ -2354,10 +2369,32 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Add a simple test endpoint to verify CORS is working
 app.get('/api/test-cors', (req: Request, res: Response) => {
+  console.log(`[TEST] CORS test endpoint called from origin: ${req.headers.origin}`);
   res.json({
     message: 'CORS test successful',
     origin: req.headers.origin,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    server: 'running'
+  });
+});
+
+// Add a health check endpoint
+app.get('/api/debug', (req: Request, res: Response) => {
+  res.json({
+    status: 'debugging',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    port: PORT,
+    cors_origins: [
+      'https://app.samhealth.co.za',
+      'https://samapigene.azurewebsites.net',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000'
+    ],
+    request_origin: req.headers.origin,
+    server_running: true
   });
 });
 
