@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "npm run prepare-deployment && vite build && npm run build:server",
     "build:frontend": "vite build",
-    "build:server": "tsc --project tsconfig.server.json --outDir dist && cp dist/src/api/server.js dist/server.js && mkdir -p dist/db && cp -r dist/src/db/* dist/db/ 2>/dev/null || true && mkdir -p dist/types && cp -r dist/src/types/* dist/types/ 2>/dev/null || true && sed -i \"s|from '../db/|from './db/|g\" dist/server.js",
+    "build:server": "tsc --project tsconfig.server.json --outDir dist && copy dist\\src\\api\\server.js dist\\server.js && if not exist dist\\db mkdir dist\\db && xcopy dist\\src\\db\\* dist\\db\\ /s /y 2>nul || echo. && if not exist dist\\types mkdir dist\\types && xcopy dist\\src\\types\\* dist\\types\\ /s /y 2>nul || echo. && powershell -Command \"(Get-Content dist/server.js) -replace 'from \\'../db/', 'from \\'./db/' | Set-Content dist/server.js\"",
     "prepare-deployment": "node scripts/prepare-deployment.cjs",
     "preview": "vite preview",
     "server": "tsx src/api/server.ts",
