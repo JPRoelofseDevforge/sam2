@@ -38,25 +38,46 @@ async function initializePool(): Promise<any> {
         throw new Error('DB_PASSWORD environment variable is required');
       }
 
+      // Azure PostgreSQL SSL configuration
+      const sslConfig = process.env.DB_SSL_MODE === 'disable'
+        ? false
+        : {
+            rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+            ca: process.env.DB_SSL_CA_CERT || undefined,
+            cert: process.env.DB_SSL_CLIENT_CERT || undefined,
+            key: process.env.DB_SSL_CLIENT_KEY || undefined,
+          };
+
       pool = new Pool({
         host: process.env.DB_HOST,
         port: parseInt(process.env.DB_PORT || '5432'),
         database: process.env.DB_NAME,
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        ssl: { rejectUnauthorized: false }, // Required for Azure PostgreSQL
+        ssl: sslConfig, // Enhanced SSL configuration for Azure PostgreSQL
         max: 20, // Maximum number of clients in the pool
         idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
         connectionTimeoutMillis: 10000, // Increased timeout for Azure connections
         // Azure PostgreSQL specific options
         keepAlive: true,
         keepAliveInitialDelayMillis: 0,
+        // Additional Azure PostgreSQL connection options
+        application_name: 'SAM Dashboard API',
+        connectionString: process.env.DATABASE_URL, // Support for connection string format
       });
 
       // Test database connection
-      pool.on('connect', () => {
+      pool.on('connect', (client: any) => {
         if (process.env.NODE_ENV !== 'production') {
-          console.log('Connected to PostgreSQL database');
+          console.log('Connected to PostgreSQL database with SSL');
+          // Log SSL connection details for debugging
+          if (client.ssl) {
+              console.log('SSL connection established:', {
+                authorized: client.ssl.authorized,
+                protocol: client.ssl.protocol,
+                cipher: client.ssl.cipher?.name
+              });
+          }
         }
       });
 
@@ -68,6 +89,14 @@ async function initializePool(): Promise<any> {
           message: err.message,
           stack: err.stack
         });
+
+        // Enhanced SSL error handling
+        if (err.code === 'CERT_HAS_EXPIRED' || err.message?.includes('certificate')) {
+          console.error('SSL Certificate Error: Please check your SSL configuration and certificates');
+        } else if (err.code === 'ECONNREFUSED' && process.env.DB_SSL_MODE === 'require') {
+          console.error('SSL Connection Failed: Azure PostgreSQL requires SSL. Check DB_SSL_MODE and SSL settings');
+        }
+
         // Do not exit the process to allow graceful handling
         // The server will continue running, database operations may fail
       });
@@ -158,4 +187,59 @@ export async function getClient() {
     query,
     release: releaseWithTimeout,
   };
+}
+
+// Helper function to test database connection with SSL validation
+export async function testDatabaseConnection(): Promise<{ success: boolean; message: string; sslInfo?: any }> {
+  try {
+    const dbPool = await getPool();
+    const client = await dbPool.connect();
+
+    // Test basic connectivity
+    const result = await client.query('SELECT version(), current_database(), session_user');
+    const version = result.rows[0].version;
+    const database = result.rows[0].current_database;
+    const user = result.rows[0].session_user;
+
+    // Get SSL information
+    const sslResult = await client.query('SHOW ssl');
+    const sslEnabled = sslResult.rows[0].ssl === 'on';
+
+    client.release();
+
+    const sslInfo = {
+      enabled: sslEnabled,
+      version: version,
+      database: database,
+      user: user,
+      sslMode: process.env.DB_SSL_MODE || 'default'
+    };
+
+    return {
+      success: true,
+      message: `Database connection successful. SSL: ${sslEnabled ? 'enabled' : 'disabled'}`,
+      sslInfo
+    };
+
+  } catch (error: any) {
+    console.error('Database connection test failed:', error);
+
+    let errorMessage = 'Database connection failed';
+    if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Connection refused - check host and port settings';
+    } else if (error.code === '42P01') {
+      errorMessage = 'Database connection successful but test query failed';
+    } else if (error.message?.includes('SSL')) {
+      errorMessage = `SSL connection error: ${error.message}`;
+    }
+
+    return {
+      success: false,
+      message: errorMessage,
+      sslInfo: {
+        error: error.message,
+        code: error.code
+      }
+    };
+  }
 }
