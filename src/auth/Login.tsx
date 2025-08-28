@@ -22,7 +22,7 @@ export const Login: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">SAM Recovery Intelligence</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">SAM Recovery Intelligence V1</h1>
           <p className="text-white/80">Please sign in to access the dashboard</p>
         </div>
         
