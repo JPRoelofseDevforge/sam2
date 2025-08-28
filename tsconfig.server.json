@@ -43,6 +43,7 @@
     "src/App.tsx",
     "src/index.css",
     "src/utils/api.ts",
+    "src/services/dataService.ts",
     "vite.config.ts",
     "**/*.test.ts",
     "**/*.spec.ts"

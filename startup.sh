@@ -23,7 +23,7 @@ if [ -d "dist" ] && [ -f "dist/server.js" ]; then
 else
     echo "Building application..."
     echo "Using npx vite build and npm run build:server..."
-    if ! npx vite build || ! npm run build:server; then
+    if ! npm run build; then
         echo "ERROR: Failed to build application"
         exit 1
     fi
