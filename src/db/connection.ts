@@ -62,9 +62,14 @@ async function initializePool(): Promise<any> {
 
       pool.on('error', (err: any) => {
         console.error('Unexpected error on idle client', err);
-        if (isNodeEnvironment) {
-          process.exit(-1);
-        }
+        // Log additional details for debugging
+        console.error('Pool error details:', {
+          code: err.code,
+          message: err.message,
+          stack: err.stack
+        });
+        // Do not exit the process to allow graceful handling
+        // The server will continue running, database operations may fail
       });
 
       if (process.env.NODE_ENV !== 'production') {

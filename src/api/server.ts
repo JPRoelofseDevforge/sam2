@@ -27,9 +27,24 @@ import { ReadinessScoreModel } from '../db/models/readinessScores';
 import { TrainingLoadTrendModel } from '../db/models/trainingLoadTrends';
 import { BiometricDataAdminModel } from '../db/models/biometricDataAdmin';
 import { BodyCompositionAdminModel } from '../db/models/bodyCompositionAdmin';
+import { query } from '../db/connection';
 
 // Load environment variables
 dotenv.config();
+
+// Validate required environment variables
+const requiredEnvVars = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'JWT_SECRET'];
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:');
+  missingVars.forEach(varName => {
+    console.error(`   - ${varName}`);
+  });
+  console.error('\nPlease set these environment variables before starting the server.');
+  console.error('You can check your .env file or environment configuration.');
+  process.exit(1);
+}
 
 // Add diagnostic logging at startup (development only)
 if (process.env.NODE_ENV !== 'production') {
@@ -2350,6 +2365,35 @@ app.get('/api/health', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Database health check endpoint
+app.get('/api/health/db', async (req: Request, res: Response) => {
+  try {
+    // Test database connectivity with a simple query
+    await query('SELECT 1 as test');
+
+    res.json({
+      status: 'healthy',
+      database: {
+        status: 'connected',
+        timestamp: new Date().toISOString()
+      },
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (error: any) {
+    console.error('Database health check failed:', error);
+
+    res.status(503).json({
+      status: 'unhealthy',
+      database: {
+        status: 'disconnected',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      },
+      environment: process.env.NODE_ENV || 'development'
+    });
+  }
 });
 
 // Catch-all handler: send back React's index.html file for any non-API routes
