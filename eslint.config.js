@@ -36,7 +36,7 @@ if (isCI) {
     // Add any specific rules that should be warnings in CI
     '@typescript-eslint/no-unused-vars': 'warn',
     '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/prefer-const': 'warn',
+    'prefer-const': 'warn',
     // Keep some rules as errors even in CI if critical
     '@typescript-eslint/no-non-null-assertion': 'error',
   };
