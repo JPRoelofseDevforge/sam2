@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { generateAlert, calculateReadinessScore } from '../utils/analytics';
 import { Athlete, BiometricData, GeneticProfile } from '../types';
 import dataService from '../services/dataService';
+import weatherApiService from '../services/weatherApi';
 
 const date = new Date();
     // Format date as YYYY-MM-DD (or customize as needed)
@@ -61,8 +62,7 @@ const getStatusColor = (alertType: string): string => {
   }
 };
 
-// 🔧 CONFIG: Replace with your actual location and IQAir API key
-const IQAIR_API_KEY = import.meta.env.VITE_IQAIR_API_KEY || 'f8e6fb6c-6ec0-4064-a46b-a173e4137718';
+// 🔧 CONFIG: Location settings for weather API
 const CITY = import.meta.env.VITE_CITY || 'Pretoria';
 const STATE = import.meta.env.VITE_STATE || 'Gauteng';
 const COUNTRY = import.meta.env.VITE_COUNTRY || 'South Africa';
@@ -142,49 +142,31 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
     };
   }, [athletes, biometricData, geneticProfiles]);
 
-  // Fetch Air Quality from IQAir
+  // Fetch Air Quality from backend API
   useEffect(() => {
     const fetchAirQuality = async () => {
       try {
         setLoading(true);
-        const url = new URL('https://api.airvisual.com/v2/city');
-        url.searchParams.append('city', CITY);
-        url.searchParams.append('state', STATE);
-        url.searchParams.append('country', COUNTRY);
-        url.searchParams.append('key', IQAIR_API_KEY);
 
-        const res = await fetch(url.toString(), {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
+        const response = await weatherApiService.getCurrentWeather(CITY, STATE, COUNTRY);
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-        const json = await res.json();
-
-        // Check if response has expected structure
-        if (!json || !json.data || !json.data.current) {
-          throw new Error('Invalid API response structure');
+        if (!response.success || !response.data) {
+          throw new Error(response.error || response.message || 'Failed to fetch air quality data');
         }
 
-        const current = json.data.current;
+        const backendData = response.data;
 
-        // Check if required weather and pollution data exist
-        if (!current.weather || !current.pollution) {
-          throw new Error('Missing weather or pollution data in API response');
-        }
-
+        // Map backend response to component's expected format
         setAirQuality({
-          temperature: current.weather.tp,
-          humidity: current.weather.hu,
-          aqi: current.pollution.aqius,
-          co: current.pollution.co,
-          pm25: current.pollution.pm25,
-          pm10: current.pollution.pm10,
-          windSpeed: current.weather.ws,
-          pressure: current.weather.pr,
-          weatherCondition: current.weather.ic,
+          temperature: backendData.current.temperature,
+          humidity: backendData.current.humidity,
+          aqi: backendData.current.air_quality_index || 0,
+          co: 0, // Backend doesn't provide CO data
+          pm25: 0, // Backend doesn't provide PM2.5 data
+          pm10: 0, // Backend doesn't provide PM10 data
+          windSpeed: backendData.current.wind_speed,
+          pressure: backendData.current.pressure,
+          weatherCondition: backendData.current.weather_condition,
           lastUpdated: new Date().toLocaleTimeString(),
         });
         setError(null);

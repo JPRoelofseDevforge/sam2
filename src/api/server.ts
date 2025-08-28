@@ -29,6 +29,10 @@ import { BiometricDataAdminModel } from '../db/models/biometricDataAdmin';
 import { BodyCompositionAdminModel } from '../db/models/bodyCompositionAdmin';
 import { query } from '../db/connection';
 
+// Import weather routes
+import weatherRoutes from './routes/weather';
+import weatherCache from '../services/weatherCache';
+
 // Load environment variables
 dotenv.config();
 
@@ -2356,6 +2360,13 @@ app.delete('/api/admin/training-load-trends/:id', authenticateToken, requireAdmi
 });
 
 // =====================================================
+// WEATHER ENDPOINTS
+// =====================================================
+
+// Mount weather routes
+app.use('/api/weather', weatherRoutes);
+
+// =====================================================
 // HEALTH CHECK
 // =====================================================
 
@@ -2481,7 +2492,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Handle uncaught exceptions
   process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
-    server.close(() => {
+    server.close(async () => {
+      // Clean up weather cache resources
+      try {
+        await weatherCache.destroy();
+        console.log('Weather cache resources cleaned up');
+      } catch (cleanupError) {
+        console.error('Error cleaning up weather cache:', cleanupError);
+      }
       process.exit(1);
     });
   });
@@ -2489,8 +2507,44 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Handle unhandled promise rejections
   process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    server.close(() => {
+    server.close(async () => {
+      // Clean up weather cache resources
+      try {
+        await weatherCache.destroy();
+        console.log('Weather cache resources cleaned up');
+      } catch (cleanupError) {
+        console.error('Error cleaning up weather cache:', cleanupError);
+      }
       process.exit(1);
+    });
+  });
+
+  // Handle graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(async () => {
+      // Clean up weather cache resources
+      try {
+        await weatherCache.destroy();
+        console.log('Weather cache resources cleaned up');
+      } catch (cleanupError) {
+        console.error('Error cleaning up weather cache:', cleanupError);
+      }
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT received, shutting down gracefully');
+    server.close(async () => {
+      // Clean up weather cache resources
+      try {
+        await weatherCache.destroy();
+        console.log('Weather cache resources cleaned up');
+      } catch (cleanupError) {
+        console.error('Error cleaning up weather cache:', cleanupError);
+      }
+      process.exit(0);
     });
   });
 }

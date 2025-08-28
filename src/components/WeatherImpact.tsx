@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Thermometer, Droplets, Wind, Eye, Zap, Activity, Target, Clock, RefreshCw } from 'lucide-react';
+import weatherApiService from '../services/weatherApi';
 
 interface WeatherImpactProps {
   athleteId: string;
@@ -44,59 +45,40 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
   const [activeTab, setActiveTab] = useState<'overview' | 'genetics' | 'performance' | 'forecast'>('overview');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  // 🔧 CONFIG: Replace with your actual location and IQAir API key
-  const IQAIR_API_KEY = import.meta.env.VITE_IQAIR_API_KEY || 'f8e6fb6c-6ec0-4064-a46b-a173e4137718';
+  // 🔧 CONFIG: Location settings for weather API
   const CITY = import.meta.env.VITE_CITY || 'Pretoria';
   const STATE = import.meta.env.VITE_STATE || 'Gauteng';
   const COUNTRY = import.meta.env.VITE_COUNTRY || 'South Africa';
 
-  // Fetch comprehensive weather data
+  // Fetch comprehensive weather data from backend API
   useEffect(() => {
     const fetchWeatherData = async () => {
       try {
         setLoading(true);
-        const url = new URL('https://api.airvisual.com/v2/city');
-        url.searchParams.append('city', CITY);
-        url.searchParams.append('state', STATE);
-        url.searchParams.append('country', COUNTRY);
-        url.searchParams.append('key', IQAIR_API_KEY);
 
-        const res = await fetch(url.toString(), {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
+        const response = await weatherApiService.getCurrentWeather(CITY, STATE, COUNTRY);
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-        const json = await res.json();
-
-        // Check if response has expected structure
-        if (!json || !json.data || !json.data.current) {
-          throw new Error('Invalid API response structure');
+        if (!response.success || !response.data) {
+          throw new Error(response.error || response.message || 'Failed to fetch weather data');
         }
 
-        const current = json.data.current;
+        const backendData = response.data;
 
-        // Check if required weather and pollution data exist
-        if (!current.weather || !current.pollution) {
-          throw new Error('Missing weather or pollution data in API response');
-        }
-
+        // Map backend response to component's expected format
         setWeatherData({
-          temperature: current.weather.tp,
-          humidity: current.weather.hu,
-          aqi: current.pollution.aqius,
-          co: current.pollution.co,
-          pm25: current.pollution.pm25,
-          pm10: current.pollution.pm10,
-          windSpeed: current.weather.ws,
-          pressure: current.weather.pr,
-          weatherCondition: current.weather.ic,
+          temperature: backendData.current.temperature,
+          humidity: backendData.current.humidity,
+          aqi: backendData.current.air_quality_index || 0,
+          co: 0, // Backend doesn't provide CO data
+          pm25: 0, // Backend doesn't provide PM2.5 data
+          pm10: 0, // Backend doesn't provide PM10 data
+          windSpeed: backendData.current.wind_speed,
+          pressure: backendData.current.pressure,
+          weatherCondition: backendData.current.weather_condition,
           lastUpdated: new Date().toLocaleTimeString(),
-          uvIndex: Math.floor(Math.random() * 11), // Mock UV data
-          visibility: Math.floor(Math.random() * 20) + 5, // Mock visibility
-          dewPoint: current.weather.tp - (100 - current.weather.hu) / 5, // Calculate dew point
+          uvIndex: backendData.current.uv_index,
+          visibility: backendData.current.visibility,
+          dewPoint: backendData.current.dew_point,
         });
         setError(null);
         setLastRefresh(new Date());
@@ -111,7 +93,7 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
     fetchWeatherData();
     const interval = setInterval(fetchWeatherData, 300000); // Refresh every 5 minutes
     return () => clearInterval(interval);
-  }, []);
+  }, [CITY, STATE, COUNTRY]);
 
   // Utility functions
   const getWeatherIcon = (condition: string | undefined) => {

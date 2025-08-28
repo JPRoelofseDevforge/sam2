@@ -373,6 +373,74 @@ export interface NavItem {
   children?: NavItem[];
 }
 
+// Weather Types
+export interface WeatherData {
+  location: {
+    city: string;
+    state: string;
+    country: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  current: {
+    temperature: number;
+    humidity: number;
+    pressure: number;
+    wind_speed: number;
+    wind_direction: number;
+    weather_condition: string;
+    weather_description: string;
+    uv_index: number;
+    visibility: number;
+    cloud_cover: number;
+    feels_like: number;
+    dew_point: number;
+    precipitation_probability: number;
+    air_quality_index?: number;
+    air_quality_category?: string;
+    timestamp: string;
+  };
+  forecast?: WeatherForecast[];
+}
+
+export interface WeatherForecast {
+  date: string;
+  temperature_max: number;
+  temperature_min: number;
+  humidity: number;
+  precipitation_probability: number;
+  weather_condition: string;
+  weather_description: string;
+  wind_speed: number;
+  wind_direction: number;
+  uv_index: number;
+}
+
+export interface WeatherApiConfig {
+  apiKey: string;
+  baseUrl: string;
+  timeout: number;
+  retryAttempts: number;
+  retryDelay: number;
+}
+
+export interface WeatherCacheEntry {
+  data: WeatherData;
+  timestamp: number;
+  expiresAt: number;
+}
+
+export interface WeatherServiceResponse {
+  success: boolean;
+  data?: WeatherData;
+  error?: string;
+  message?: string;
+  cached?: boolean;
+  timestamp?: string;
+}
+
 // Theme Types
 export interface ThemeConfig {
   colors: {
