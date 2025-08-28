@@ -1,9 +1,9 @@
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
+import App from './App';
 import './index.css';
-import { AuthProvider } from './auth/AuthContext.tsx';
-import { ProtectedRoute } from './auth/ProtectedRoute.tsx';
+import { AuthProvider } from './auth/AuthContext';
+import { ProtectedRoute } from './auth/ProtectedRoute';
 
 const root = createRoot(document.getElementById('root')!);
 root.render(
