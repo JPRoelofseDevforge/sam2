@@ -162,7 +162,18 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
 
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
         const json = await res.json();
+
+        // Check if response has expected structure
+        if (!json || !json.data || !json.data.current) {
+          throw new Error('Invalid API response structure');
+        }
+
         const current = json.data.current;
+
+        // Check if required weather and pollution data exist
+        if (!current.weather || !current.pollution) {
+          throw new Error('Missing weather or pollution data in API response');
+        }
 
         setAirQuality({
           temperature: current.weather.tp,
