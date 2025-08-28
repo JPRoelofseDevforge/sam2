@@ -18,6 +18,9 @@ if (fs.existsSync(serverSrc)) {
 // Create directories
 const dbDir = path.join(__dirname, '..', 'dist', 'db');
 const typesDir = path.join(__dirname, '..', 'dist', 'types');
+const routesDir = path.join(__dirname, '..', 'dist', 'routes');
+const servicesDir = path.join(__dirname, '..', 'dist', 'services');
+const middlewareDir = path.join(__dirname, '..', 'dist', 'middleware');
 
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
@@ -27,6 +30,21 @@ if (!fs.existsSync(dbDir)) {
 if (!fs.existsSync(typesDir)) {
   fs.mkdirSync(typesDir, { recursive: true });
   console.log('✅ Created types directory');
+}
+
+if (!fs.existsSync(routesDir)) {
+  fs.mkdirSync(routesDir, { recursive: true });
+  console.log('✅ Created routes directory');
+}
+
+if (!fs.existsSync(servicesDir)) {
+  fs.mkdirSync(servicesDir, { recursive: true });
+  console.log('✅ Created services directory');
+}
+
+if (!fs.existsSync(middlewareDir)) {
+  fs.mkdirSync(middlewareDir, { recursive: true });
+  console.log('✅ Created middleware directory');
 }
 
 // Copy db files
@@ -41,6 +59,27 @@ const typesSrc = path.join(__dirname, '..', 'dist', 'src', 'types');
 if (fs.existsSync(typesSrc)) {
   copyDirRecursive(typesSrc, typesDir);
   console.log('✅ Copied types files');
+}
+
+// Copy routes files
+const routesSrc = path.join(__dirname, '..', 'dist', 'src', 'api', 'routes');
+if (fs.existsSync(routesSrc)) {
+  copyDirRecursive(routesSrc, routesDir);
+  console.log('✅ Copied routes files');
+}
+
+// Copy services files
+const servicesSrc = path.join(__dirname, '..', 'dist', 'src', 'services');
+if (fs.existsSync(servicesSrc)) {
+  copyDirRecursive(servicesSrc, servicesDir);
+  console.log('✅ Copied services files');
+}
+
+// Copy middleware files
+const middlewareSrc = path.join(__dirname, '..', 'dist', 'src', 'middleware');
+if (fs.existsSync(middlewareSrc)) {
+  copyDirRecursive(middlewareSrc, middlewareDir);
+  console.log('✅ Copied middleware files');
 }
 
 // Fix import paths in all JS files
