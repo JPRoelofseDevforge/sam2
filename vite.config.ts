@@ -34,7 +34,7 @@ export default defineConfig({
     sourcemap: process.env.NODE_ENV === 'development',
     // Optimize build performance
     minify: 'esbuild',
-    target: 'esnext',
+    target: 'es2020',
     cssCodeSplit: true,
     // Reduce bundle size
     reportCompressedSize: false,

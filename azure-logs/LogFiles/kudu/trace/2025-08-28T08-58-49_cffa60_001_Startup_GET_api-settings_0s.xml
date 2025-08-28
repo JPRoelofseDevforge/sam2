@@ -1,0 +1,3 @@
+<step title="Startup Request" date="2025-08-28T08:58:49.059" instance="cffa60" url="/api/settings" method="GET" type="request" pid="820,1,7" ScmType="GitHubAction" >
+  <step title="Cleanup Xml Logs" date="2025-08-28T08:58:49.063" /><!-- duration: 7ms -->
+</step><!-- duration: 16ms -->

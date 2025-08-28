@@ -1,0 +1,14 @@
+<step title="Incoming Request" date="2025-08-28T16:47:44.067" instance="7f1a8d" url="/api/zipdeploy?isAsync=true" method="POST" type="request" pid="820,1,23" Accept="*/*" Host="samdashboardapi.scm.azurewebsites.net" User-Agent="AZURECLI/2.76.0 (MSI)" Accept-Encoding="gzip, deflate" Authorization="Bea..." Cache-Control="no-cache" Content-Type="application/octet-stream" Cookie="ARRAffinity=7f1a8d376a83fdb83d78d08c3afa570b9eb71dbd4ed444b8e2a36ca0d9c4345c; ARRAffinitySameSite=7f1a8d376a83fdb83d78d08c3afa570b9eb71dbd4ed444b8e2a36ca0d9c4345c" Content-Length="10259046" x-ms-client-request-id="b444667c-842e-11f0-83b0-fcb0de71a262" x-ms-artifact-checksum="46ef3a9fe0aa6016d4ed75d41c748f7e82fcaa0072264af9843f8d7dbef7d8ee" X-ARR-LOG-ID="b444667c-842e-11f0-83b0-fcb0de71a262" CLIENT-IP="102.66.125.105:64846" X-SITE-DEPLOYMENT-ID="samdashboardapi" WAS-DEFAULT-HOSTNAME="samdashboardapi.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/zipdeploy?isAsync=true" X-Client-IP="102.66.125.105" X-Client-Port="64846" >
+  <step title="ZipPushDeploy" date="2025-08-28T16:47:44.076" >
+    <step title="ZipDeploy. Extract zip." date="2025-08-28T16:47:44.079" /><!-- duration: 1ms -->
+    <step title="Starting PushDeployAsync" date="2025-08-28T16:47:44.082" /><!-- duration: 1ms -->
+    <step title="Writing artifact to /tmp/zipdeploy/b5702e2b-e587-4c99-9c82-26dfe37f008d.zip" date="2025-08-28T16:47:44.086" >
+      <step title="Writing multipart request body to /tmp/zipdeploy/b5702e2b-e587-4c99-9c82-26dfe37f008d.zip" date="2025-08-28T16:47:44.087" /><!-- duration: 1ms -->
+    </step><!-- duration: 197ms -->
+    <step title="Start deployment in the background" date="2025-08-28T16:47:44.290" >
+      <step title="Acquiring Deployment Lock" date="2025-08-28T16:47:44.294" /><!-- duration: 1ms -->
+      <step title="Acquired Deployment Lock" date="2025-08-28T16:47:44.318" /><!-- duration: 1ms -->
+    </step><!-- duration: 79ms -->
+  </step><!-- duration: 294ms -->
+  <step title="Outgoing response" date="2025-08-28T16:47:44.371" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 1ms -->
+</step><!-- duration: 306ms -->

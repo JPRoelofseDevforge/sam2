@@ -36,18 +36,25 @@ import weatherCache from '../services/weatherCache';
 // Load environment variables
 dotenv.config();
 
-// Validate required environment variables
+// Validate required environment variables (only in production runtime)
+const isProduction = process.env.NODE_ENV === 'production';
 const requiredEnvVars = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'JWT_SECRET'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
-if (missingVars.length > 0) {
-  console.error('❌ Missing required environment variables:');
+if (isProduction && missingVars.length > 0) {
+  console.error('❌ Missing required environment variables in production:');
   missingVars.forEach(varName => {
     console.error(`   - ${varName}`);
   });
   console.error('\nPlease set these environment variables before starting the server.');
   console.error('You can check your .env file or environment configuration.');
   process.exit(1);
+} else if (!isProduction && missingVars.length > 0) {
+  console.warn('⚠️  Missing environment variables (this is OK during build):');
+  missingVars.forEach(varName => {
+    console.warn(`   - ${varName}`);
+  });
+  console.warn('Server will continue with limited functionality.');
 }
 
 // Add diagnostic logging at startup (development only)
@@ -2381,6 +2388,21 @@ app.get('/api/health', (req: Request, res: Response) => {
 // Database health check endpoint
 app.get('/api/health/db', async (req: Request, res: Response) => {
   try {
+    // Check if database environment variables are available
+    const hasDbConfig = process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process.env.DB_PASSWORD;
+
+    if (!hasDbConfig) {
+      return res.status(503).json({
+        status: 'unhealthy',
+        database: {
+          status: 'not_configured',
+          message: 'Database environment variables not found',
+          timestamp: new Date().toISOString()
+        },
+        environment: process.env.NODE_ENV || 'development'
+      });
+    }
+
     // Test database connectivity with a simple query
     await query('SELECT 1 as test');
 

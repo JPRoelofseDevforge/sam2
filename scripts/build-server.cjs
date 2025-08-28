@@ -120,6 +120,31 @@ function fixImportPaths(dir) {
       content = content.replace(/from '\.\.\/db\/([^']+)'/g, (match, path) => {
         return path.endsWith('.js') ? `from './db/${path}'` : `from './db/${path}.js'`;
       });
+
+      // Special handling for server.js when it's moved from dist/src/api/ to dist/
+      // ../services/ should become ./services/
+      content = content.replace(/from '\.\.\/services\/([^']+)'/g, (match, path) => {
+        return path.endsWith('.js') ? `from './services/${path}'` : `from './services/${path}.js'`;
+      });
+
+      // Special handling for routes moved from dist/src/api/routes/ to dist/routes/
+      // ../../services/ should become ../services/
+      content = content.replace(/from '\.\.\/\.\.\/services\/([^']+)'/g, (match, path) => {
+        return path.endsWith('.js') ? `from '../services/${path}'` : `from '../services/${path}.js'`;
+      });
+
+      // Special handling for routes moved from dist/src/api/routes/ to dist/routes/
+      // ../../middleware/ should become ../middleware/
+      content = content.replace(/from '\.\.\/\.\.\/middleware\/([^']+)'/g, (match, path) => {
+        return path.endsWith('.js') ? `from '../middleware/${path}'` : `from '../middleware/${path}.js'`;
+      });
+
+      // Special handling for routes moved from dist/src/api/routes/ to dist/routes/
+      // ../../types/ should become ../types/
+      content = content.replace(/from '\.\.\/\.\.\/types\/([^']+)'/g, (match, path) => {
+        return path.endsWith('.js') ? `from '../types/${path}'` : `from '../types/${path}.js'`;
+      });
+
       content = content.replace(/from '\.\.\/([^']+)'/g, (match, path) => {
         return path.endsWith('.js') ? match : `from '../${path}.js'`;
       });

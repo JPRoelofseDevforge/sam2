@@ -27,8 +27,11 @@
   },
   "include": [
     "src/api/server.ts",
+    "src/api/routes/**/*",
     "src/db/**/*",
-    "src/types/**/*"
+    "src/types/**/*",
+    "src/services/**/*",
+    "src/middleware/**/*"
   ],
   "exclude": [
     "node_modules",

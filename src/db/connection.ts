@@ -24,18 +24,22 @@ async function initializePool(): Promise<any> {
       const pg = await import('pg');
       const { Pool } = pg;
 
-      // Validate required environment variables
-      if (!process.env.DB_HOST) {
-        throw new Error('DB_HOST environment variable is required');
+      // Validate required environment variables (only fail in production runtime, not during build)
+      const isProduction = process.env.NODE_ENV === 'production';
+      const hasAllEnvVars = process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process.env.DB_PASSWORD;
+
+      if (isProduction && !hasAllEnvVars) {
+        throw new Error('Database environment variables are required in production. Missing: ' +
+          (!process.env.DB_HOST ? 'DB_HOST ' : '') +
+          (!process.env.DB_NAME ? 'DB_NAME ' : '') +
+          (!process.env.DB_USER ? 'DB_USER ' : '') +
+          (!process.env.DB_PASSWORD ? 'DB_PASSWORD ' : ''));
       }
-      if (!process.env.DB_NAME) {
-        throw new Error('DB_NAME environment variable is required');
-      }
-      if (!process.env.DB_USER) {
-        throw new Error('DB_USER environment variable is required');
-      }
-      if (!process.env.DB_PASSWORD) {
-        throw new Error('DB_PASSWORD environment variable is required');
+
+      // During build process or development, use dummy values to prevent build failures
+      if (!hasAllEnvVars) {
+        console.warn('Database environment variables not found. Using dummy configuration for build process.');
+        return null; // Return null to indicate no database connection
       }
 
       // Azure PostgreSQL SSL configuration
@@ -135,6 +139,12 @@ export default pool;
 export async function query(text: string, params?: any[]) {
   try {
     const dbPool = await getPool();
+
+    // If pool is null (no database connection), throw a specific error
+    if (!dbPool) {
+      throw new Error('Database connection not available. Please check your environment variables.');
+    }
+
     const start = Date.now();
     const res = await dbPool.query(text, params);
     const duration = Date.now() - start;
@@ -160,12 +170,17 @@ async function getPool(): Promise<any> {
     }
     await initializePool();
   }
-  return pool;
+  return pool; // This can be null if environment variables are missing during build
 }
 
 // Helper function to get a client from the pool
 export async function getClient() {
   const dbPool = await getPool();
+
+  // If pool is null (no database connection), throw an error
+  if (!dbPool) {
+    throw new Error('Database connection not available. Please check your environment variables.');
+  }
 
   const client = await dbPool.connect();
   const query = client.query.bind(client);
@@ -193,6 +208,16 @@ export async function getClient() {
 export async function testDatabaseConnection(): Promise<{ success: boolean; message: string; sslInfo?: any }> {
   try {
     const dbPool = await getPool();
+
+    // If pool is null (no database connection), return failure
+    if (!dbPool) {
+      return {
+        success: false,
+        message: 'Database connection not available. Please check your environment variables.',
+        sslInfo: { error: 'No database configuration found' }
+      };
+    }
+
     const client = await dbPool.connect();
 
     // Test basic connectivity

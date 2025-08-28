@@ -44,7 +44,7 @@ export class WeatherApiService {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data: WeatherServiceResponse = await response.json();
+      const data = await response.json() as WeatherServiceResponse;
 
       if (!data.success) {
         throw new Error(data.error || data.message || 'Failed to fetch weather data');
@@ -80,7 +80,7 @@ export class WeatherApiService {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data: WeatherServiceResponse = await response.json();
+      const data = await response.json() as WeatherServiceResponse;
 
       if (!data.success) {
         throw new Error(data.error || data.message || 'Failed to fetch weather data');
@@ -111,7 +111,7 @@ export class WeatherApiService {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data: WeatherServiceResponse = await response.json();
+      const data = await response.json() as WeatherServiceResponse;
 
       if (!data.success) {
         throw new Error(data.error || data.message || 'Failed to fetch weather data');
@@ -174,12 +174,14 @@ export class WeatherApiService {
 
     console.error(`Weather API Error:`, errorMessage);
 
-    return {
+    const errorResponse: WeatherApiResponse = {
       success: false,
       error: errorMessage,
       message: 'Weather data retrieval failed',
       timestamp: new Date().toISOString(),
     };
+
+    return errorResponse;
   }
 
   /**
