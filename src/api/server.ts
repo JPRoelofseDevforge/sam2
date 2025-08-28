@@ -31,16 +31,18 @@ import { BodyCompositionAdminModel } from '../db/models/bodyCompositionAdmin';
 // Load environment variables
 dotenv.config();
 
-// Add diagnostic logging at startup
-console.log('=== SERVER DIAGNOSTIC STARTUP ===');
-console.log(`Current working directory: ${process.cwd()}`);
-console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`PORT from env: ${process.env.PORT}`);
-console.log(`JWT_SECRET loaded: ${!!process.env.JWT_SECRET}`);
-console.log(`DB_HOST: ${process.env.DB_HOST}`);
-console.log(`DB_NAME: ${process.env.DB_NAME}`);
-console.log(`VITE_API_URL: ${process.env.VITE_API_URL}`);
-console.log('=== SERVER DIAGNOSTIC END ===');
+// Add diagnostic logging at startup (development only)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('=== SERVER DIAGNOSTIC STARTUP ===');
+  console.log(`Current working directory: ${process.cwd()}`);
+  console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`PORT from env: ${process.env.PORT}`);
+  console.log(`JWT_SECRET loaded: ${!!process.env.JWT_SECRET}`);
+  console.log(`DB_HOST: ${process.env.DB_HOST}`);
+  console.log(`DB_NAME: ${process.env.DB_NAME}`);
+  console.log(`VITE_API_URL: ${process.env.VITE_API_URL}`);
+  console.log('=== SERVER DIAGNOSTIC END ===');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -58,14 +60,20 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   ];
   const origin = req.headers.origin;
 
-  console.log(`[CORS] Request from origin: ${origin}, method: ${req.method}, path: ${req.path}, user-agent: ${req.headers['user-agent']?.substring(0, 50)}...`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[CORS] Request from origin: ${origin}, method: ${req.method}, path: ${req.path}, user-agent: ${req.headers['user-agent']?.substring(0, 50)}...`);
+  }
 
   // Allow the specific origins or if no origin header (for same-origin requests)
   if ((origin && allowedOrigins.includes(origin)) || !origin) {
     res.header('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
-    console.log(`[CORS] ✅ Allowed origin: ${origin || allowedOrigins[0]}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[CORS] ✅ Allowed origin: ${origin || allowedOrigins[0]}`);
+    }
   } else {
-    console.log(`[CORS] ❌ Blocked origin: ${origin} - not in allowed list: ${allowedOrigins.join(', ')}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[CORS] ❌ Blocked origin: ${origin} - not in allowed list: ${allowedOrigins.join(', ')}`);
+    }
     return res.status(403).json({ error: 'CORS policy violation', allowedOrigins });
   }
 
@@ -76,7 +84,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
-    console.log(`[CORS] Handling OPTIONS preflight for: ${req.path}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[CORS] Handling OPTIONS preflight for: ${req.path}`);
+    }
     res.status(200).send();
     return;
   }
@@ -137,22 +147,30 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  console.log(`[AUTH] ${req.method} ${req.path} - Auth header present: ${!!authHeader}, Token present: ${!!token}`);
-  console.log(`[AUTH] Origin: ${req.headers.origin}, User-Agent: ${req.headers['user-agent']?.substring(0, 50)}...`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[AUTH] ${req.method} ${req.path} - Auth header present: ${!!authHeader}, Token present: ${!!token}`);
+    console.log(`[AUTH] Origin: ${req.headers.origin}, User-Agent: ${req.headers['user-agent']?.substring(0, 50)}...`);
+  }
 
   if (!token) {
-    console.log(`[AUTH] ❌ No token provided for: ${req.path}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[AUTH] ❌ No token provided for: ${req.path}`);
+    }
     return res.status(401).json({ error: 'Access token required' });
   }
 
   try {
     const user = jwt.verify(token, JWT_SECRET);
     req.user = user;
-    console.log(`[AUTH] ✅ Token verified for user: ${(user as any).user_id}, role: ${(user as any).role_name}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[AUTH] ✅ Token verified for user: ${(user as any).user_id}, role: ${(user as any).role_name}`);
+    }
     next();
   } catch (err) {
-    console.log(`[AUTH] ❌ Invalid token for: ${req.path} - ${err}`);
-    console.log(`[AUTH] JWT_SECRET length: ${JWT_SECRET.length}, first 10 chars: ${JWT_SECRET.substring(0, 10)}...`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[AUTH] ❌ Invalid token for: ${req.path} - ${err}`);
+      console.log(`[AUTH] JWT_SECRET length: ${JWT_SECRET.length}, first 10 chars: ${JWT_SECRET.substring(0, 10)}...`);
+    }
     return res.status(403).json({ error: 'Invalid or expired token', details: err instanceof Error ? err.message : String(err) });
   }
 };
@@ -2347,7 +2365,9 @@ app.use(errorHandler);
 
 // Add a simple test endpoint to verify CORS is working
 app.get('/api/test-cors', (req: Request, res: Response) => {
-  console.log(`[TEST] CORS test endpoint called from origin: ${req.headers.origin}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[TEST] CORS test endpoint called from origin: ${req.headers.origin}`);
+  }
   res.json({
     message: 'CORS test successful',
     origin: req.headers.origin,
@@ -2356,45 +2376,49 @@ app.get('/api/test-cors', (req: Request, res: Response) => {
   });
 });
 
-// Add a health check endpoint
-app.get('/api/debug', (req: Request, res: Response) => {
-  res.json({
-    status: 'debugging',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    port: PORT,
-    server_file: 'src/api/server.ts (TypeScript Express)',
-    cors_origins: [
-      'https://app.samhealth.co.za',
-      'https://samapigene.azurewebsites.net',
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:3000'
-    ],
-    request_origin: req.headers.origin,
-    server_running: true,
-    jwt_secret_loaded: !!process.env.JWT_SECRET,
-    jwt_secret_length: process.env.JWT_SECRET?.length || 0,
-    database_config: {
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
-      name: process.env.DB_NAME,
-      user: process.env.DB_USER ? 'configured' : 'missing'
-    }
+// Add a health check endpoint (development only - secured for production)
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/debug', (req: Request, res: Response) => {
+    res.json({
+      status: 'debugging',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      port: PORT,
+      server_file: 'src/api/server.ts (TypeScript Express)',
+      cors_origins: [
+        'https://app.samhealth.co.za',
+        'https://samapigene.azurewebsites.net',
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:3000'
+      ],
+      request_origin: req.headers.origin,
+      server_running: true,
+      jwt_secret_loaded: !!process.env.JWT_SECRET,
+      jwt_secret_length: process.env.JWT_SECRET?.length || 0,
+      database_config: {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        name: process.env.DB_NAME,
+        user: process.env.DB_USER ? 'configured' : 'missing'
+      }
+    });
   });
-});
+}
 
 export default app;
 
-// Execution guard for CommonJS
-if (require.main === module) {
+// Execution guard for ES modules
+if (import.meta.url === `file://${process.argv[1]}`) {
   // Start server with error handling
   const server = app.listen(PORT, () => {
-    console.log(`API Server running on http://localhost:${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Database: ${process.env.DB_NAME} @ ${process.env.DB_HOST}:${process.env.DB_PORT}`);
-    console.log(`CORS Origins: https://app.samhealth.co.za, https://samapigene.azurewebsites.net`);
+    console.log(`API Server running on port ${PORT}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Database: ${process.env.DB_NAME} @ ${process.env.DB_HOST}:${process.env.DB_PORT}`);
+      console.log(`CORS Origins: https://app.samhealth.co.za, https://samapigene.azurewebsites.net`);
+    }
   });
 
   // Handle server startup errors

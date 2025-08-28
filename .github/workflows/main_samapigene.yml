@@ -48,6 +48,9 @@ jobs:
           cd deployment
           npx tsc --project tsconfig.server.json --outDir .
           mv dist/src/api/server.js dist/server.js 2>/dev/null || cp server.js dist/server.js 2>/dev/null || echo "Server compilation completed"
+          # Copy database models and types to dist root for runtime access
+          cp -r dist/src/db dist/db 2>/dev/null || echo "No db directory to copy"
+          cp -r dist/src/types dist/types 2>/dev/null || echo "No types directory to copy"
 
       - name: Login to Azure
         uses: azure/login@v2

@@ -18,7 +18,7 @@ fi
 # Ensure the compiled server exists
 if [ ! -f "dist/server.js" ]; then
     echo "Compiling TypeScript server..."
-    npx tsc src/api/server.ts --outDir . --target es2020 --module commonjs --moduleResolution node --esModuleInterop --allowSyntheticDefaultImports --skipLibCheck
+    npx tsc src/api/server.ts --outDir . --target es2022 --module es2022 --moduleResolution node --esModuleInterop --allowSyntheticDefaultImports --skipLibCheck
     mkdir -p dist
     mv server.js dist/server.js 2>/dev/null || cp server.js dist/server.js 2>/dev/null || echo "Server compilation completed"
 fi

@@ -24,12 +24,26 @@ async function initializePool(): Promise<any> {
       const pg = await import('pg');
       const { Pool } = pg;
 
+      // Validate required environment variables
+      if (!process.env.DB_HOST) {
+        throw new Error('DB_HOST environment variable is required');
+      }
+      if (!process.env.DB_NAME) {
+        throw new Error('DB_NAME environment variable is required');
+      }
+      if (!process.env.DB_USER) {
+        throw new Error('DB_USER environment variable is required');
+      }
+      if (!process.env.DB_PASSWORD) {
+        throw new Error('DB_PASSWORD environment variable is required');
+      }
+
       pool = new Pool({
-        host: process.env.DB_HOST || 'rxg.postgres.database.azure.com',
+        host: process.env.DB_HOST,
         port: parseInt(process.env.DB_PORT || '5432'),
-        database: process.env.DB_NAME || 'sports_performance_db',
-        user: process.env.DB_USER || 'rx',
-        password: process.env.DB_PASSWORD || 'qwe12345_',
+        database: process.env.DB_NAME,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
         ssl: { rejectUnauthorized: false }, // Required for Azure PostgreSQL
         max: 20, // Maximum number of clients in the pool
         idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
@@ -41,7 +55,9 @@ async function initializePool(): Promise<any> {
 
       // Test database connection
       pool.on('connect', () => {
-        console.log('Connected to PostgreSQL database');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Connected to PostgreSQL database');
+        }
       });
 
       pool.on('error', (err: any) => {
@@ -51,7 +67,9 @@ async function initializePool(): Promise<any> {
         }
       });
 
-      console.log('PostgreSQL connection pool initialized successfully');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('PostgreSQL connection pool initialized successfully');
+      }
       return pool;
     } catch (error) {
       console.error('Failed to initialize PostgreSQL connection:', error);
@@ -63,15 +81,19 @@ async function initializePool(): Promise<any> {
 }
 
 if (isNodeEnvironment) {
-  // Initialize pool asynchronously with better error handling
-  initializePool().catch(error => {
-    console.error('Failed to initialize database connection:', error);
-    console.warn('Server will continue running but database operations will fail');
-    // Don't exit the process - let the server start even without database
-  });
-} else {
-  console.warn('Database connection skipped - not in Node.js environment');
-}
+   // Initialize pool asynchronously with better error handling
+   initializePool().catch(error => {
+     console.error('Failed to initialize database connection:', error);
+     if (process.env.NODE_ENV !== 'production') {
+       console.warn('Server will continue running but database operations will fail');
+     }
+     // Don't exit the process - let the server start even without database
+   });
+ } else {
+   if (process.env.NODE_ENV !== 'production') {
+     console.warn('Database connection skipped - not in Node.js environment');
+   }
+ }
 
 export default pool;
 
@@ -82,7 +104,9 @@ export async function query(text: string, params?: any[]) {
     const start = Date.now();
     const res = await dbPool.query(text, params);
     const duration = Date.now() - start;
-    console.log('Executed query', { text, duration, rows: res.rowCount });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Executed query', { text, duration, rows: res.rowCount });
+    }
     return res;
   } catch (error: any) {
     console.error('Database query error:', error);

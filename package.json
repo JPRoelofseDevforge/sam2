@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "npm run prepare-deployment && vite build && npm run build:server",
     "build:frontend": "vite build",
-    "build:server": "tsc --project tsconfig.server.json --outDir dist && mv dist/src/api/server.js dist/src/api/server.cjs && cp dist/src/api/server.cjs dist/server.cjs && mkdir -p dist/db && cp -r dist/src/db/* dist/db/ 2>/dev/null || true && mkdir -p dist/types && cp -r dist/src/types/* dist/types/ 2>/dev/null || true",
+    "build:server": "tsc --project tsconfig.server.json --outDir dist && cp dist/src/api/server.js dist/server.js && mkdir -p dist/db && cp -r dist/src/db/* dist/db/ 2>/dev/null || true && mkdir -p dist/types && cp -r dist/src/types/* dist/types/ 2>/dev/null || true && sed -i \"s|from '../db/|from './db/|g\" dist/server.js",
     "prepare-deployment": "node scripts/prepare-deployment.cjs",
     "preview": "vite preview",
     "server": "tsx src/api/server.ts",
