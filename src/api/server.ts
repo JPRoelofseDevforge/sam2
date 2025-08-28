@@ -53,6 +53,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   const allowedOrigins = [
     'https://app.samhealth.co.za',
     'https://samapigene.azurewebsites.net',
+    'https://samdashboardapi.azurewebsites.net',
     'http://localhost:5173', // Vite dev server
     'http://localhost:3000', // Alternative dev port
     'http://127.0.0.1:5173', // Alternative localhost
@@ -2388,6 +2389,7 @@ if (process.env.NODE_ENV !== 'production') {
       cors_origins: [
         'https://app.samhealth.co.za',
         'https://samapigene.azurewebsites.net',
+        'https://samdashboardapi.azurewebsites.net',
         'http://localhost:5173',
         'http://localhost:3000',
         'http://127.0.0.1:5173',
@@ -2417,7 +2419,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`Database: ${process.env.DB_NAME} @ ${process.env.DB_HOST}:${process.env.DB_PORT}`);
-      console.log(`CORS Origins: https://app.samhealth.co.za, https://samapigene.azurewebsites.net`);
+      console.log(`CORS Origins: https://app.samhealth.co.za, https://samapigene.azurewebsites.net, https://samdashboardapi.azurewebsites.net`);
     }
   });
 

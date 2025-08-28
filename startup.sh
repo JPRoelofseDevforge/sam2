@@ -12,15 +12,16 @@ cd /home/site/wwwroot
 # Install dependencies if node_modules doesn't exist
 if [ ! -d "node_modules" ]; then
     echo "Installing dependencies..."
-    npm ci --production
+    if ! npm ci --production; then
+        echo "ERROR: Failed to install dependencies"
+        exit 1
+    fi
 fi
 
-# Ensure the compiled server exists
+# Verify the compiled server exists
 if [ ! -f "dist/server.js" ]; then
-    echo "Compiling TypeScript server..."
-    npx tsc src/api/server.ts --outDir . --target es2022 --module es2022 --moduleResolution node --esModuleInterop --allowSyntheticDefaultImports --skipLibCheck
-    mkdir -p dist
-    mv server.js dist/server.js 2>/dev/null || cp server.js dist/server.js 2>/dev/null || echo "Server compilation completed"
+    echo "ERROR: Compiled server not found at dist/server.js"
+    exit 1
 fi
 
 # Copy production environment file
@@ -31,4 +32,4 @@ fi
 
 # Start the application
 echo "Starting server..."
-npm start
+exec npm start

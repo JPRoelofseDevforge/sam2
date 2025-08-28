@@ -1,6 +1,6 @@
 # Simple deployment workflow for Node.js app to Azure Web App
 
-name: Deploy to Azure Web App - samapigene
+name: Deploy to Azure Web App - samdashboardapi
 
 on:
   push:
@@ -44,13 +44,6 @@ jobs:
           cp web.config deployment/ 2>/dev/null || true
           cp startup.sh deployment/ 2>/dev/null || true
           cp .env.production deployment/ 2>/dev/null || true
-          # Build the TypeScript server for production
-          cd deployment
-          npx tsc --project tsconfig.server.json --outDir .
-          mv dist/src/api/server.js dist/server.js 2>/dev/null || cp server.js dist/server.js 2>/dev/null || echo "Server compilation completed"
-          # Copy database models and types to dist root for runtime access
-          cp -r dist/src/db dist/db 2>/dev/null || echo "No db directory to copy"
-          cp -r dist/src/types dist/types 2>/dev/null || echo "No types directory to copy"
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -62,6 +55,6 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'samapigene'
+          app-name: 'samdashboardapi'
           slot-name: 'Production'
           package: deployment/
