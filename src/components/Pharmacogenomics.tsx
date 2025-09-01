@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { geneticProfiles, athletes } from '../data/mockData';
+import React, { useMemo, useState, useEffect } from 'react';
+import { geneticProfileService } from '../services/dataService';
+import { GeneticProfile } from '../types';
 
 interface MedicationInsight {
   medication: string;
@@ -11,13 +12,50 @@ interface MedicationInsight {
 }
 
 export const Pharmacogenomics: React.FC<{ athleteId: string }> = ({ athleteId }) => {
+  const [geneticProfiles, setGeneticProfiles] = useState<GeneticProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [athleteName, setAthleteName] = useState<string>('');
+
+  // Fetch genetic profiles for the athlete
+  useEffect(() => {
+    const fetchGeneticData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Convert string athleteId to number for API call
+        const athleteIdNum = parseInt(athleteId, 10);
+        if (isNaN(athleteIdNum)) {
+          throw new Error('Invalid athlete ID');
+        }
+
+        const profiles = await geneticProfileService.getGeneticProfileByAthlete(athleteIdNum);
+        setGeneticProfiles(profiles);
+
+        // For now, we'll use a placeholder name since athlete service might not be available
+        // In a real implementation, you'd fetch athlete details separately
+        setAthleteName(`Athlete ${athleteId}`);
+
+      } catch (err) {
+        console.error('Failed to fetch genetic profiles:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load genetic data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (athleteId) {
+      fetchGeneticData();
+    }
+  }, [athleteId]);
+
   // Get pharmacogenomics insights for the athlete
   const medicationInsights = useMemo<MedicationInsight[]>(() => {
-    const athleteGenetics = geneticProfiles.filter(g => g.athlete_id === athleteId);
     const insights: MedicationInsight[] = [];
-    
+
     // Common sports medicine medications and their genetic interactions
-    athleteGenetics.forEach(profile => {
+    geneticProfiles.forEach(profile => {
       switch(profile.gene) {
         case 'CYP2D6':
           if (profile.genotype.includes('Poor')) {
@@ -40,7 +78,7 @@ export const Pharmacogenomics: React.FC<{ athleteId: string }> = ({ athleteId })
             });
           }
           break;
-          
+
         case 'CYP2C19':
           if (profile.genotype.includes('Poor')) {
             insights.push({
@@ -53,7 +91,7 @@ export const Pharmacogenomics: React.FC<{ athleteId: string }> = ({ athleteId })
             });
           }
           break;
-          
+
         case 'SLCO1B1':
           if (profile.genotype === 'CC') {
             insights.push({
@@ -75,22 +113,22 @@ export const Pharmacogenomics: React.FC<{ athleteId: string }> = ({ athleteId })
             });
           }
           break;
-          
+
         case 'VKORC1':
           insights.push({
             medication: 'Warfarin',
             gene: profile.gene,
             genotype: profile.genotype,
             effect: 'Affects warfarin sensitivity',
-            recommendation: profile.genotype === 'AA' 
-              ? 'May require higher warfarin doses' 
-              : profile.genotype === 'AG' 
-                ? 'Standard dosing appropriate' 
+            recommendation: profile.genotype === 'AA'
+              ? 'May require higher warfarin doses'
+              : profile.genotype === 'AG'
+                ? 'Standard dosing appropriate'
                 : 'May require lower warfarin doses',
             riskLevel: profile.genotype === 'AA' ? 'medium' : profile.genotype === 'GG' ? 'high' : 'low'
           });
           break;
-          
+
         case 'CFTR':
           if (profile.genotype === 'F508del/F508del') {
             insights.push({
@@ -105,19 +143,53 @@ export const Pharmacogenomics: React.FC<{ athleteId: string }> = ({ athleteId })
           break;
       }
     });
-    
-    return insights;
-  }, [athleteId]);
 
-  // Get athlete name
-  const athlete = athletes.find(a => a.athlete_id === athleteId);
+    return insights;
+  }, [geneticProfiles]);
   
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="card-enhanced p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Pharmacogenomics Report</h2>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-gray-600">Loading genetic data...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="card-enhanced p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Pharmacogenomics Report</h2>
+          <div className="text-center py-12">
+            <div className="text-red-500 mb-4">⚠️</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Genetic Data</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="card-enhanced p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Pharmacogenomics Report</h2>
         <p className="text-gray-600 mb-6">
-          Medication response based on {athlete?.name}'s genetics
+          Medication response based on {athleteName}'s genetics
         </p>
         
         {medicationInsights.length > 0 ? (

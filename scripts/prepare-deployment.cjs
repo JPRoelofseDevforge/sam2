@@ -1,18 +1,13 @@
-// Prepare deployment by copying production environment file
-const fs = require('fs');
-const path = require('path');
+#!/usr/bin/env node
 
-console.log('Preparing deployment...');
+/**
+ * Prepare deployment script
+ * This script runs before the build process to prepare the application for deployment
+ */
 
-// Copy production environment file to .env
-const envProdPath = path.join(__dirname, '..', '.env.production');
-const envPath = path.join(__dirname, '..', '.env');
+console.log('🔧 Preparing deployment...');
 
-if (fs.existsSync(envProdPath)) {
-  fs.copyFileSync(envProdPath, envPath);
-  console.log('✅ Copied .env.production to .env');
-} else {
-  console.log('⚠️  .env.production not found, using existing .env if present');
-}
+// Add any pre-deployment tasks here
+// For example: environment checks, file copying, configuration updates, etc.
 
-console.log('Deployment preparation complete!');
+console.log('✅ Deployment preparation complete');

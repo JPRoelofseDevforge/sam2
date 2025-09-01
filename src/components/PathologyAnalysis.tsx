@@ -2,435 +2,475 @@ import React, { useState, useEffect } from 'react';
 import { BloodResults } from '../types';
 import { bloodResultsService } from '../services/dataService';
 import {
-    HormoneAnalysisCard,
-    PathologyAlerts,
-    BiomarkerGrid,
-    PathologyTrends,
-    ClinicalRecommendations
-} from './pathology';
-import { PathologyChartsOverview } from './pathology/PathologyChartsOverview';
+  Activity,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  CheckCircle,
+  Target,
+  Zap,
+  Heart,
+  Droplets,
+  Shield,
+  BarChart3,
+  Clock,
+  Thermometer,
+  Weight,
+  Users,
+  ArrowUp,
+  ArrowDown,
+  Minus
+} from 'lucide-react';
 
 interface PathologyAnalysisProps {
-   athleteId: string | number;
+  athleteId: string | number;
 }
 
-interface PathologyAlert {
-   type: 'normal' | 'warning' | 'critical';
-   category: string;
-   test: string;
-   value: number;
-   unit: string;
-   reference: string;
-   message: string;
+interface KeyMetric {
+  name: string;
+  value: number;
+  unit: string;
+  status: 'optimal' | 'warning' | 'critical';
+  trend: 'up' | 'down' | 'stable';
+  reference: string;
+  icon: React.ReactNode;
+  description: string;
 }
 
 interface HormoneAnalysis {
-   cortisolTestosteroneRatio: number;
-   cortisolStatus: string;
-   testosteroneStatus: string;
-   hormonalBalance: string;
-   balanceMessage: string;
-   cortisol: number;
-   testosterone: number;
+  cortisol: number;
+  testosterone: number;
+  ratio: number;
+  status: 'optimal' | 'catabolic' | 'anabolic';
+  message: string;
+  recommendations: string[];
 }
 
-export const PathologyAnalysis: React.FC<PathologyAnalysisProps> = ({ athleteId }) => {
-   const [bloodResults, setBloodResults] = useState<BloodResults[]>([]);
-   const [latestResults, setLatestResults] = useState<BloodResults | null>(null);
-   const [alerts, setAlerts] = useState<PathologyAlert[]>([]);
-   const [hormoneAnalysis, setHormoneAnalysis] = useState<HormoneAnalysis | null>(null);
-   const [loading, setLoading] = useState(true);
-   const [error, setError] = useState<string | null>(null);
+const PathologyAnalysis: React.FC<PathologyAnalysisProps> = ({ athleteId }) => {
+  const [bloodResults, setBloodResults] = useState<BloodResults[]>([]);
+  const [latestResults, setLatestResults] = useState<BloodResults | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hormoneAnalysis, setHormoneAnalysis] = useState<HormoneAnalysis | null>(null);
 
-   useEffect(() => {
-      const fetchBloodResults = async () => {
-         try {
-            setLoading(true);
-            setError(null);
-            const athleteIdStr = typeof athleteId === 'string' ? athleteId : athleteId.toString();
+  useEffect(() => {
+    const fetchBloodResults = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const athleteIdNum = typeof athleteId === 'string' ? parseInt(athleteId, 10) : athleteId;
 
-            const results = await bloodResultsService.getBloodResultsByAthlete(athleteIdStr);
-            setBloodResults(results);
+        const results = await bloodResultsService.getBloodResultsByAthlete(athleteIdNum);
+        setBloodResults(results);
 
-            if (results.length > 0) {
-               setLatestResults(results[0]);
-               const pathologyAlerts = analyzeBloodResults(results[0]);
-               setAlerts(pathologyAlerts);
-
-               // Calculate hormone analysis if data is available
-               const hormoneData = calculateHormoneAnalysis(results);
-               setHormoneAnalysis(hormoneData);
-            }
-         } catch (error) {
-            console.error('Failed to fetch blood results:', error);
-            setError('Failed to load pathology data. Please try again.');
-         } finally {
-            setLoading(false);
-         }
-      };
-
-      fetchBloodResults();
-   }, [athleteId]);
-
-  const analyzeBloodResults = (results: BloodResults): PathologyAlert[] => {
-     const alerts: PathologyAlert[] = [];
-
-     // Hormone Analysis
-     if (results.cortisol_nmol_l !== undefined) {
-        if (results.cortisol_nmol_l > 550) {
-           alerts.push({
-              type: 'critical',
-              category: 'Hormones',
-              test: 'Cortisol',
-              value: results.cortisol_nmol_l,
-              unit: 'nmol/L',
-              reference: '150-550',
-              message: 'Elevated cortisol may indicate chronic stress or Cushing syndrome'
-           });
-        } else if (results.cortisol_nmol_l < 150) {
-           alerts.push({
-              type: 'warning',
-              category: 'Hormones',
-              test: 'Cortisol',
-              value: results.cortisol_nmol_l,
-              unit: 'nmol/L',
-              reference: '150-550',
-              message: 'Low cortisol may indicate adrenal insufficiency'
-           });
+        if (results.length > 0) {
+          setLatestResults(results[0]);
+          const analysis = analyzeHormones(results[0]);
+          setHormoneAnalysis(analysis);
         }
-     }
+      } catch (error) {
+        console.error('Failed to fetch blood results:', error);
+        setError('Failed to load pathology data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-     if (results.vitamin_d !== undefined) {
-        if (results.vitamin_d < 30) {
-           alerts.push({
-              type: 'warning',
-              category: 'Vitamins',
-              test: 'Vitamin D',
-              value: results.vitamin_d,
-              unit: 'ng/mL',
-              reference: '30-100',
-              message: 'Vitamin D deficiency may affect bone health and immune function'
-           });
-        }
-     }
+    fetchBloodResults();
+  }, [athleteId]);
 
-     if (results.testosterone !== undefined) {
-        if (results.testosterone < 10) {
-           alerts.push({
-              type: 'warning',
-              category: 'Hormones',
-              test: 'Testosterone',
-              value: results.testosterone,
-              unit: 'nmol/L',
-              reference: '10-35',
-              message: 'Low testosterone may affect muscle mass and energy levels'
-           });
-        }
-     }
+  const analyzeHormones = (results: BloodResults): HormoneAnalysis => {
+    const cortisol = results.cortisol_nmol_l || 0;
+    const testosterone = results.testosterone || 0;
+    const ratio = testosterone > 0 ? cortisol / testosterone : 0;
 
-     // Muscle & Metabolic Analysis
-     if (results.ck !== undefined) {
-        if (results.ck > 200) {
-           alerts.push({
-              type: 'warning',
-              category: 'Muscle',
-              test: 'Creatine Kinase',
-              value: results.ck,
-              unit: 'U/L',
-              reference: '30-200',
-              message: 'Elevated CK may indicate muscle damage or intense exercise'
-           });
-        }
-     }
+    let status: 'optimal' | 'catabolic' | 'anabolic' = 'optimal';
+    let message = 'Hormonal balance is optimal for athletic performance.';
+    const recommendations: string[] = [];
 
-     if (results.fasting_glucose !== undefined) {
-        if (results.fasting_glucose > 100) {
-           alerts.push({
-              type: 'warning',
-              category: 'Metabolic',
-              test: 'Fasting Glucose',
-              value: results.fasting_glucose,
-              unit: 'mmol/L',
-              reference: '3.9-5.6',
-              message: 'Elevated fasting glucose may indicate impaired glucose tolerance'
-           });
-        }
-     }
+    if (ratio > 0.05) {
+      status = 'catabolic';
+      message = 'High cortisol relative to testosterone indicates potential overtraining or chronic stress.';
+      recommendations.push('Consider reducing training intensity');
+      recommendations.push('Prioritize recovery and sleep');
+      recommendations.push('Monitor stress levels');
+    } else if (ratio < 0.01) {
+      status = 'anabolic';
+      message = 'Low cortisol-testosterone ratio suggests good recovery and adaptation.';
+      recommendations.push('Current training load is appropriate');
+      recommendations.push('Continue monitoring for optimal performance');
+    } else {
+      recommendations.push('Maintain current training and recovery protocols');
+    }
 
-     if (results.hba1c !== undefined) {
-        if (results.hba1c > 6.5) {
-           alerts.push({
-              type: 'critical',
-              category: 'Metabolic',
-              test: 'HbA1c',
-              value: results.hba1c,
-              unit: '%',
-              reference: '<6.5',
-              message: 'Elevated HbA1c indicates poor long-term glucose control'
-           });
-        }
-     }
-
-     // Liver Function Analysis
-     if (results.s_alanine_transaminase !== undefined) {
-        if (results.s_alanine_transaminase > 40) {
-           alerts.push({
-              type: 'warning',
-              category: 'Liver',
-              test: 'ALT',
-              value: results.s_alanine_transaminase,
-              unit: 'U/L',
-              reference: '7-40',
-              message: 'Elevated ALT may indicate liver stress or damage'
-           });
-        }
-     }
-
-     if (results.s_aspartate_transaminase !== undefined) {
-        if (results.s_aspartate_transaminase > 40) {
-           alerts.push({
-              type: 'warning',
-              category: 'Liver',
-              test: 'AST',
-              value: results.s_aspartate_transaminase,
-              unit: 'U/L',
-              reference: '10-40',
-              message: 'Elevated AST may indicate liver or muscle damage'
-           });
-        }
-     }
-
-     // Kidney Function Analysis
-     if (results.creatinine !== undefined) {
-        if (results.creatinine > 110) {
-           alerts.push({
-              type: 'warning',
-              category: 'Kidney',
-              test: 'Creatinine',
-              value: results.creatinine,
-              unit: 'µmol/L',
-              reference: '60-110',
-              message: 'Elevated creatinine may indicate reduced kidney function'
-           });
-        }
-     }
-
-     if (results.egfr !== undefined) {
-        if (results.egfr < 60) {
-           alerts.push({
-              type: 'critical',
-              category: 'Kidney',
-              test: 'eGFR',
-              value: results.egfr,
-              unit: 'mL/min/1.73m²',
-              reference: '>60',
-              message: 'Reduced eGFR indicates impaired kidney function'
-           });
-        }
-     }
-
-     // Inflammation Analysis
-     if (results.c_reactive_protein !== undefined) {
-        if (results.c_reactive_protein > 3) {
-           alerts.push({
-              type: 'warning',
-              category: 'Inflammation',
-              test: 'CRP',
-              value: results.c_reactive_protein,
-              unit: 'mg/L',
-              reference: '<3',
-              message: 'Elevated CRP indicates systemic inflammation'
-           });
-        }
-     }
-
-     // Complete Blood Count Analysis
-     if (results.hemoglobin !== undefined) {
-        if (results.hemoglobin < 13) {
-           alerts.push({
-              type: 'warning',
-              category: 'Blood',
-              test: 'Hemoglobin',
-              value: results.hemoglobin,
-              unit: 'g/dL',
-              reference: '13-17',
-              message: 'Low hemoglobin may indicate anemia'
-           });
-        }
-     }
-
-     if (results.leucocyte_count !== undefined) {
-        if (results.leucocyte_count > 11) {
-           alerts.push({
-              type: 'warning',
-              category: 'Blood',
-              test: 'WBC',
-              value: results.leucocyte_count,
-              unit: '×10⁹/L',
-              reference: '4-11',
-              message: 'Elevated WBC may indicate infection or inflammation'
-           });
-        } else if (results.leucocyte_count < 4) {
-           alerts.push({
-              type: 'warning',
-              category: 'Blood',
-              test: 'WBC',
-              value: results.leucocyte_count,
-              unit: '×10⁹/L',
-              reference: '4-11',
-              message: 'Low WBC may indicate immunosuppression'
-           });
-        }
-     }
-
-     if (results.platelets !== undefined) {
-        if (results.platelets < 150) {
-           alerts.push({
-              type: 'warning',
-              category: 'Blood',
-              test: 'Platelets',
-              value: results.platelets,
-              unit: '×10⁹/L',
-              reference: '150-400',
-              message: 'Low platelet count may increase bleeding risk'
-           });
-        }
-     }
-
-     return alerts;
+    return {
+      cortisol,
+      testosterone,
+      ratio,
+      status,
+      message,
+      recommendations
+    };
   };
 
-  const calculateHormoneAnalysis = (results: BloodResults[]): HormoneAnalysis | null => {
-     if (results.length === 0) return null;
+  const getKeyMetrics = (): KeyMetric[] => {
+    if (!latestResults) return [];
 
-     const latest = results[0];
-     const cortisol = latest.cortisol_nmol_l;
-     const testosterone = latest.testosterone;
+    const metrics: KeyMetric[] = [];
 
-     if (!cortisol || !testosterone) return null;
+    // Cortisol
+    if (latestResults.cortisol_nmol_l !== undefined) {
+      metrics.push({
+        name: 'Cortisol',
+        value: latestResults.cortisol_nmol_l,
+        unit: 'nmol/L',
+        status: latestResults.cortisol_nmol_l > 550 ? 'critical' : latestResults.cortisol_nmol_l > 150 ? 'warning' : 'optimal',
+        trend: 'stable',
+        reference: '150-550',
+        icon: <Activity className="w-5 h-5" />,
+        description: 'Stress hormone'
+      });
+    }
 
-     const cortisolTestosteroneRatio = cortisol / testosterone;
-     const cortisolStatus = cortisol > 550 ? 'high' : cortisol < 150 ? 'low' : 'normal';
-     const testosteroneStatus = testosterone < 10 ? 'low' : testosterone > 35 ? 'high' : 'normal';
+    // Testosterone
+    if (latestResults.testosterone !== undefined) {
+      metrics.push({
+        name: 'Testosterone',
+        value: latestResults.testosterone,
+        unit: 'nmol/L',
+        status: latestResults.testosterone < 10 ? 'critical' : latestResults.testosterone < 15 ? 'warning' : 'optimal',
+        trend: 'stable',
+        reference: '10-35',
+        icon: <Target className="w-5 h-5" />,
+        description: 'Anabolic hormone'
+      });
+    }
 
-     // Determine overall hormonal balance
-     let hormonalBalance = 'balanced';
-     let balanceMessage = 'Hormonal balance appears optimal for athletic performance';
+    // Hemoglobin
+    if (latestResults.hemoglobin !== undefined) {
+      metrics.push({
+        name: 'Hemoglobin',
+        value: latestResults.hemoglobin,
+        unit: 'g/dL',
+        status: latestResults.hemoglobin < 13 ? 'critical' : latestResults.hemoglobin < 14 ? 'warning' : 'optimal',
+        trend: 'stable',
+        reference: '13-17',
+        icon: <Droplets className="w-5 h-5" />,
+        description: 'Oxygen transport'
+      });
+    }
 
-     if (cortisolTestosteroneRatio > 0.05) {
-        hormonalBalance = 'catabolic';
-        balanceMessage = 'High cortisol relative to testosterone may indicate overtraining or chronic stress';
-     } else if (cortisolTestosteroneRatio < 0.01) {
-        hormonalBalance = 'anabolic';
-        balanceMessage = 'Low cortisol relative to testosterone suggests good recovery and adaptation';
-     }
+    // Creatine Kinase
+    if (latestResults.ck !== undefined) {
+      metrics.push({
+        name: 'Creatine Kinase',
+        value: latestResults.ck,
+        unit: 'U/L',
+        status: latestResults.ck > 200 ? 'critical' : latestResults.ck > 150 ? 'warning' : 'optimal',
+        trend: 'stable',
+        reference: '30-200',
+        icon: <Zap className="w-5 h-5" />,
+        description: 'Muscle damage marker'
+      });
+    }
 
-     return {
-        cortisolTestosteroneRatio,
-        cortisolStatus,
-        testosteroneStatus,
-        hormonalBalance,
-        balanceMessage,
-        cortisol,
-        testosterone
-     };
+    // ALT
+    if (latestResults.s_alanine_transaminase !== undefined) {
+      metrics.push({
+        name: 'ALT',
+        value: latestResults.s_alanine_transaminase,
+        unit: 'U/L',
+        status: latestResults.s_alanine_transaminase > 40 ? 'critical' : latestResults.s_alanine_transaminase > 30 ? 'warning' : 'optimal',
+        trend: 'stable',
+        reference: '7-40',
+        icon: <Activity className="w-5 h-5" />,
+        description: 'Liver function'
+      });
+    }
+
+    // CRP
+    if (latestResults.c_reactive_protein !== undefined) {
+      metrics.push({
+        name: 'CRP',
+        value: latestResults.c_reactive_protein,
+        unit: 'mg/L',
+        status: latestResults.c_reactive_protein > 3 ? 'critical' : latestResults.c_reactive_protein > 1 ? 'warning' : 'optimal',
+        trend: 'stable',
+        reference: '<3',
+        icon: <Shield className="w-5 h-5" />,
+        description: 'Inflammation marker'
+      });
+    }
+
+    return metrics;
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'optimal': return 'text-green-400 bg-green-500/10 border-green-500/30';
+      case 'warning': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30';
+      case 'critical': return 'text-red-400 bg-red-500/10 border-red-500/30';
+      default: return 'text-gray-400 bg-gray-500/10 border-gray-500/30';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'optimal': return <CheckCircle className="w-4 h-4" />;
+      case 'warning': return <AlertTriangle className="w-4 h-4" />;
+      case 'critical': return <AlertTriangle className="w-4 h-4" />;
+      default: return <Activity className="w-4 h-4" />;
+    }
+  };
+
+  const getTrendIcon = (trend: string) => {
+    switch (trend) {
+      case 'up': return <ArrowUp className="w-4 h-4" />;
+      case 'down': return <ArrowDown className="w-4 h-4" />;
+      default: return <Minus className="w-4 h-4" />;
+    }
   };
 
   if (loading) {
-     return (
-        <div className="flex items-center justify-center py-12">
-           <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-gray-400">Loading pathology data...</p>
-           </div>
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400 text-lg">Loading pathology data...</p>
         </div>
-     );
+      </div>
+    );
   }
 
   if (error) {
-     return (
-        <div className="text-center py-12 card-enhanced rounded-xl">
-           <div className="text-4xl mb-3">⚠️</div>
-           <p className="text-red-400 font-medium">Error loading pathology data</p>
-           <p className="text-sm text-gray-500 mt-2">{error}</p>
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <p className="text-red-400 font-medium text-lg">Error loading pathology data</p>
+          <p className="text-gray-400 mt-2">{error}</p>
         </div>
-     );
+      </div>
+    );
   }
 
   if (!latestResults) {
-     return (
-        <div className="text-center py-12 card-enhanced rounded-xl">
-           <div className="text-4xl mb-3">🩸</div>
-           <p className="text-gray-700 font-medium">No blood results available</p>
-           <p className="text-sm text-gray-500 mt-2">
-              Blood test results will appear here once uploaded.
-           </p>
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <Activity className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+          <p className="text-gray-400 font-medium text-lg">No blood results available</p>
+          <p className="text-gray-500 mt-2">Blood test results will appear here once uploaded.</p>
         </div>
-     );
+      </div>
+    );
   }
 
+  const keyMetrics = getKeyMetrics();
+
   return (
-     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="relative overflow-hidden">
-           {/* Background Pattern */}
-           <div className="absolute inset-0 opacity-10">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500/10 to-transparent"></div>
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-pink-500/10 to-transparent"></div>
-           </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500/5 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-pink-500/5 to-transparent"></div>
 
-           <div className="relative z-10 p-6 space-y-8">
-              {/* Header */}
-              <div className="text-center mb-8">
-                 <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-red-500 to-pink-500 rounded-full mb-4 shadow-lg animate-pulse">
-                    <span className="text-3xl">🩸</span>
-                 </div>
-                 <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-red-200 to-pink-200 bg-clip-text text-transparent mb-2">
-                    Pathology Analysis
-                 </h1>
-                 <p className="text-gray-400 text-lg">
-                    Latest Results: <span className="text-white font-medium">{latestResults.date || 'Recent'}</span>
-                 </p>
+        <div className="relative z-10 p-8 space-y-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-red-500 to-pink-500 rounded-full mb-4 shadow-lg animate-pulse">
+              <Activity className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-red-200 to-pink-200 bg-clip-text text-transparent mb-2">
+              Pathology Analysis
+            </h1>
+            <p className="text-gray-400 text-lg">
+              Key biomarkers for athletic performance
+            </p>
+            <p className="text-gray-500 text-sm mt-2">
+              Last updated: {latestResults.date || latestResults.created_at || 'Recent'}
+            </p>
+          </div>
+
+          {/* Hormone Analysis - Priority Section */}
+          {hormoneAnalysis && (
+            <div className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 rounded-2xl border border-slate-700/50 p-8">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Heart className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Hormone Balance Analysis</h2>
+                  <p className="text-gray-400">Cortisol vs Testosterone - Critical for recovery</p>
+                </div>
               </div>
 
-              {/* Hormone Analysis */}
-              {hormoneAnalysis && (
-                 <div className="transform hover:scale-[1.02] transition-all duration-300">
-                    <HormoneAnalysisCard hormoneAnalysis={hormoneAnalysis} />
-                 </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-400 text-sm">Cortisol</span>
+                    <Activity className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-1">
+                    {hormoneAnalysis.cortisol.toFixed(1)}
+                  </div>
+                  <div className="text-sm text-gray-400">nmol/L</div>
+                </div>
 
-              {/* Interactive Charts Overview */}
-              {bloodResults.length >= 1 && (
-                 <div className="transform hover:scale-[1.01] transition-all duration-300">
-                    <PathologyChartsOverview bloodResults={bloodResults} />
-                 </div>
-              )}
+                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-400 text-sm">Testosterone</span>
+                    <Target className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-1">
+                    {hormoneAnalysis.testosterone.toFixed(1)}
+                  </div>
+                  <div className="text-sm text-gray-400">nmol/L</div>
+                </div>
 
-              {/* Pathology Trends */}
-              {bloodResults.length >= 1 && (
-                 <div className="transform hover:scale-[1.01] transition-all duration-300">
-                    <PathologyTrends bloodResults={bloodResults} />
-                 </div>
-              )}
-
-              {/* Health Alerts */}
-              {alerts.length > 0 && (
-                 <div className="transform hover:scale-[1.01] transition-all duration-300">
-                    <PathologyAlerts alerts={alerts} />
-                 </div>
-              )}
-
-              {/* Biomarker Grid */}
-              <div className="transform hover:scale-[1.01] transition-all duration-300">
-                 <BiomarkerGrid latestResults={latestResults} />
+                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-400 text-sm">C/T Ratio</span>
+                    <BarChart3 className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-1">
+                    {(hormoneAnalysis.ratio * 100).toFixed(1)}%
+                  </div>
+                  <div className="text-sm text-gray-400">Ratio</div>
+                </div>
               </div>
 
-              {/* Clinical Recommendations */}
-              <div className="transform hover:scale-[1.01] transition-all duration-300">
-                 <ClinicalRecommendations alerts={alerts} hormoneAnalysis={hormoneAnalysis} />
+              <div className={`rounded-xl p-6 border-2 ${
+                hormoneAnalysis.status === 'optimal'
+                  ? 'border-green-500/30 bg-green-500/5'
+                  : hormoneAnalysis.status === 'catabolic'
+                  ? 'border-red-500/30 bg-red-500/5'
+                  : 'border-blue-500/30 bg-blue-500/5'
+              }`}>
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 mt-1">
+                    {hormoneAnalysis.status === 'optimal' ? (
+                      <CheckCircle className="w-6 h-6 text-green-400" />
+                    ) : hormoneAnalysis.status === 'catabolic' ? (
+                      <AlertTriangle className="w-6 h-6 text-red-400" />
+                    ) : (
+                      <Target className="w-6 h-6 text-blue-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className={`text-lg font-semibold mb-2 ${
+                      hormoneAnalysis.status === 'optimal'
+                        ? 'text-green-400'
+                        : hormoneAnalysis.status === 'catabolic'
+                        ? 'text-red-400'
+                        : 'text-blue-400'
+                    }`}>
+                      {hormoneAnalysis.status === 'optimal' ? 'Optimal Balance' :
+                       hormoneAnalysis.status === 'catabolic' ? 'Catabolic State' :
+                       'Anabolic State'}
+                    </h3>
+                    <p className="text-gray-300 mb-4">{hormoneAnalysis.message}</p>
+                    <div className="space-y-2">
+                      {hormoneAnalysis.recommendations.map((rec, index) => (
+                        <div key={index} className="flex items-center gap-2 text-sm text-gray-400">
+                          <div className="w-1.5 h-1.5 bg-current rounded-full"></div>
+                          {rec}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-           </div>
+            </div>
+          )}
+
+          {/* Key Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {keyMetrics.map((metric, index) => (
+              <div key={index} className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl border border-slate-700/50 p-6 hover:shadow-lg transition-all duration-300">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+                      {metric.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white text-lg">{metric.name}</h3>
+                      <p className="text-gray-400 text-sm">{metric.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(metric.status)}
+                    {getTrendIcon(metric.trend)}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="text-3xl font-bold text-white mb-1">
+                    {metric.value.toFixed(1)} <span className="text-lg text-gray-400">{metric.unit}</span>
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    Reference: {metric.reference}
+                  </div>
+                </div>
+
+                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(metric.status)}`}>
+                  {getStatusIcon(metric.status)}
+                  {metric.status.toUpperCase()}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Summary Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl border border-green-500/30 p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+                <span className="text-green-400 font-medium">Optimal</span>
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {keyMetrics.filter(m => m.status === 'optimal').length}
+              </div>
+              <div className="text-sm text-gray-400">markers</div>
+            </div>
+
+            <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-xl border border-yellow-500/30 p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <AlertTriangle className="w-6 h-6 text-yellow-500" />
+                <span className="text-yellow-400 font-medium">Monitor</span>
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {keyMetrics.filter(m => m.status === 'warning').length}
+              </div>
+              <div className="text-sm text-gray-400">markers</div>
+            </div>
+
+            <div className="bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-xl border border-red-500/30 p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+                <span className="text-red-400 font-medium">Critical</span>
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {keyMetrics.filter(m => m.status === 'critical').length}
+              </div>
+              <div className="text-sm text-gray-400">markers</div>
+            </div>
+
+            <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl border border-blue-500/30 p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Clock className="w-6 h-6 text-blue-500" />
+                <span className="text-blue-400 font-medium">Total Tests</span>
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {bloodResults.length}
+              </div>
+              <div className="text-sm text-gray-400">available</div>
+            </div>
+          </div>
         </div>
-     </div>
+      </div>
+    </div>
   );
 };
+
+export { PathologyAnalysis };

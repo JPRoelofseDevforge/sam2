@@ -1,12 +1,15 @@
-import { athletes } from '../data/mockData';
 import { BiometricData, Alert, GeneticProfile } from '../types';
 
 export function generateAlert(
-  athleteId: string, 
-  biometricData: BiometricData[], 
+  athleteId: string,
+  biometricData: BiometricData[],
   geneticProfiles: GeneticProfile[]
 ): Alert {
-  if (biometricData.length === 0) {
+  // Ensure inputs are arrays
+  const biometricArray = Array.isArray(biometricData) ? biometricData : [];
+  const geneticArray = Array.isArray(geneticProfiles) ? geneticProfiles : [];
+
+  if (biometricArray.length === 0) {
     return {
       type: 'no_data',
       title: '📊 No Data',
@@ -15,8 +18,8 @@ export function generateAlert(
     };
   }
 
-  const latest = biometricData[biometricData.length - 1];
-  const geneticDict = geneticProfiles.reduce((acc, profile) => {
+  const latest = biometricArray[biometricArray.length - 1];
+  const geneticDict = geneticArray.reduce((acc, profile) => {
     acc[profile.gene] = profile.genotype;
     return acc;
   }, {} as Record<string, string>);
@@ -90,15 +93,10 @@ export const getTeamAverage = (
   athleteId: string,
   allBiometrics: BiometricData[]
 ): number => {
-  const athleteTeam = athletes.find(a => a.athlete_id === athleteId)?.team;
-  if (!athleteTeam) return 0;
-
-  const teamMembers = athletes.filter(a => a.team === athleteTeam);
-  const teamData = allBiometrics.filter(d => 
-    teamMembers.some(m => m.athlete_id === d.athlete_id)
-  );
-
-  const values = teamData.map(d => d[metric]).filter(Boolean) as number[];
+  // For now, calculate average across all athletes since team data is not yet available in database
+  // TODO: Update this function when team information is added to the database schema
+  const allAthleteData = allBiometrics.filter(d => d.athlete_id !== athleteId); // Exclude current athlete
+  const values = allAthleteData.map(d => d[metric]).filter(Boolean) as number[];
   return values.length > 0 ? Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)) : 0;
 };
 
@@ -139,7 +137,8 @@ export function getGeneticInsights(geneticProfiles: GeneticProfile[]): Array<{
   recommendation: string;
 }> {
   const insights: Array<{gene: string; trait: string; recommendation: string}> = [];
-  const geneticDict = geneticProfiles.reduce((acc, profile) => {
+  const geneticArray = Array.isArray(geneticProfiles) ? geneticProfiles : [];
+  const geneticDict = geneticArray.reduce((acc, profile) => {
     acc[profile.gene] = profile.genotype;
     return acc;
   }, {} as Record<string, string>);
@@ -237,7 +236,8 @@ function getRecoveryEvents(data: BiometricData): string[] {
 // Get pharmacogenomics insights
 export function getPharmacogenomicsInsights(geneticProfiles: GeneticProfile[]) {
   const insights: Array<{medication: string, gene: string, genotype: string, effect: string, recommendation: string, riskLevel: 'low' | 'medium' | 'high'}> = [];
-  const geneticDict = geneticProfiles.reduce((acc, profile) => {
+  const geneticArray = Array.isArray(geneticProfiles) ? geneticProfiles : [];
+  const geneticDict = geneticArray.reduce((acc, profile) => {
     acc[profile.gene] = profile.genotype;
     return acc;
   }, {} as Record<string, string>);
@@ -306,7 +306,8 @@ export function getPharmacogenomicsInsights(geneticProfiles: GeneticProfile[]) {
 // Get nutrigenomics recommendations
 export function getNutrigenomicsRecommendations(geneticProfiles: GeneticProfile[]) {
   const recommendations: Array<{supplement: string, gene: string, genotype: string, rationale: string, dosage: string, timing: string, priority: 'high' | 'medium' | 'low'}> = [];
-  const geneticDict = geneticProfiles.reduce((acc, profile) => {
+  const geneticArray = Array.isArray(geneticProfiles) ? geneticProfiles : [];
+  const geneticDict = geneticArray.reduce((acc, profile) => {
     acc[profile.gene] = profile.genotype;
     return acc;
   }, {} as Record<string, string>);
@@ -436,7 +437,8 @@ export function getNutrigenomicsRecommendations(geneticProfiles: GeneticProfile[
 // Get recovery gene panel insights
 export function getRecoveryGenePanelInsights(geneticProfiles: GeneticProfile[]) {
   const genes: Array<{gene: string, genotype: string, trait: string, impact: string, recoveryProtocol: string, priority: 'high' | 'medium' | 'low'}> = [];
-  const geneticDict = geneticProfiles.reduce((acc, profile) => {
+  const geneticArray = Array.isArray(geneticProfiles) ? geneticProfiles : [];
+  const geneticDict = geneticArray.reduce((acc, profile) => {
     acc[profile.gene] = profile.genotype;
     return acc;
   }, {} as Record<string, string>);

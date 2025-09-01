@@ -1,9 +1,9 @@
-import { ApiResponse, PaginatedResponse } from '../types';
+import { ApiResponse, JCApiResponse, PaginatedResponse } from '../types';
 
 /**
  * Base API configuration
  */
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5288/api';
 
 /**
  * Default headers for API requests
@@ -36,7 +36,10 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 
     try {
       errorData = await response.json();
-      if (errorData.error) {
+      // Handle JCRing.Api error format
+      if (errorData.Info && errorData.Code !== 1) {
+        errorMessage = errorData.Info;
+      } else if (errorData.error) {
         errorMessage = errorData.error;
       }
     } catch (e) {
@@ -46,7 +49,18 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
     throw new ApiError(errorMessage, response.status, errorData);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Handle JCRing.Api response format
+  if (data && typeof data === 'object' && 'Code' in data && 'Info' in data) {
+    if (data.Code !== 1) {
+      throw new ApiError(data.Info || 'API Error', response.status, data);
+    }
+    return data.Data;
+  }
+
+  // Fallback for legacy response format
+  return data;
 };
 
 /**

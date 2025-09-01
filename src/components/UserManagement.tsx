@@ -30,7 +30,7 @@ export const UserManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('users');
 
   // API Base URL configuration
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5288/api';
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +38,11 @@ export const UserManagement: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiTestResult, setApiTestResult] = useState<string | null>(null);
+
+  // Ensure users and roles are always arrays to prevent map errors
+  const safeUsers = Array.isArray(users) ? users : [];
+  const safeRoles = Array.isArray(roles) ? roles : [];
 
   const [formData, setFormData] = useState({
     username: '',
@@ -60,21 +65,185 @@ export const UserManagement: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
+      console.log('🔍 UserManagement: Fetching users from API...');
+      console.log('🔗 API URL:', `${API_BASE_URL}/users`);
+      console.log('🔑 Token available:', !!token);
+
+      if (!token) {
+        console.warn('⚠️ UserManagement: No authentication token available');
+        setError('Authentication required. Please log in.');
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(`${API_BASE_URL}/users`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
+      console.log('📡 UserManagement: Response status:', response.status);
+      console.log('📡 UserManagement: Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (response.ok) {
         const data = await response.json();
-        setUsers(data);
+        console.log('📊 UserManagement: Raw API response:', data);
+        console.log('🔍 UserManagement: Response structure:', {
+          hasCode: 'Code' in data,
+          code: data.Code,
+          hasData: 'Data' in data,
+          dataType: typeof data.Data,
+          dataKeys: data.Data ? Object.keys(data.Data) : 'no data',
+          usersInData: data.Data && 'users' in data.Data,
+          usersType: data.Data && data.Data.users ? typeof data.Data.users : 'no users',
+          usersHasValues: data.Data && data.Data.users && '$values' in data.Data.users
+        });
+
+        let usersArray: User[] = [];
+
+        // Handle JCRing.Api response format
+        if (data && typeof data === 'object' && 'Code' in data && 'Info' in data) {
+          console.log('✅ UserManagement: Detected JCRing.Api format');
+          if (data.Code === 1) {
+            if (Array.isArray(data.Data)) {
+              usersArray = data.Data;
+              console.log(`✅ UserManagement: Found ${usersArray.length} users in Data array`);
+            } else if (data.Data && typeof data.Data === 'object') {
+              // Handle nested structure like Data.users or Data.$values
+              if (data.Data.users && Array.isArray(data.Data.users)) {
+                usersArray = data.Data.users;
+                console.log(`✅ UserManagement: Found ${usersArray.length} users in Data.users`);
+              } else if (data.Data.$values && Array.isArray(data.Data.$values)) {
+                usersArray = data.Data.$values;
+                console.log(`✅ UserManagement: Found ${usersArray.length} users in Data.$values`);
+              } else {
+                console.warn('⚠️ UserManagement: Data field exists but is not an array:', data.Data);
+                usersArray = [];
+              }
+            } else {
+              console.warn('⚠️ UserManagement: No valid Data field found');
+              usersArray = [];
+            }
+          } else {
+            console.error('❌ UserManagement: API returned error code:', data.Code, data.Info);
+            setError(data.Info || 'Failed to fetch users');
+            usersArray = [];
+          }
+        } else {
+          // Simplified parsing logic - try the most likely structure first
+          console.log('🔍 UserManagement: Checking API structure...');
+          console.log('🔍 UserManagement: data.Data keys:', data.Data ? Object.keys(data.Data) : 'no Data');
+
+          if (data.Data && typeof data.Data === 'object' && data.Data.users) {
+            // Handle the nested structure: { Data: { users: { $values: [...] } } }
+            console.log('✅ UserManagement: ENTERED users parsing branch');
+            console.log('🔍 UserManagement: Users object structure:', data.Data.users);
+
+            // Check if users exist in Data and have $values
+            if (data.Data.users && typeof data.Data.users === 'object' && '$values' in data.Data.users) {
+              usersArray = data.Data.users.$values;
+              console.log(`✅ UserManagement: Found ${usersArray.length} users in Data.users.$values`);
+            } else if (Array.isArray(data.Data.users)) {
+              // Fallback: users might be a direct array
+              usersArray = data.Data.users;
+              console.log(`✅ UserManagement: Found ${usersArray.length} users in Data.users (direct array)`);
+            } else {
+              console.warn('⚠️ UserManagement: Users structure debug:', {
+                usersExists: !!data.Data.users,
+                usersType: typeof data.Data.users,
+                hasValues: data.Data.users && '$values' in data.Data.users,
+                valuesType: data.Data.users && '$values' in data.Data.users ? typeof data.Data.users.$values : 'N/A',
+                isValuesArray: data.Data.users && '$values' in data.Data.users ? Array.isArray(data.Data.users.$values) : false
+              });
+              usersArray = [];
+            }
+          } else if (Array.isArray(data)) {
+            // Direct array response
+            usersArray = data;
+            console.log(`✅ UserManagement: Found ${usersArray.length} users in direct array`);
+          } else if (data.Data && typeof data.Data === 'object') {
+            // Fallback: Try to extract from Data object regardless of structure
+            console.log('🔄 UserManagement: Trying fallback parsing for users');
+            console.log('🔍 UserManagement: Data.Data keys:', Object.keys(data.Data));
+
+            if (data.Data.users && typeof data.Data.users === 'object' && '$values' in data.Data.users) {
+              usersArray = data.Data.users.$values;
+              console.log(`✅ UserManagement: Fallback found ${usersArray.length} users in Data.users.$values`);
+            } else if (data.Data.users && Array.isArray(data.Data.users)) {
+              usersArray = data.Data.users;
+              console.log(`✅ UserManagement: Fallback found ${usersArray.length} users in Data.users (array)`);
+            } else {
+              console.warn('⚠️ UserManagement: Could not extract users from Data object');
+              usersArray = [];
+            }
+          } else {
+            console.warn('⚠️ UserManagement: Unexpected response format:', data);
+            usersArray = [];
+          }
+        }
+
+        // Transform user objects to match expected interface
+        if (Array.isArray(usersArray) && usersArray.length > 0) {
+          usersArray = usersArray.map((user: any) => ({
+            user_id: user.Id || user.user_id,
+            username: user.Username || user.username,
+            email: user.Email || user.email,
+            first_name: user.FirstName || user.first_name,
+            last_name: user.LastName || user.last_name,
+            phone_number: user.PhoneNumber || user.phone_number,
+            is_active: user.IsActive !== undefined ? user.IsActive : user.is_active,
+            is_email_verified: user.IsEmailVerified !== undefined ? user.IsEmailVerified : user.is_email_verified,
+            role_id: user.role_id,
+            role_name: user.role_name,
+            created_date: user.CreatedAt || user.created_date,
+            modified_date: user.UpdatedAt || user.modified_date
+          }));
+        }
+
+        // Ensure users is always an array
+        if (!Array.isArray(usersArray)) {
+          console.error('❌ UserManagement: usersArray is not an array:', usersArray);
+          usersArray = [];
+        }
+
+        console.log('✅ UserManagement: Final users array:', usersArray);
+        console.log('📋 UserManagement: Sample user:', usersArray.length > 0 ? usersArray[0] : 'No users found');
+        console.log('🔄 UserManagement: Transformed users count:', usersArray.length);
+
+        setUsers(usersArray);
       } else {
-        setError('Failed to fetch users');
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+        try {
+          const errorData = await response.json();
+          console.error('❌ UserManagement: API error response:', errorData);
+
+          if (errorData.Info && errorData.Code !== 1) {
+            errorMessage = errorData.Info;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          console.error('❌ UserManagement: Could not parse error response:', parseError);
+          try {
+            const textResponse = await response.text();
+            console.error('❌ UserManagement: Raw error response:', textResponse);
+          } catch (textError) {
+            console.error('❌ UserManagement: Could not read error response');
+          }
+        }
+
+        setError(`Failed to fetch users: ${errorMessage}`);
+        setUsers([]); // Ensure users is always an array
       }
     } catch (err) {
-      setError('Error fetching users');
-      console.error(err);
+      console.error('❌ UserManagement: Network error fetching users:', err);
+      setError(`Network error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setUsers([]); // Ensure users is always an array
     } finally {
       setLoading(false);
     }
@@ -82,18 +251,161 @@ export const UserManagement: React.FC = () => {
 
   const fetchRoles = async () => {
     try {
+      console.log('🔍 UserManagement: Fetching roles from API...');
+      console.log('🔗 Roles API URL:', `${API_BASE_URL}/roles`);
+      console.log('🔑 Token available:', !!token);
+
+      if (!token) {
+        console.warn('⚠️ UserManagement: No authentication token available for roles');
+        setError('Authentication required. Please log in.');
+        setRoles([]);
+        return;
+      }
+
       const response = await fetch(`${API_BASE_URL}/roles`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setRoles(data);
+      console.log('📡 UserManagement: Roles response status:', response.status);
+      console.log('📡 UserManagement: Roles response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        console.error('❌ UserManagement: Roles API call failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('❌ UserManagement: Roles API error response:', errorText);
+        setError(`Failed to fetch roles: ${response.status} ${response.statusText}`);
+        setRoles([]);
+        return;
       }
+
+      const data = await response.json();
+        console.log('📊 UserManagement: Raw roles API response:', data);
+        console.log('🔍 UserManagement: Roles response structure:', {
+          hasCode: 'Code' in data,
+          code: data.Code,
+          hasData: 'Data' in data,
+          dataType: typeof data.Data,
+          dataKeys: data.Data ? Object.keys(data.Data) : 'no data',
+          rolesInData: data.Data && 'roles' in data.Data,
+          rolesType: data.Data && data.Data.roles ? typeof data.Data.roles : 'no roles',
+          rolesHasValues: data.Data && data.Data.roles && '$values' in data.Data.roles
+        });
+
+        let rolesArray: Role[] = [];
+
+        // Handle JCRing.Api response format
+        if (data && typeof data === 'object' && 'Code' in data && 'Info' in data) {
+          console.log('✅ UserManagement: Detected JCRing.Api format for roles');
+          if (data.Code === 1) {
+            if (Array.isArray(data.Data)) {
+              rolesArray = data.Data;
+              console.log(`✅ UserManagement: Found ${rolesArray.length} roles in Data array`);
+            } else if (data.Data && typeof data.Data === 'object') {
+              // Handle nested structure
+              if (data.Data.roles && Array.isArray(data.Data.roles)) {
+                rolesArray = data.Data.roles;
+                console.log(`✅ UserManagement: Found ${rolesArray.length} roles in Data.roles`);
+              } else if (data.Data.$values && Array.isArray(data.Data.$values)) {
+                rolesArray = data.Data.$values;
+                console.log(`✅ UserManagement: Found ${rolesArray.length} roles in Data.$values`);
+              } else {
+                console.warn('⚠️ UserManagement: Roles Data field exists but is not an array:', data.Data);
+                rolesArray = [];
+              }
+            } else {
+              console.warn('⚠️ UserManagement: No valid roles Data field found');
+              rolesArray = [];
+            }
+          } else {
+            console.error('❌ UserManagement: API returned error code:', data.Code, data.Info);
+            setError(`Failed to fetch roles: ${data.Info}`);
+            rolesArray = [];
+          }
+        } else if (data && typeof data === 'object' && 'Data' in data && data.Data && typeof data.Data === 'object' && 'roles' in data.Data) {
+          // Handle the nested structure: { Data: { roles: { $values: [...] } } }
+          console.log('✅ UserManagement: ENTERED roles parsing branch');
+          console.log('🔍 UserManagement: Roles object structure:', data.Data.roles);
+          console.log('🔍 UserManagement: Full data.Data:', data.Data);
+
+          // Check if roles exist in Data and have $values
+          if (data.Data.roles && typeof data.Data.roles === 'object' && '$values' in data.Data.roles) {
+            rolesArray = data.Data.roles.$values;
+            console.log(`✅ UserManagement: Found ${rolesArray.length} roles in Data.roles.$values`);
+          } else if (data.Data.roles && typeof data.Data.roles === 'object' && '$values' in data.Data.roles && Array.isArray(data.Data.roles.$values)) {
+            // More explicit check for $values array
+            rolesArray = data.Data.roles.$values;
+            console.log(`✅ UserManagement: Found ${rolesArray.length} roles in Data.roles.$values (explicit check)`);
+          } else if (Array.isArray(data.Data.roles)) {
+            // Fallback: roles might be a direct array
+            rolesArray = data.Data.roles;
+            console.log(`✅ UserManagement: Found ${rolesArray.length} roles in Data.roles (direct array)`);
+          } else {
+            console.warn('⚠️ UserManagement: Roles structure debug:', {
+              rolesExists: !!data.Data.roles,
+              rolesType: typeof data.Data.roles,
+              hasValues: data.Data.roles && '$values' in data.Data.roles,
+              valuesType: data.Data.roles && '$values' in data.Data.roles ? typeof data.Data.roles.$values : 'N/A',
+              isValuesArray: data.Data.roles && '$values' in data.Data.roles ? Array.isArray(data.Data.roles.$values) : false
+            });
+            rolesArray = [];
+          }
+        } else if (Array.isArray(data)) {
+          // Direct array response
+          rolesArray = data;
+          console.log(`✅ UserManagement: Found ${rolesArray.length} roles in direct array`);
+        } else if (data && typeof data === 'object' && 'Data' in data && data.Data && typeof data.Data === 'object') {
+          // Fallback: Try to extract from Data object regardless of structure
+          console.log('🔄 UserManagement: Trying fallback parsing for roles');
+          console.log('🔍 UserManagement: Data.Data keys:', Object.keys(data.Data));
+
+          if (data.Data.roles && typeof data.Data.roles === 'object' && '$values' in data.Data.roles) {
+            rolesArray = data.Data.roles.$values;
+            console.log(`✅ UserManagement: Fallback found ${rolesArray.length} roles in Data.roles.$values`);
+          } else if (data.Data.roles && Array.isArray(data.Data.roles)) {
+            rolesArray = data.Data.roles;
+            console.log(`✅ UserManagement: Fallback found ${rolesArray.length} roles in Data.roles (array)`);
+          } else {
+            console.warn('⚠️ UserManagement: Could not extract roles from Data object');
+            rolesArray = [];
+          }
+        } else {
+          console.warn('⚠️ UserManagement: Unexpected roles response format:', data);
+          rolesArray = [];
+        }
+
+        // Transform role objects to match expected interface
+        if (Array.isArray(rolesArray) && rolesArray.length > 0) {
+          rolesArray = rolesArray.map((role: any) => ({
+            role_id: role.Id || role.role_id,
+            role_name: role.Name || role.role_name,
+            description: role.Description || role.description,
+            is_active: role.IsActive !== undefined ? role.IsActive : role.is_active
+          }));
+        }
+
+        // Ensure roles is always an array
+        if (!Array.isArray(rolesArray)) {
+          console.error('❌ UserManagement: rolesArray is not an array:', rolesArray);
+          rolesArray = [];
+        }
+
+        console.log('✅ UserManagement: Final roles array:', rolesArray);
+        console.log('📋 UserManagement: Sample role:', rolesArray.length > 0 ? rolesArray[0] : 'No roles found');
+        console.log('🔄 UserManagement: Transformed roles count:', rolesArray.length);
+
+        // Log final result
+        if (rolesArray.length === 0) {
+          console.log('⚠️ UserManagement: No roles found from API');
+        }
+
+        setRoles(rolesArray);
     } catch (err) {
-      console.error('Error fetching roles:', err);
+      console.error('❌ UserManagement: Network error fetching roles:', err);
+      setError(`Network error fetching roles: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setRoles([]); // Ensure roles is always an array
     }
   };
 
@@ -248,66 +560,95 @@ export const UserManagement: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: newValue }));
   };
 
-  // New simplified user creation wizard component
-  const UserCreationWizard: React.FC = () => {
-    const [step, setStep] = useState(1);
-    const [wizardData, setWizardData] = useState({
+  const testApiConnection = async () => {
+    try {
+      setApiTestResult('Testing API connection...');
+
+      console.log('🔗 Testing API connection to:', API_BASE_URL);
+
+      // Test basic connectivity first
+      const healthResponse = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (healthResponse.ok) {
+        setApiTestResult('✅ API server is reachable');
+        console.log('✅ API health check passed');
+      } else {
+        setApiTestResult(`⚠️ API server responded with status: ${healthResponse.status}`);
+        console.warn('⚠️ API health check failed:', healthResponse.status);
+      }
+
+      // Test authentication
+      if (token) {
+        const authTestResponse = await fetch(`${API_BASE_URL}/auth/verify`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (authTestResponse.ok) {
+          setApiTestResult(prev => prev + '\n✅ Authentication is valid');
+          console.log('✅ Authentication test passed');
+        } else {
+          setApiTestResult(prev => prev + `\n❌ Authentication failed: ${authTestResponse.status}`);
+          console.error('❌ Authentication test failed:', authTestResponse.status);
+        }
+      } else {
+        setApiTestResult(prev => prev + '\n❌ No authentication token available');
+      }
+
+    } catch (error) {
+      setApiTestResult(`❌ API connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ API test failed:', error);
+    }
+  };
+
+  // Simple user creation form
+  const SimpleUserForm: React.FC = () => {
+    const [formData, setFormData] = useState({
       first_name: '',
       last_name: '',
       email: '',
       role_id: 0,
       password: '',
-      phone_number: ''
+      phone_number: '',
+      is_active: true
     });
-    const [wizardErrors, setWizardErrors] = useState<{[key: string]: string}>({});
+    const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [isCreating, setIsCreating] = useState(false);
 
-    const totalSteps = 3;
+    const validateForm = (): boolean => {
+      const newErrors: {[key: string]: string} = {};
 
-    const validateStep = (stepNumber: number): boolean => {
-      const errors: {[key: string]: string} = {};
-
-      if (stepNumber === 1) {
-        if (!wizardData.first_name.trim()) errors.first_name = 'First name is required';
-        if (!wizardData.last_name.trim()) errors.last_name = 'Last name is required';
-        if (!wizardData.email.trim()) errors.email = 'Email is required';
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(wizardData.email)) {
-          errors.email = 'Please enter a valid email address';
-        }
-      } else if (stepNumber === 2) {
-        if (!wizardData.role_id) errors.role_id = 'Please select a role';
-      } else if (stepNumber === 3) {
-        if (!wizardData.password) errors.password = 'Password is required';
-        else if (wizardData.password.length < 8) errors.password = 'Password must be at least 8 characters';
-        else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(wizardData.password)) {
-          errors.password = 'Password must contain uppercase, lowercase, and number';
-        }
+      if (!formData.first_name.trim()) newErrors.first_name = 'First name is required';
+      if (!formData.last_name.trim()) newErrors.last_name = 'Last name is required';
+      if (!formData.email.trim()) newErrors.email = 'Email is required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = 'Please enter a valid email address';
       }
+      if (!formData.role_id) newErrors.role_id = 'Please select a role';
+      if (!formData.password) newErrors.password = 'Password is required';
+      else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
 
-      setWizardErrors(errors);
-      return Object.keys(errors).length === 0;
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
     };
 
-    const nextStep = () => {
-      if (validateStep(step)) {
-        setStep(step + 1);
-      }
-    };
-
-    const prevStep = () => {
-      setStep(step - 1);
-    };
-
-    const handleWizardSubmit = async () => {
-      if (!validateStep(3)) return;
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!validateForm()) return;
 
       setIsCreating(true);
 
       try {
         const userData = {
-          ...wizardData,
-          username: `${wizardData.first_name.toLowerCase()}.${wizardData.last_name.toLowerCase()}`,
-          is_active: true
+          ...formData,
+          username: `${formData.first_name.toLowerCase()}.${formData.last_name.toLowerCase()}`
         };
 
         const response = await fetch(`${API_BASE_URL}/users`, {
@@ -320,12 +661,39 @@ export const UserManagement: React.FC = () => {
         });
 
         if (response.ok) {
-          await fetchUsers();
-          setShowCreateForm(false);
-          resetForm();
+          console.log('✅ UserManagement: User created successfully');
+          console.log('🔄 UserManagement: Refreshing users list...');
+
+          try {
+            // Refresh the users list
+            await fetchUsers();
+            console.log('✅ UserManagement: Users list refreshed successfully');
+
+            // Also refresh roles in case they changed
+            await fetchRoles();
+            console.log('✅ UserManagement: Roles list refreshed successfully');
+
+            setShowCreateForm(false);
+            setFormData({
+              first_name: '',
+              last_name: '',
+              email: '',
+              role_id: 0,
+              password: '',
+              phone_number: '',
+              is_active: true
+            });
+            setError(null); // Clear any previous errors
+
+            console.log('✅ UserManagement: User creation process completed successfully');
+          } catch (refreshError) {
+            console.error('❌ UserManagement: Failed to refresh data after user creation:', refreshError);
+            setError('User created successfully, but failed to refresh the list. Please refresh the page.');
+          }
         } else {
-          const data = await response.json();
-          setError(data.error || 'Failed to create user');
+          const data = await response.json().catch(() => ({}));
+          console.error('❌ UserManagement: Failed to create user:', data);
+          setError(data.Info || data.error || 'Failed to create user');
         }
       } catch (err) {
         setError('Error creating user');
@@ -335,262 +703,155 @@ export const UserManagement: React.FC = () => {
       }
     };
 
-    const updateWizardData = (field: string, value: any) => {
-      setWizardData(prev => ({ ...prev, [field]: value }));
-
-      // Auto-generate username
-      if (field === 'first_name' || field === 'last_name') {
-        const firstName = field === 'first_name' ? value : wizardData.first_name;
-        const lastName = field === 'last_name' ? value : wizardData.last_name;
-        if (firstName && lastName) {
-          const username = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`;
-          setWizardData(prev => ({ ...prev, username: username }));
-        }
-      }
-    };
-
     return (
       <div className="max-w-2xl mx-auto">
-        {/* Progress Indicator */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            {[1, 2, 3].map((stepNumber) => (
-              <div key={stepNumber} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  stepNumber < step ? 'bg-green-500 text-white' :
-                  stepNumber === step ? 'bg-blue-500 text-white' :
-                  'bg-gray-300 text-gray-600'
-                }`}>
-                  {stepNumber < step ? '✓' : stepNumber}
-                </div>
-                {stepNumber < 3 && (
-                  <div className={`w-16 h-1 mx-2 ${
-                    stepNumber < step ? 'bg-green-500' : 'bg-gray-300'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Basic Info</span>
-            <span>Role & Permissions</span>
-            <span>Security</span>
-          </div>
-        </div>
-
-        {/* Step Content */}
         <div className="bg-white rounded-lg shadow-lg p-8">
-          {step === 1 && (
-            <div className="space-y-6">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Basic Information</h3>
-                <p className="text-gray-600 mt-2">Let's start with the user's personal details</p>
-              </div>
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-900">Add New User</h3>
+            <p className="text-gray-600 mt-2">Create a new user account</p>
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={wizardData.first_name}
-                    onChange={(e) => updateWizardData('first_name', e.target.value)}
-                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
-                      wizardErrors.first_name ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter first name"
-                  />
-                  {wizardErrors.first_name && (
-                    <p className="mt-1 text-sm text-red-600">{wizardErrors.first_name}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={wizardData.last_name}
-                    onChange={(e) => updateWizardData('last_name', e.target.value)}
-                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
-                      wizardErrors.last_name ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter last name"
-                  />
-                  {wizardErrors.last_name && (
-                    <p className="mt-1 text-sm text-red-600">{wizardErrors.last_name}</p>
-                  )}
-                </div>
-              </div>
-
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address *
+                  First Name *
                 </label>
                 <input
-                  type="email"
-                  value={wizardData.email}
-                  onChange={(e) => updateWizardData('email', e.target.value)}
+                  type="text"
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({...formData, first_name: e.target.value})}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
-                    wizardErrors.email ? 'border-red-500' : 'border-gray-300'
+                    errors.first_name ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="user@company.com"
+                  placeholder="Enter first name"
                 />
-                {wizardErrors.email && (
-                  <p className="mt-1 text-sm text-red-600">{wizardErrors.email}</p>
+                {errors.first_name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number (Optional)
+                  Last Name *
                 </label>
                 <input
-                  type="tel"
-                  value={wizardData.phone_number}
-                  onChange={(e) => updateWizardData('phone_number', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="+1 (555) 123-4567"
+                  type="text"
+                  value={formData.last_name}
+                  onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
+                    errors.last_name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter last name"
                 />
+                {errors.last_name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>
+                )}
               </div>
+            </div>
 
-              {wizardData.first_name && wizardData.last_name && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
-                    <strong>Username will be:</strong> {wizardData.first_name.toLowerCase()}.{wizardData.last_name.toLowerCase()}
-                  </p>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address *
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="user@company.com"
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
               )}
             </div>
-          )}
 
-          {step === 2 && (
-            <div className="space-y-6">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Role & Permissions</h3>
-                <p className="text-gray-600 mt-2">Choose the appropriate role for this user</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4">
-                  User Role *
-                </label>
-                <div className="space-y-3">
-                  {roles.map(role => (
-                    <div
-                      key={role.role_id}
-                      onClick={() => updateWizardData('role_id', role.role_id)}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        wizardData.role_id === role.role_id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          checked={wizardData.role_id === role.role_id}
-                          onChange={() => updateWizardData('role_id', role.role_id)}
-                          className="mr-3"
-                        />
-                        <div>
-                          <h4 className="font-medium text-gray-900">{role.role_name}</h4>
-                          <p className="text-sm text-gray-600 mt-1">{role.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {wizardErrors.role_id && (
-                  <p className="mt-2 text-sm text-red-600">{wizardErrors.role_id}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-6">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Security Settings</h3>
-                <p className="text-gray-600 mt-2">Set up a secure password for the user</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password *
-                </label>
-                <input
-                  type="password"
-                  value={wizardData.password}
-                  onChange={(e) => updateWizardData('password', e.target.value)}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
-                    wizardErrors.password ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Enter a secure password"
-                />
-                {wizardErrors.password && (
-                  <p className="mt-1 text-sm text-red-600">{wizardErrors.password}</p>
-                )}
-
-                <div className="mt-3">
-                  <p className="text-sm text-gray-600 mb-2">Password requirements:</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className={`flex items-center ${wizardData.password.length >= 8 ? 'text-green-600' : 'text-gray-500'}`}>
-                      <span className="mr-2">{wizardData.password.length >= 8 ? '✓' : '○'}</span>
-                      At least 8 characters
-                    </div>
-                    <div className={`flex items-center ${/(?=.*[a-z])/.test(wizardData.password) ? 'text-green-600' : 'text-gray-500'}`}>
-                      <span className="mr-2">{/(?=.*[a-z])/.test(wizardData.password) ? '✓' : '○'}</span>
-                      Lowercase letter
-                    </div>
-                    <div className={`flex items-center ${/(?=.*[A-Z])/.test(wizardData.password) ? 'text-green-600' : 'text-gray-500'}`}>
-                      <span className="mr-2">{/(?=.*[A-Z])/.test(wizardData.password) ? '✓' : '○'}</span>
-                      Uppercase letter
-                    </div>
-                    <div className={`flex items-center ${/(?=.*\d)/.test(wizardData.password) ? 'text-green-600' : 'text-gray-500'}`}>
-                      <span className="mr-2">{/(?=.*\d)/.test(wizardData.password) ? '✓' : '○'}</span>
-                      Number
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
-                <div className="space-y-1 text-sm text-gray-600">
-                  <p><strong>Name:</strong> {wizardData.first_name} {wizardData.last_name}</p>
-                  <p><strong>Email:</strong> {wizardData.email}</p>
-                  <p><strong>Username:</strong> {wizardData.first_name.toLowerCase()}.{wizardData.last_name.toLowerCase()}</p>
-                  <p><strong>Role:</strong> {roles.find(r => r.role_id === wizardData.role_id)?.role_name}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8">
-            <button
-              onClick={prevStep}
-              disabled={step === 1}
-              className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-
-            {step < totalSteps ? (
-              <button
-                onClick={nextStep}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Role *
+              </label>
+              <select
+                value={formData.role_id}
+                onChange={(e) => setFormData({...formData, role_id: parseInt(e.target.value)})}
+                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
+                  errors.role_id ? 'border-red-500' : 'border-gray-300'
+                }`}
               >
-                Next
-              </button>
-            ) : (
+                <option value="">Select a role</option>
+                {safeRoles.map(role => (
+                  <option key={role.role_id} value={role.role_id}>
+                    {role.role_name} - {role.description}
+                  </option>
+                ))}
+              </select>
+              {errors.role_id && (
+                <p className="mt-1 text-sm text-red-600">{errors.role_id}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password *
+              </label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
+                  errors.password ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Enter password (min 6 characters)"
+              />
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number (Optional)
+              </label>
+              <input
+                type="tel"
+                value={formData.phone_number}
+                onChange={(e) => setFormData({...formData, phone_number: e.target.value})}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="is_active"
+                checked={formData.is_active}
+                onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
+                Active User
+              </label>
+            </div>
+
+            {formData.first_name && formData.last_name && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Username will be:</strong> {formData.first_name.toLowerCase()}.{formData.last_name.toLowerCase()}
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
               <button
-                onClick={handleWizardSubmit}
+                type="submit"
                 disabled={isCreating}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`px-6 py-3 rounded-lg transition-colors font-medium ${
+                  isCreating
+                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
               >
                 {isCreating ? (
                   <span className="flex items-center">
@@ -604,293 +865,395 @@ export const UserManagement: React.FC = () => {
                   'Create User'
                 )}
               </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Tab Components
-  const UsersTab = () => (
-    <div className="space-y-6">
-      {/* Quick Actions */}
-      {!showCreateForm && !editingUser && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
-              <p className="text-gray-600 mt-1">Create and manage user accounts for your organization</p>
-            </div>
-            <button
-              onClick={() => {
-                setShowCreateForm(true);
-                setEditingUser(null);
-                resetForm();
-              }}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add New User
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Create/Edit Form */}
-      {showCreateForm && !editingUser && <UserCreationWizard />}
-
-      {editingUser && (
-        <div className="p-6 bg-gray-50 rounded-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Edit User</h2>
-            <div className="text-sm text-gray-600">
-              <span className="text-blue-600">*</span> Required fields
-            </div>
-          </div>
-
-          <form onSubmit={handleUpdateUser}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  First Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="Enter first name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="Enter last name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Username <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="Enter username"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="Enter email address"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password <span className="text-xs text-gray-500 ml-1">(leave blank to keep current)</span>
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="Leave blank to keep current"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number <span className="text-xs text-gray-500 ml-1">(optional)</span>
-                </label>
-                <input
-                  type="tel"
-                  name="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="Enter phone number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Role <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="role_id"
-                  value={formData.role_id}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                >
-                  <option value="">Select a role</option>
-                  {roles.map(role => (
-                    <option key={role.role_id} value={role.role_id}>
-                      {role.role_name} - {role.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="is_active"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
-                  Active User
-                </label>
-              </div>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`px-6 py-2 rounded-lg transition-colors font-medium ${
-                  isSubmitting
-                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Updating...
-                  </span>
-                ) : (
-                  'Update User'
-                )}
-              </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowCreateForm(false);
-                  setEditingUser(null);
-                  resetForm();
-                }}
-                disabled={isSubmitting}
-                className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium disabled:opacity-50"
+                onClick={() => setShowCreateForm(false)}
+                disabled={isCreating}
+                className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium disabled:opacity-50"
               >
                 Cancel
               </button>
             </div>
           </form>
         </div>
-      )}
-
-      {/* Users Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Username
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Role
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {users.map(user => (
-              <tr key={user.user_id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {user.username}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {user.first_name} {user.last_name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {user.email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    user.role_name === 'SuperAdmin' || user.role_name === 'OrgAdmin'
-                      ? 'bg-purple-100 text-purple-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {user.role_name || 'No Role'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    user.is_active
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {user.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => startEdit(user)}
-                    className="text-blue-600 hover:text-blue-900 mr-3"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteUser(user.user_id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
-    </div>
-  );
+    );
+  };
+
+  // Tab Components
+  const UsersTab = () => {
+    console.log('🔍 UsersTab: Rendering with users:', safeUsers.length, 'roles:', safeRoles.length);
+
+    // Calculate user statistics
+    const activeUsers = safeUsers.filter(user => user.is_active).length;
+    const inactiveUsers = safeUsers.filter(user => !user.is_active).length;
+    const roleStats = safeRoles.map(role => ({
+      role: role.role_name,
+      count: safeUsers.filter(user => user.role_name === role.role_name).length
+    }));
+
+    return (
+      <div className="space-y-6">
+        {/* Quick Actions */}
+        {!showCreateForm && !editingUser && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
+                <p className="text-gray-600 mt-1">Create and manage user accounts for your organization</p>
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="bg-white rounded-lg p-3 border">
+                    <div className="text-2xl font-bold text-blue-600">{safeUsers.length}</div>
+                    <div className="text-gray-600">Total Users</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border">
+                    <div className="text-2xl font-bold text-green-600">{activeUsers}</div>
+                    <div className="text-gray-600">Active Users</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border">
+                    <div className="text-2xl font-bold text-red-600">{inactiveUsers}</div>
+                    <div className="text-gray-600">Inactive Users</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border">
+                    <div className="text-2xl font-bold text-purple-600">{safeRoles.length}</div>
+                    <div className="text-gray-600">Available Roles</div>
+                  </div>
+                </div>
+                {safeUsers.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Users by Role:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {roleStats.map(stat => (
+                        <span key={stat.role} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                          {stat.role}: {stat.count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={fetchUsers}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Refresh Users'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCreateForm(true);
+                    setEditingUser(null);
+                    resetForm();
+                  }}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add New User
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create/Edit Form */}
+        {showCreateForm && !editingUser && <SimpleUserForm />}
+
+        {editingUser && (
+          <div className="p-6 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Edit User</h2>
+              <div className="text-sm text-gray-600">
+                <span className="text-blue-600">*</span> Required fields
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdateUser}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                    placeholder="Enter first name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                    placeholder="Enter last name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Username <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                    placeholder="Enter username"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                    placeholder="Enter email address"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Password <span className="text-xs text-gray-500 ml-1">(leave blank to keep current)</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                    placeholder="Leave blank to keep current"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number <span className="text-xs text-gray-500 ml-1">(optional)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone_number"
+                    value={formData.phone_number}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="role_id"
+                    value={formData.role_id}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  >
+                    <option value="">Select a role</option>
+                    {safeRoles.map(role => (
+                      <option key={role.role_id} value={role.role_id}>
+                        {role.role_name} - {role.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="is_active"
+                    id="is_active"
+                    checked={formData.is_active}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
+                    Active User
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={`px-6 py-2 rounded-lg transition-colors font-medium ${
+                    isSubmitting
+                      ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Updating...
+                    </span>
+                  ) : (
+                    'Update User'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setEditingUser(null);
+                    resetForm();
+                  }}
+                  disabled={isSubmitting}
+                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Users Table */}
+        <div className="overflow-x-auto">
+          {safeUsers.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">👥</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Users Found</h3>
+              <p className="text-gray-600 mb-4">
+                {error ? `Error: ${error}` : 'No users are currently registered in the system.'}
+              </p>
+              {!error && (
+                <div className="text-sm text-gray-500 mb-4 space-y-1">
+                  <p><strong>API Status:</strong> {token ? '✅ Authenticated' : '❌ Not authenticated'}</p>
+                  <p><strong>API URL:</strong> {API_BASE_URL}</p>
+                  <p><strong>Roles Available:</strong> {safeRoles.length}</p>
+                  <p><strong>Last Fetch:</strong> {new Date().toLocaleTimeString()}</p>
+                </div>
+              )}
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={fetchUsers}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Refresh Users'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCreateForm(true);
+                    setEditingUser(null);
+                    resetForm();
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Add First User
+                </button>
+              </div>
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Username
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {safeUsers.map(user => (
+                  <tr key={user.user_id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {user.username}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.first_name} {user.last_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        user.role_name === 'SuperAdmin' || user.role_name === 'OrgAdmin'
+                          ? 'bg-purple-100 text-purple-800'
+                          : user.role_name === 'Admin'
+                            ? 'bg-blue-100 text-blue-800'
+                            : user.role_name === 'Coach'
+                              ? 'bg-green-100 text-green-800'
+                              : user.role_name === 'Athlete'
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {user.role_name || (user.role_id ? `Role ${user.role_id}` : 'No Role')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        user.is_active
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => startEdit(user)}
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user.user_id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const RolesTab = () => (
     <div className="space-y-6">
@@ -1392,7 +1755,7 @@ export const UserManagement: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select Default Role</option>
-                {roles.map(role => (
+                {safeRoles.map(role => (
                   <option key={role.role_id} value={role.role_id}>
                     {role.role_name}
                   </option>
@@ -1505,10 +1868,16 @@ export const UserManagement: React.FC = () => {
             </nav>
             <div className="flex items-center space-x-4">
               <div className="hidden md:flex items-center space-x-2 text-white/80 text-sm">
-                <span>{users.length} users</span>
+                <span>{safeUsers.length} users</span>
                 <span>•</span>
-                <span>{roles.length} roles</span>
+                <span>{safeRoles.length} roles</span>
               </div>
+              <button
+                onClick={testApiConnection}
+                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium"
+              >
+                Test API
+              </button>
               <button
                 onClick={() => {
                   setShowCreateForm(true);
@@ -1548,6 +1917,20 @@ export const UserManagement: React.FC = () => {
             >
               ×
             </button>
+          </div>
+        )}
+
+        {apiTestResult && (
+          <div className="mb-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded-lg">
+            <div className="flex items-start justify-between">
+              <div className="whitespace-pre-line">{apiTestResult}</div>
+              <button
+                onClick={() => setApiTestResult(null)}
+                className="ml-2 text-blue-900 hover:text-blue-700"
+              >
+                ×
+              </button>
+            </div>
           </div>
         )}
 

@@ -41,7 +41,6 @@ interface GeneticImpact {
 export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, geneticData }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'genetics' | 'performance' | 'forecast'>('overview');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
@@ -80,11 +79,10 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
           visibility: backendData.current.visibility,
           dewPoint: backendData.current.dew_point,
         });
-        setError(null);
         setLastRefresh(new Date());
       } catch (err: any) {
         console.error('Weather API Error:', err);
-        setError(err.message || 'Failed to load weather data');
+        setWeatherData(null); // Set to null on error to handle gracefully
       } finally {
         setLoading(false);
       }
@@ -350,26 +348,7 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
     );
   }
 
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900">🌤️ Weather Impact Analysis</h2>
-        <div className="card-enhanced p-8 text-center">
-          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Weather Data Unavailable</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!weatherData) return null;
+  // Component renders even when weatherData is null, showing placeholder content
 
   const performanceImpact = calculatePerformanceImpact;
   const geneticImpacts = analyzeGeneticImpacts;
@@ -475,42 +454,50 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
             {/* Current Conditions Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="card-enhanced p-4 text-center">
-                <div className="text-4xl mb-2">{getWeatherIcon(weatherData.weatherCondition)}</div>
-                <div className="text-lg font-semibold text-gray-900">{getWeatherDescription(weatherData.weatherCondition)}</div>
+                <div className="text-4xl mb-2">{weatherData ? getWeatherIcon(weatherData.weatherCondition) : '❓'}</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {weatherData ? getWeatherDescription(weatherData.weatherCondition) : 'Weather Unavailable'}
+                </div>
                 <div className="text-gray-600 text-sm">Condition</div>
               </div>
 
               <div className="card-enhanced p-4 text-center">
                 <Thermometer className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">{weatherData.temperature}°C</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {weatherData ? `${weatherData.temperature}°C` : '--°C'}
+                </div>
                 <div className="text-gray-600 text-sm">Temperature</div>
                 <div className="flex items-center justify-center mt-1">
-                  {weatherData.temperature > 25 ? <TrendingUp className="w-4 h-4 text-red-500" /> :
-                   weatherData.temperature < 15 ? <TrendingDown className="w-4 h-4 text-blue-500" /> :
+                  {weatherData && weatherData.temperature > 25 ? <TrendingUp className="w-4 h-4 text-red-500" /> :
+                   weatherData && weatherData.temperature < 15 ? <TrendingDown className="w-4 h-4 text-blue-500" /> :
                    <CheckCircle className="w-4 h-4 text-green-500" />}
                 </div>
               </div>
 
               <div className="card-enhanced p-4 text-center">
                 <Droplets className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">{weatherData.humidity}%</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {weatherData ? `${weatherData.humidity}%` : '--%'}
+                </div>
                 <div className="text-gray-600 text-sm">Humidity</div>
                 <div className="w-full bg-gray-300 rounded-full h-2 mt-2">
                   <div
                     className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${weatherData.humidity}%` }}
+                    style={{ width: weatherData ? `${weatherData.humidity}%` : '0%' }}
                   ></div>
                 </div>
               </div>
 
               <div className="card-enhanced p-4 text-center">
                 <Wind className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">{weatherData.windSpeed}</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {weatherData ? weatherData.windSpeed : '--'}
+                </div>
                 <div className="text-gray-600 text-sm">km/h Wind</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {weatherData.windSpeed < 5 ? 'Calm' :
-                   weatherData.windSpeed < 15 ? 'Light' :
-                   weatherData.windSpeed < 25 ? 'Moderate' : 'Strong'}
+                  {weatherData && weatherData.windSpeed < 5 ? 'Calm' :
+                   weatherData && weatherData.windSpeed < 15 ? 'Light' :
+                   weatherData && weatherData.windSpeed < 25 ? 'Moderate' : 'Strong'}
                 </div>
               </div>
             </div>
@@ -521,17 +508,19 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-semibold text-gray-900">Air Quality</h4>
                   <div className={`px-2 py-1 rounded text-xs font-medium ${
-                    weatherData.aqi <= 50 ? 'bg-green-100 text-green-800' :
-                    weatherData.aqi <= 100 ? 'bg-yellow-100 text-yellow-800' :
-                    weatherData.aqi <= 150 ? 'bg-orange-100 text-orange-800' :
-                    'bg-red-100 text-red-800'
+                    weatherData && weatherData.aqi <= 50 ? 'bg-green-100 text-green-800' :
+                    weatherData && weatherData.aqi <= 100 ? 'bg-yellow-100 text-yellow-800' :
+                    weatherData && weatherData.aqi <= 150 ? 'bg-orange-100 text-orange-800' :
+                    'bg-gray-100 text-gray-800'
                   }`}>
-                    {weatherData.aqi <= 50 ? 'Good' :
-                     weatherData.aqi <= 100 ? 'Moderate' :
-                     weatherData.aqi <= 150 ? 'Unhealthy' : 'Hazardous'}
+                    {weatherData && weatherData.aqi <= 50 ? 'Good' :
+                     weatherData && weatherData.aqi <= 100 ? 'Moderate' :
+                     weatherData && weatherData.aqi <= 150 ? 'Unhealthy' : 'Unavailable'}
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{weatherData.aqi}</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">
+                  {weatherData ? weatherData.aqi : '--'}
+                </div>
                 <div className="text-sm text-gray-600">AQI Index</div>
               </div>
 
@@ -539,17 +528,19 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-semibold text-gray-900">UV Index</h4>
                   <div className={`px-2 py-1 rounded text-xs font-medium ${
-                    (weatherData.uvIndex || 0) <= 2 ? 'bg-green-100 text-green-800' :
-                    (weatherData.uvIndex || 0) <= 5 ? 'bg-yellow-100 text-yellow-800' :
-                    (weatherData.uvIndex || 0) <= 7 ? 'bg-orange-100 text-orange-800' :
-                    'bg-red-100 text-red-800'
+                    weatherData && (weatherData.uvIndex || 0) <= 2 ? 'bg-green-100 text-green-800' :
+                    weatherData && (weatherData.uvIndex || 0) <= 5 ? 'bg-yellow-100 text-yellow-800' :
+                    weatherData && (weatherData.uvIndex || 0) <= 7 ? 'bg-orange-100 text-orange-800' :
+                    'bg-gray-100 text-gray-800'
                   }`}>
-                    {(weatherData.uvIndex || 0) <= 2 ? 'Low' :
-                     (weatherData.uvIndex || 0) <= 5 ? 'Moderate' :
-                     (weatherData.uvIndex || 0) <= 7 ? 'High' : 'Very High'}
+                    {weatherData && (weatherData.uvIndex || 0) <= 2 ? 'Low' :
+                     weatherData && (weatherData.uvIndex || 0) <= 5 ? 'Moderate' :
+                     weatherData && (weatherData.uvIndex || 0) <= 7 ? 'High' : 'Unavailable'}
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{weatherData.uvIndex || 0}</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">
+                  {weatherData ? (weatherData.uvIndex || 0) : '--'}
+                </div>
                 <div className="text-sm text-gray-600">UV Index</div>
               </div>
 
@@ -558,7 +549,9 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
                   <h4 className="font-semibold text-gray-900">Visibility</h4>
                   <Eye className="w-5 h-5 text-gray-600" />
                 </div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{weatherData.visibility || 10}</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">
+                  {weatherData ? (weatherData.visibility || 10) : '--'}
+                </div>
                 <div className="text-sm text-gray-600">km Visibility</div>
               </div>
             </div>

@@ -7,7 +7,7 @@ interface ApiState<T> {
 }
 
 // Base API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5288/api';
 
 interface ApiState<T> {
   data: T | null;
@@ -43,27 +43,51 @@ export const useAdminApi = <T>(endpoint: string, options?: RequestInit) => {
 
       if (response.ok) {
         const data = await response.json();
-        setState({
-          data,
-          loading: false,
-          error: null
-        });
+
+        // Handle JCRing.Api response format
+        if (data && typeof data === 'object' && 'Code' in data && 'Info' in data) {
+          if (data.Code === 1) {
+            setState({
+              data: data.Data,
+              loading: false,
+              error: null
+            });
+          } else {
+            setState({
+              data: null,
+              loading: false,
+              error: data.Info || 'API Error'
+            });
+          }
+        } else {
+          // Fallback for legacy response format
+          setState({
+            data,
+            loading: false,
+            error: null
+          });
+        }
       } else {
         // Handle non-OK responses
         const errorText = await response.text();
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        
+
         // Try to parse as JSON if possible
         try {
           const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.error || errorMessage;
+          // Handle JCRing.Api error format
+          if (errorJson.Info && errorJson.Code !== 1) {
+            errorMessage = errorJson.Info;
+          } else if (errorJson.error) {
+            errorMessage = errorJson.error;
+          }
         } catch (parseError) {
           // If it's not JSON, it might be HTML (like a 404 page)
           if (errorText.startsWith('<!doctype') || errorText.startsWith('<html')) {
             errorMessage = 'API server may not be running. Received HTML instead of JSON.';
           }
         }
-        
+
         setState({
           data: null,
           loading: false,

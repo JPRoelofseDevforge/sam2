@@ -11,9 +11,9 @@ import {
 } from 'three-stdlib';
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
-// Mock Data
-import { bodyCompositionData } from '../data/mockData';
-import { athletes, biometricData } from '../data/mockData';
+// API Services
+import { dataService } from '../services/dataService';
+import { Athlete, BiometricData, BodyComposition } from '../types';
 
 // Model URL
 const MODEL_URL = '/models/3d_human_body_wireframe_model.glb';
@@ -88,16 +88,59 @@ export const DigitalTwin3D: React.FC<{ athleteId: string }> = ({ athleteId }) =>
   // State
   const [modelLoaded, setModelLoaded] = useState(false);
   const [recoveryExplanation, setRecoveryExplanation] = useState<string>('');
+  const [athlete, setAthlete] = useState<Athlete | undefined>(undefined);
+  const [bodyData, setBodyData] = useState<BodyComposition | undefined>(undefined);
+  const [latestBiometric, setLatestBiometric] = useState<BiometricData | undefined>(undefined);
+  const [biometricHistory, setBiometricHistory] = useState<BiometricData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get athlete and latest biometric data
-  const athlete = athletes.find(a => a.athlete_id === athleteId);
-  const bodyData = bodyCompositionData
-    .filter(d => d.athlete_id === athleteId)
-    .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())[0];
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const latestBiometric = biometricData
-    .filter(d => d.athlete_id === athleteId)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+        // Convert athleteId to number if it's a string
+        const numericAthleteId = typeof athleteId === 'string' ? parseInt(athleteId, 10) : athleteId;
+
+        // Fetch athlete data
+        const athleteData = await dataService.getAthleteData(numericAthleteId);
+
+        setAthlete(athleteData.athlete);
+        setBiometricHistory(athleteData.biometricData);
+
+        // Get latest body composition data
+        if (athleteData.bodyComposition.length > 0) {
+          const latestBodyData = athleteData.bodyComposition
+            .sort((a: BodyComposition, b: BodyComposition) =>
+              new Date(b.date || '').getTime() - new Date(a.date || '').getTime()
+            )[0];
+          setBodyData(latestBodyData);
+        }
+
+        // Get latest biometric data
+        if (athleteData.biometricData.length > 0) {
+          const latestBioData = athleteData.biometricData
+            .sort((a: BiometricData, b: BiometricData) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+            )[0];
+          setLatestBiometric(latestBioData);
+        }
+
+      } catch (err) {
+        console.error('Failed to fetch DigitalTwin data:', err);
+        setError('Failed to load athlete data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (athleteId) {
+      fetchData();
+    }
+  }, [athleteId]);
 
   const restingHeartRate = latestBiometric?.resting_hr || 60;
   const hrv = latestBiometric?.hrv_night || 60;
@@ -151,11 +194,18 @@ export const DigitalTwin3D: React.FC<{ athleteId: string }> = ({ athleteId }) =>
 
   // 🔹 7-Day Temp Trend Data
   const tempTrendData = useMemo(() => {
+    if (!biometricHistory.length) {
+      return Array.from({ length: 7 }, (_, i) => ({
+        date: new Date(Date.now() - (6 - i) * 86400000).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+        temp: 36.8 + Math.random() * 0.4,
+      }));
+    }
+
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const filtered = biometricData
-      .filter(d => d.athlete_id === athleteId && new Date(d.date) >= sevenDaysAgo)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .map(d => ({
+    const filtered = biometricHistory
+      .filter((d: BiometricData) => d.athlete_id === athleteId && new Date(d.date) >= sevenDaysAgo)
+      .sort((a: BiometricData, b: BiometricData) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .map((d: BiometricData) => ({
         date: new Date(d.date).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
         temp: parseFloat(d.temp_trend_c.toFixed(1)),
       }));
@@ -164,7 +214,7 @@ export const DigitalTwin3D: React.FC<{ athleteId: string }> = ({ athleteId }) =>
       date: new Date(Date.now() - (6 - i) * 86400000).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
       temp: 36.8 + Math.random() * 0.4,
     }));
-  }, [athleteId]);
+  }, [biometricHistory, athleteId]);
 
   // Generate ECG waveform
   const generateEcgWaveform = () => {
@@ -726,7 +776,57 @@ export const DigitalTwin3D: React.FC<{ athleteId: string }> = ({ athleteId }) =>
       rendererRef.current?.dispose();
       sceneRef.current?.clear();
     };
-  }, [athleteId, athlete, labels, temp]);
+  }, [athleteId, athlete, labels, temp, bodyData, latestBiometric]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <ErrorBoundary fallback={<div className="text-red-500 p-4">Something went wrong with the 3D twin.</div>}>
+        <div className="relative w-full h-full bg-indigo-900 flex items-center justify-center min-h-[800px]">
+          <div className="text-white text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p>Loading athlete data...</p>
+          </div>
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <ErrorBoundary fallback={<div className="text-red-500 p-4">Something went wrong with the 3D twin.</div>}>
+        <div className="relative w-full h-full bg-indigo-900 flex items-center justify-center min-h-[800px]">
+          <div className="text-white text-center">
+            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+            <h3 className="text-lg font-semibold mb-2">Failed to Load Data</h3>
+            <p className="text-gray-300 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
+  // Show no data state
+  if (!athlete) {
+    return (
+      <ErrorBoundary fallback={<div className="text-red-500 p-4">Something went wrong with the 3D twin.</div>}>
+        <div className="relative w-full h-full bg-indigo-900 flex items-center justify-center min-h-[800px]">
+          <div className="text-white text-center">
+            <div className="text-gray-400 text-4xl mb-4">👤</div>
+            <h3 className="text-lg font-semibold mb-2">Athlete Not Found</h3>
+            <p className="text-gray-300">No data available for the selected athlete.</p>
+          </div>
+        </div>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary fallback={<div className="text-red-500 p-4">Something went wrong with the 3D twin.</div>}>

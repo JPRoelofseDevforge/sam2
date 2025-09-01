@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { athletes, biometricData, geneticProfiles } from '../data/mockData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { dataService } from '../services/dataService';
+import { Athlete, BiometricData, GeneticProfile } from '../types';
 import { calculateReadinessScore, getGeneticInsights } from '../utils/analytics';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 
@@ -22,14 +23,46 @@ interface ComparisonAthlete {
 export const TeamComparisonDashboard: React.FC = () => {
   const [selectedAthletes, setSelectedAthletes] = useState<string[]>([]);
   const [metric, setMetric] = useState<string>('readiness');
+  const [athletes, setAthletes] = useState<Athlete[]>([]);
+  const [biometricData, setBiometricData] = useState<BiometricData[]>([]);
+  const [geneticProfiles, setGeneticProfiles] = useState<GeneticProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch all dashboard data
+        const dashboardData = await dataService.getData();
+
+        setAthletes(dashboardData.athletes);
+        setBiometricData(dashboardData.biometricData);
+        setGeneticProfiles(dashboardData.geneticProfiles);
+
+      } catch (err) {
+        console.error('Failed to fetch TeamComparisonDashboard data:', err);
+        setError('Failed to load team comparison data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Get comparison data for all athletes
   const comparisonData = useMemo<ComparisonAthlete[]>(() => {
-    return athletes.map(athlete => {
-      const athleteBiometrics = biometricData.filter(d => d.athlete_id === athlete.athlete_id);
-      const athleteGenetics = geneticProfiles.filter(g => g.athlete_id === athlete.athlete_id);
+    if (!athletes.length) return [];
+
+    return athletes.map((athlete: Athlete) => {
+      const athleteBiometrics = biometricData.filter((d: BiometricData) => d.athlete_id === athlete.athlete_id);
+      const athleteGenetics = geneticProfiles.filter((g: GeneticProfile) => g.athlete_id === athlete.athlete_id);
       const latest = athleteBiometrics[athleteBiometrics.length - 1];
-      
+
       return {
         athlete_id: athlete.athlete_id,
         name: athlete.name,
@@ -42,7 +75,7 @@ export const TeamComparisonDashboard: React.FC = () => {
         geneticInsights: getGeneticInsights(athleteGenetics)
       };
     });
-  }, []);
+  }, [athletes, biometricData, geneticProfiles]);
 
   // Toggle athlete selection
   const toggleAthlete = (athleteId: string) => {
@@ -142,6 +175,62 @@ export const TeamComparisonDashboard: React.FC = () => {
       fullMark: 100
     };
   });
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="card-enhanced p-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading team comparison data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-8">
+        <div className="card-enhanced p-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="text-red-500 text-4xl mb-4">⚠️</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Data</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show no data state
+  if (!athletes.length) {
+    return (
+      <div className="space-y-8">
+        <div className="card-enhanced p-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="text-gray-400 text-4xl mb-4">👥</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Athletes Available</h3>
+              <p className="text-gray-600">No athlete data found in the system.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

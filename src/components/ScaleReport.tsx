@@ -1,5 +1,6 @@
-import React from 'react';
-import { bodyCompositionData } from '../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { bodyCompositionService } from '../services/dataService';
+import { BodyComposition } from '../types';
 import {
   PieChart,
   Pie,
@@ -14,10 +15,75 @@ interface ScaleReportProps {
 }
 
 const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
-  // Get the latest body composition data for this athlete
-  const athleteBodyComp = bodyCompositionData
-    .filter(b => b.athlete_id === athleteId && b.date)
-    .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())[0];
+  const [athleteBodyComp, setAthleteBodyComp] = useState<BodyComposition | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBodyCompositionData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Convert athleteId string to number for API call
+        const athleteIdNum = parseInt(athleteId, 10);
+        if (isNaN(athleteIdNum)) {
+          throw new Error('Invalid athlete ID');
+        }
+
+        const bodyCompositionData = await bodyCompositionService.getBodyCompositionByAthlete(athleteIdNum);
+        
+        // Get the latest body composition data for this athlete
+        const latestData = Array.isArray(bodyCompositionData)
+          ? bodyCompositionData
+              .filter(b => b.date)
+              .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())[0]
+          : null;
+
+        
+
+        setAthleteBodyComp(latestData || null);
+      } catch (err) {
+        console.error('Failed to fetch body composition data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load body composition data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (athleteId) {
+      fetchBodyCompositionData();
+    }
+  }, [athleteId]);
+
+  // Helper function to safely handle numeric values
+  const safeValue = (val: number | undefined) => typeof val === 'number' && !isNaN(val) ? val : 0;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-8 text-gray-900">
+        <h1 className="text-3xl font-bold text-center text-white mb-8">⚖️ Body Composition Analysis</h1>
+        <div className="text-center py-12 card-enhanced rounded-xl">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading body composition data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-8 text-gray-900">
+        <h1 className="text-3xl font-bold text-center text-white mb-8">⚖️ Body Composition Analysis</h1>
+        <div className="text-center py-12 card-enhanced rounded-xl">
+          <p className="text-red-600 mb-2">⚠️ Error loading data</p>
+          <p className="text-sm text-gray-500">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   // If no data available, show a message
   if (!athleteBodyComp) {
@@ -42,10 +108,10 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
         <h2 className="text-xl font-semibold text-gray-900 mb-4">📈 Body Composition Breakdown</h2>
         <div className="flex justify-center">
           {(() => {
-            const fatPercent = parseFloat(athleteBodyComp.body_fat_rate.toFixed(1));
-            const musclePercent = parseFloat(((athleteBodyComp.muscle_mass_kg / athleteBodyComp.weight_kg) * 100).toFixed(1));
-            const waterPercent = parseFloat(((((athleteBodyComp.fat_free_body_weight_kg / athleteBodyComp.weight_kg) * 100) - athleteBodyComp.body_fat_rate)).toFixed(1));
-            const proteinPercent = parseFloat(((athleteBodyComp.muscle_mass_kg * 0.2 / athleteBodyComp.weight_kg) * 100).toFixed(1));
+            const fatPercent = parseFloat(safeValue(athleteBodyComp.body_fat_rate).toFixed(1));
+            const musclePercent = parseFloat(((safeValue(athleteBodyComp.muscle_mass_kg) / safeValue(athleteBodyComp.weight_kg)) * 100).toFixed(1));
+            const waterPercent = parseFloat(((((safeValue(athleteBodyComp.fat_free_body_weight_kg) / safeValue(athleteBodyComp.weight_kg)) * 100) - safeValue(athleteBodyComp.body_fat_rate))).toFixed(1));
+            const proteinPercent = parseFloat(((safeValue(athleteBodyComp.muscle_mass_kg) * 0.2 / safeValue(athleteBodyComp.weight_kg)) * 100).toFixed(1));
             const bonePercent = 15.0;
 
             // Normalize percentages to ensure they add up to 100%
@@ -57,11 +123,11 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             const normalizedBone = (bonePercent / total) * 100;
 
             const bodyCompositionData = [
-              { name: 'Fat Mass', value: normalizedFat, weight: `${athleteBodyComp.fat_mass_kg.toFixed(1)}kg` },
-              { name: 'Muscle Mass', value: normalizedMuscle, weight: `${athleteBodyComp.muscle_mass_kg.toFixed(1)}kg` },
-              { name: 'Water Weight', value: normalizedWater, weight: `${athleteBodyComp.fat_free_body_weight_kg.toFixed(1)}kg` },
-              { name: 'Protein Mass', value: normalizedProtein, weight: `${(athleteBodyComp.muscle_mass_kg * 0.2).toFixed(1)}kg` },
-              { name: 'Bone Mass', value: normalizedBone, weight: `${(athleteBodyComp.weight_kg * 0.15).toFixed(1)}kg` }
+              { name: 'Fat Mass', value: normalizedFat, weight: `${safeValue(athleteBodyComp.fat_mass_kg).toFixed(1)}kg` },
+              { name: 'Muscle Mass', value: normalizedMuscle, weight: `${safeValue(athleteBodyComp.muscle_mass_kg).toFixed(1)}kg` },
+              { name: 'Water Weight', value: normalizedWater, weight: `${safeValue(athleteBodyComp.fat_free_body_weight_kg).toFixed(1)}kg` },
+              { name: 'Protein Mass', value: normalizedProtein, weight: `${(safeValue(athleteBodyComp.muscle_mass_kg) * 0.2).toFixed(1)}kg` },
+              { name: 'Bone Mass', value: normalizedBone, weight: `${(safeValue(athleteBodyComp.weight_kg) * 0.15).toFixed(1)}kg` }
             ];
 
             const COLORS = ['#f97316', '#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'];
@@ -111,15 +177,15 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
           <div className="space-y-3">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Current:</span>
-              <span className="font-bold text-purple-600">{athleteBodyComp.weight_kg.toFixed(1)} kg</span>
+              <span className="font-bold text-purple-600">{safeValue(athleteBodyComp.weight_kg).toFixed(1)} kg</span>
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Target Range:</span>
-              <span className="font-bold text-green-600">{athleteBodyComp.target_weight_kg.toFixed(1)} kg</span>
+              <span className="font-bold text-green-600">{safeValue(athleteBodyComp.target_weight_kg).toFixed(1)} kg</span>
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Healthy Range:</span>
-              <span className="font-bold text-blue-600">{athleteBodyComp.weight_range_min}-{athleteBodyComp.weight_range_max} kg</span>
+              <span className="font-bold text-blue-600">{safeValue(athleteBodyComp.weight_range_min)}-{safeValue(athleteBodyComp.weight_range_max)} kg</span>
             </div>
           </div>
           <div className="mt-4 relative">
@@ -127,20 +193,20 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
               <div
                 className="h-full bg-purple-500 transition-all duration-300"
                 style={{
-                  width: `${Math.min(100, ((athleteBodyComp.weight_kg - athleteBodyComp.weight_range_min) / (athleteBodyComp.weight_range_max - athleteBodyComp.weight_range_min)) * 100)}%`
+                  width: `${Math.min(100, ((safeValue(athleteBodyComp.weight_kg) - safeValue(athleteBodyComp.weight_range_min)) / (safeValue(athleteBodyComp.weight_range_max) - safeValue(athleteBodyComp.weight_range_min))) * 100)}%`
                 }}
               ></div>
             </div>
             {/* Current Weight Marker */}
             <div className="absolute top-0 w-0 h-0" style={{
-              left: `${Math.min(100, Math.max(0, ((athleteBodyComp.weight_kg - athleteBodyComp.weight_range_min) / (athleteBodyComp.weight_range_max - athleteBodyComp.weight_range_min)) * 100))}%`,
+              left: `${Math.min(100, Math.max(0, ((safeValue(athleteBodyComp.weight_kg) - safeValue(athleteBodyComp.weight_range_min)) / (safeValue(athleteBodyComp.weight_range_max) - safeValue(athleteBodyComp.weight_range_min))) * 100))}%`,
               transform: 'translateX(-50%)'
             }}>
               <div className="w-0 h-0 border-l-2 border-r-2 border-b-3 border-l-transparent border-r-transparent border-b-purple-600 mx-auto"></div>
             </div>
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>{athleteBodyComp.weight_range_min}kg</span>
-              <span>{athleteBodyComp.weight_range_max}kg</span>
+              <span>{safeValue(athleteBodyComp.weight_range_min)}kg</span>
+              <span>{safeValue(athleteBodyComp.weight_range_max)}kg</span>
             </div>
           </div>
           <div className="mt-3 p-2 bg-purple-50 rounded text-center">
@@ -157,7 +223,7 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
           <div className="space-y-3">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Current:</span>
-              <span className="font-bold text-green-600">{athleteBodyComp.skeletal_muscle_kg.toFixed(1)} kg</span>
+              <span className="font-bold text-green-600">{safeValue(athleteBodyComp.skeletal_muscle_kg).toFixed(1)} kg</span>
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Standard Range:</span>
@@ -165,7 +231,7 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Muscle Mass:</span>
-              <span className="font-bold text-green-600">{athleteBodyComp.muscle_mass_kg.toFixed(1)} kg</span>
+              <span className="font-bold text-green-600">{safeValue(athleteBodyComp.muscle_mass_kg).toFixed(1)} kg</span>
             </div>
           </div>
           <div className="mt-4 relative">
@@ -173,13 +239,13 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
               <div
                 className="h-full bg-green-500 transition-all duration-300"
                 style={{
-                  width: `${Math.min(100, ((athleteBodyComp.skeletal_muscle_kg - 30.2) / (37.0 - 30.2)) * 100)}%`
+                  width: `${Math.min(100, ((safeValue(athleteBodyComp.skeletal_muscle_kg) - 30.2) / (37.0 - 30.2)) * 100)}%`
                 }}
               ></div>
             </div>
             {/* Current Skeletal Muscle Marker */}
             <div className="absolute top-0 w-0 h-0" style={{
-              left: `${Math.min(100, Math.max(0, ((athleteBodyComp.skeletal_muscle_kg - 30.2) / (37.0 - 30.2)) * 100))}%`,
+              left: `${Math.min(100, Math.max(0, ((safeValue(athleteBodyComp.skeletal_muscle_kg) - 30.2) / (37.0 - 30.2)) * 100))}%`,
               transform: 'translateX(-50%)'
             }}>
               <div className="w-0 h-0 border-l-2 border-r-2 border-b-3 border-l-transparent border-r-transparent border-b-green-600 mx-auto"></div>
@@ -203,11 +269,11 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
           <div className="space-y-3">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Current:</span>
-              <span className="font-bold text-orange-600">{athleteBodyComp.fat_mass_kg.toFixed(1)} kg</span>
+              <span className="font-bold text-orange-600">{safeValue(athleteBodyComp.fat_mass_kg).toFixed(1)} kg</span>
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Body Fat %:</span>
-              <span className="font-bold text-orange-600">{athleteBodyComp.body_fat_rate.toFixed(1)}%</span>
+              <span className="font-bold text-orange-600">{safeValue(athleteBodyComp.body_fat_rate).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Healthy Range:</span>
@@ -219,13 +285,13 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
               <div
                 className="h-full bg-orange-500 transition-all duration-300"
                 style={{
-                  width: `${Math.min(100, (athleteBodyComp.body_fat_rate / 20) * 100)}%`
+                  width: `${Math.min(100, (safeValue(athleteBodyComp.body_fat_rate) / 20) * 100)}%`
                 }}
               ></div>
             </div>
             {/* Current Fat Mass Marker */}
             <div className="absolute top-0 w-0 h-0" style={{
-              left: `${Math.min(100, Math.max(0, (athleteBodyComp.body_fat_rate / 20) * 100))}%`,
+              left: `${Math.min(100, Math.max(0, (safeValue(athleteBodyComp.body_fat_rate) / 20) * 100))}%`,
               transform: 'translateX(-50%)'
             }}>
               <div className="w-0 h-0 border-l-2 border-r-2 border-b-3 border-l-transparent border-r-transparent border-b-orange-600 mx-auto"></div>
@@ -295,7 +361,7 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             {/* Current BMI Display */}
             <div className="text-center p-3 bg-white rounded-lg shadow-sm">
               <div className="text-sm text-gray-600 mb-1">Your BMI</div>
-              <div className="text-3xl font-bold text-blue-600 mb-1">{athleteBodyComp.bmi.toFixed(1)}</div>
+              <div className="text-3xl font-bold text-blue-600 mb-1">{safeValue(athleteBodyComp.bmi).toFixed(1)}</div>
               <div className="text-sm font-medium text-gray-700">
                 {athleteBodyComp.bmi < 18.5 ? 'Underweight' :
                  athleteBodyComp.bmi < 25 ? 'Normal Weight' :
@@ -352,7 +418,7 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             {/* Current Body Fat Display */}
             <div className="text-center p-3 bg-white rounded-lg shadow-sm">
               <div className="text-sm text-gray-600 mb-1">Your Body Fat</div>
-              <div className="text-3xl font-bold text-purple-600 mb-1">{athleteBodyComp.body_fat_rate.toFixed(1)}%</div>
+              <div className="text-3xl font-bold text-purple-600 mb-1">{safeValue(athleteBodyComp.body_fat_rate).toFixed(1)}%</div>
               <div className="text-sm font-medium text-gray-700">
                 {athleteBodyComp.body_fat_rate < 6 ? 'Essential Fat' :
                  athleteBodyComp.body_fat_rate < 14 ? 'Athletic' :
@@ -416,37 +482,37 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
                 },
                 {
                   label: 'Fat mass',
-                  value: `${athleteBodyComp.fat_mass_kg} (${athleteBodyComp.fat_mass_range_min.toFixed(1)}-${athleteBodyComp.fat_mass_range_max.toFixed(1)})`,
-                  percent: athleteBodyComp.body_fat_rate.toFixed(1),
+                  value: `${safeValue(athleteBodyComp.fat_mass_kg)} (${safeValue(athleteBodyComp.fat_mass_range_min).toFixed(1)}-${safeValue(athleteBodyComp.fat_mass_range_max).toFixed(1)})`,
+                  percent: safeValue(athleteBodyComp.body_fat_rate).toFixed(1),
                   eval: 'Standard'
                 },
                 {
                   label: 'Muscle mass',
-                  value: `${athleteBodyComp.muscle_mass_kg.toFixed(1)} (${athleteBodyComp.muscle_mass_range_min.toFixed(1)}-${athleteBodyComp.muscle_mass_range_max.toFixed(1)})`,
-                  percent: ((athleteBodyComp.muscle_mass_kg / athleteBodyComp.weight_kg) * 100).toFixed(1),
+                  value: `${safeValue(athleteBodyComp.muscle_mass_kg).toFixed(1)} (${safeValue(athleteBodyComp.muscle_mass_range_min).toFixed(1)}-${safeValue(athleteBodyComp.muscle_mass_range_max).toFixed(1)})`,
+                  percent: ((safeValue(athleteBodyComp.muscle_mass_kg) / safeValue(athleteBodyComp.weight_kg)) * 100).toFixed(1),
                   eval: 'Standard'
                 },
                 {
                   label: 'Skeletal muscle',
-                  value: `${athleteBodyComp.skeletal_muscle_kg.toFixed(1)} (30.2-37.0)`,
-                  percent: ((athleteBodyComp.skeletal_muscle_kg / athleteBodyComp.weight_kg) * 100).toFixed(1),
+                  value: `${safeValue(athleteBodyComp.skeletal_muscle_kg).toFixed(1)} (30.2-37.0)`,
+                  percent: ((safeValue(athleteBodyComp.skeletal_muscle_kg) / safeValue(athleteBodyComp.weight_kg)) * 100).toFixed(1),
                   eval: 'Standard'
                 },
                 {
                   label: 'Water weight',
-                  value: `${athleteBodyComp.fat_free_body_weight_kg.toFixed(1)} (37.7-47.0)`,
-                  percent: (((athleteBodyComp.fat_free_body_weight_kg / athleteBodyComp.weight_kg) * 100) - athleteBodyComp.body_fat_rate).toFixed(1),
+                  value: `${safeValue(athleteBodyComp.fat_free_body_weight_kg).toFixed(1)} (37.7-47.0)`,
+                  percent: (((safeValue(athleteBodyComp.fat_free_body_weight_kg) / safeValue(athleteBodyComp.weight_kg)) * 100) - safeValue(athleteBodyComp.body_fat_rate)).toFixed(1),
                   eval: 'Standard'
                 },
                 {
                   label: 'Protein mass',
-                  value: `${(athleteBodyComp.muscle_mass_kg * 0.2).toFixed(1)} (10.3-12.8)`,
-                  percent: ((athleteBodyComp.muscle_mass_kg * 0.2 / athleteBodyComp.weight_kg) * 100).toFixed(1),
+                  value: `${(safeValue(athleteBodyComp.muscle_mass_kg) * 0.2).toFixed(1)} (10.3-12.8)`,
+                  percent: ((safeValue(athleteBodyComp.muscle_mass_kg) * 0.2 / safeValue(athleteBodyComp.weight_kg)) * 100).toFixed(1),
                   eval: 'Standard'
                 },
                 {
                   label: 'Bone Mass',
-                  value: `${(athleteBodyComp.weight_kg * 0.15).toFixed(1)} (3.4-4.3)`,
+                  value: `${(safeValue(athleteBodyComp.weight_kg) * 0.15).toFixed(1)} (3.4-4.3)`,
                   percent: '15.0',
                   eval: 'Standard'
                 },
@@ -470,7 +536,7 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
           <div className="mb-4 text-center">
             <div className="text-sm text-gray-600 mb-1">Your Current Position</div>
             <div className="text-lg font-semibold text-indigo-700">
-              BMI: {athleteBodyComp.bmi.toFixed(1)} | Body Fat: {athleteBodyComp.body_fat_rate.toFixed(1)}%
+              BMI: {safeValue(athleteBodyComp.bmi).toFixed(1)} | Body Fat: {safeValue(athleteBodyComp.body_fat_rate).toFixed(1)}%
             </div>
           </div>
 
@@ -1086,16 +1152,16 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div className="p-3 bg-white rounded-lg shadow-sm">
               <div className="text-sm text-gray-600 mb-1">Current Weight</div>
-              <div className="text-2xl font-bold text-blue-600">{athleteBodyComp.weight_kg.toFixed(1)} kg</div>
+              <div className="text-2xl font-bold text-blue-600">{safeValue(athleteBodyComp.weight_kg).toFixed(1)} kg</div>
             </div>
             <div className="p-3 bg-white rounded-lg shadow-sm">
               <div className="text-sm text-gray-600 mb-1">Target Weight</div>
-              <div className="text-2xl font-bold text-green-600">{athleteBodyComp.target_weight_kg.toFixed(1)} kg</div>
+              <div className="text-2xl font-bold text-green-600">{safeValue(athleteBodyComp.target_weight_kg).toFixed(1)} kg</div>
             </div>
             <div className="p-3 bg-white rounded-lg shadow-sm">
               <div className="text-sm text-gray-600 mb-1">Difference</div>
-              <div className={`text-2xl font-bold ${athleteBodyComp.weight_control_kg >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
-                {athleteBodyComp.weight_control_kg >= 0 ? '+' : ''}{athleteBodyComp.weight_control_kg.toFixed(1)} kg
+              <div className={`text-2xl font-bold ${safeValue(athleteBodyComp.weight_control_kg) >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                {safeValue(athleteBodyComp.weight_control_kg) >= 0 ? '+' : ''}{safeValue(athleteBodyComp.weight_control_kg).toFixed(1)} kg
               </div>
             </div>
           </div>
@@ -1108,11 +1174,11 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             {/* Current Position Indicator */}
             <div className="flex justify-between items-center text-sm font-medium text-gray-700 mb-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{athleteBodyComp.weight_kg.toFixed(1)}kg</div>
+                <div className="text-2xl font-bold text-blue-600">{safeValue(athleteBodyComp.weight_kg).toFixed(1)}kg</div>
                 <div className="text-xs text-gray-600">CURRENT</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{athleteBodyComp.target_weight_kg.toFixed(1)}kg</div>
+                <div className="text-2xl font-bold text-green-600">{safeValue(athleteBodyComp.target_weight_kg).toFixed(1)}kg</div>
                 <div className="text-xs text-gray-600">TARGET</div>
               </div>
             </div>
@@ -1137,11 +1203,11 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
 
               {/* Current Position Marker */}
               <div className="absolute top-0 w-4 h-10 bg-blue-600 rounded-full shadow-lg border-2 border-white" style={{
-                left: `${Math.min(100, Math.max(0, ((athleteBodyComp.target_weight_kg - athleteBodyComp.weight_kg) / (athleteBodyComp.target_weight_kg - athleteBodyComp.weight_kg + Math.abs(athleteBodyComp.weight_control_kg))) * 100))}%`,
+                left: `${Math.min(100, Math.max(0, ((safeValue(athleteBodyComp.target_weight_kg) - safeValue(athleteBodyComp.weight_kg)) / (safeValue(athleteBodyComp.target_weight_kg) - safeValue(athleteBodyComp.weight_kg) + Math.abs(safeValue(athleteBodyComp.weight_control_kg)))) * 100))}%`,
                 transform: 'translateX(-50%)'
               }}>
                 <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
-                  <div className="text-xs font-bold text-blue-600 whitespace-nowrap">📍 {athleteBodyComp.weight_kg.toFixed(1)}kg</div>
+                  <div className="text-xs font-bold text-blue-600 whitespace-nowrap">📍 {safeValue(athleteBodyComp.weight_kg).toFixed(1)}kg</div>
                 </div>
               </div>
             </div>
@@ -1150,14 +1216,14 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div className="bg-white p-3 rounded-lg shadow-sm">
                 <div className="text-sm text-gray-600">Difference</div>
-                <div className={`text-lg font-bold ${athleteBodyComp.weight_control_kg >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                  {athleteBodyComp.weight_control_kg >= 0 ? '+' : ''}{athleteBodyComp.weight_control_kg.toFixed(1)} kg
+                <div className={`text-lg font-bold ${safeValue(athleteBodyComp.weight_control_kg) >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                  {safeValue(athleteBodyComp.weight_control_kg) >= 0 ? '+' : ''}{safeValue(athleteBodyComp.weight_control_kg).toFixed(1)} kg
                 </div>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm">
                 <div className="text-sm text-gray-600">Progress</div>
                 <div className="text-lg font-bold text-blue-600">
-                  {Math.min(100, Math.max(0, ((athleteBodyComp.target_weight_kg - athleteBodyComp.weight_kg) / (athleteBodyComp.target_weight_kg - athleteBodyComp.weight_kg + Math.abs(athleteBodyComp.weight_control_kg))) * 100)).toFixed(0)}%
+                  {Math.min(100, Math.max(0, ((safeValue(athleteBodyComp.target_weight_kg) - safeValue(athleteBodyComp.weight_kg)) / (safeValue(athleteBodyComp.target_weight_kg) - safeValue(athleteBodyComp.weight_kg) + Math.abs(safeValue(athleteBodyComp.weight_control_kg)))) * 100)).toFixed(0)}%
                 </div>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm">
@@ -1171,9 +1237,9 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             {/* Motivational Message */}
             <div className="mt-4 text-center">
               <div className="text-sm text-gray-700 bg-white p-3 rounded-lg shadow-sm">
-                {athleteBodyComp.weight_control_kg <= 0 ?
-                  `🎉 Great progress! Only ${Math.abs(athleteBodyComp.weight_control_kg).toFixed(1)}kg to reach your target!` :
-                  `💪 You're ${Math.abs(athleteBodyComp.weight_control_kg).toFixed(1)}kg above target. Let's adjust your plan!`
+                {safeValue(athleteBodyComp.weight_control_kg) <= 0 ?
+                  `🎉 Great progress! Only ${Math.abs(safeValue(athleteBodyComp.weight_control_kg)).toFixed(1)}kg to reach your target!` :
+                  `💪 You're ${Math.abs(safeValue(athleteBodyComp.weight_control_kg)).toFixed(1)}kg above target. Let's adjust your plan!`
                 }
               </div>
             </div>
@@ -1191,20 +1257,20 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             <div className="space-y-3">
               <div className="flex justify-between items-center p-2 bg-white rounded">
                 <span className="text-sm text-blue-700">Target Weight</span>
-                <span className="font-bold text-blue-600">{athleteBodyComp.target_weight_kg.toFixed(1)} kg</span>
+                <span className="font-bold text-blue-600">{safeValue(athleteBodyComp.target_weight_kg).toFixed(1)} kg</span>
               </div>
               <div className="flex justify-between items-center p-2 bg-white rounded">
                 <span className="text-sm text-blue-700">Current Status</span>
-                <span className={`font-bold ${athleteBodyComp.weight_control_kg >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                  {athleteBodyComp.weight_control_kg >= 0 ? 'Above Target' : 'On Track'}
+                <span className={`font-bold ${safeValue(athleteBodyComp.weight_control_kg) >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                  {safeValue(athleteBodyComp.weight_control_kg) >= 0 ? 'Above Target' : 'On Track'}
                 </span>
               </div>
               <div className="flex justify-between items-center p-2 bg-white rounded">
                 <span className="text-sm text-blue-700">Weekly Goal</span>
                 <span className="font-bold text-blue-600">
-                  {athleteBodyComp.weight_control_kg > 2 ? `-${Math.min(1.0, athleteBodyComp.weight_control_kg / 8).toFixed(2)} kg/week` :
-                   athleteBodyComp.weight_control_kg > 0 ? `-${Math.min(0.5, athleteBodyComp.weight_control_kg / 8).toFixed(2)} kg/week` :
-                   athleteBodyComp.weight_control_kg < -2 ? `+${Math.min(0.5, Math.abs(athleteBodyComp.weight_control_kg) / 8).toFixed(2)} kg/week` : 'Maintain'}
+                  {safeValue(athleteBodyComp.weight_control_kg) > 2 ? `-${Math.min(1.0, safeValue(athleteBodyComp.weight_control_kg) / 8).toFixed(2)} kg/week` :
+                   safeValue(athleteBodyComp.weight_control_kg) > 0 ? `-${Math.min(0.5, safeValue(athleteBodyComp.weight_control_kg) / 8).toFixed(2)} kg/week` :
+                   safeValue(athleteBodyComp.weight_control_kg) < -2 ? `+${Math.min(0.5, Math.abs(safeValue(athleteBodyComp.weight_control_kg)) / 8).toFixed(2)} kg/week` : 'Maintain'}
                 </span>
               </div>
             </div>
@@ -1219,14 +1285,14 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             <div className="space-y-3">
               <div className="flex justify-between items-center p-2 bg-white rounded">
                 <span className="text-sm text-green-700">Fat Control</span>
-                <span className={`font-bold ${athleteBodyComp.fat_control_kg >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {athleteBodyComp.fat_control_kg >= 0 ? '+' : ''}{athleteBodyComp.fat_control_kg.toFixed(1)} kg
+                <span className={`font-bold ${safeValue(athleteBodyComp.fat_control_kg) >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {safeValue(athleteBodyComp.fat_control_kg) >= 0 ? '+' : ''}{safeValue(athleteBodyComp.fat_control_kg).toFixed(1)} kg
                 </span>
               </div>
               <div className="flex justify-between items-center p-2 bg-white rounded">
                 <span className="text-sm text-green-700">Muscle Control</span>
-                <span className={`font-bold ${athleteBodyComp.muscle_control_kg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {athleteBodyComp.muscle_control_kg >= 0 ? '+' : ''}{athleteBodyComp.muscle_control_kg.toFixed(1)} kg
+                <span className={`font-bold ${safeValue(athleteBodyComp.muscle_control_kg) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {safeValue(athleteBodyComp.muscle_control_kg) >= 0 ? '+' : ''}{safeValue(athleteBodyComp.muscle_control_kg).toFixed(1)} kg
                 </span>
               </div>
               <div className="flex justify-between items-center p-2 bg-white rounded">
@@ -1246,9 +1312,9 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
               <div>
                 <div className="font-medium">Nutrition Focus</div>
                 <div>
-                  {athleteBodyComp.weight_control_kg > 2 ? `Calorie deficit: ${Math.round(athleteBodyComp.weight_control_kg * 1250)} kcal/day` :
-                   athleteBodyComp.weight_control_kg > 0 ? `Calorie deficit: ${Math.round(athleteBodyComp.weight_control_kg * 625)} kcal/day` :
-                   athleteBodyComp.weight_control_kg < -2 ? `Calorie surplus: ${Math.round(Math.abs(athleteBodyComp.weight_control_kg) * 625)} kcal/day` : 'Balanced nutrition'}
+                  {safeValue(athleteBodyComp.weight_control_kg) > 2 ? `Calorie deficit: ${Math.round(safeValue(athleteBodyComp.weight_control_kg) * 1250)} kcal/day` :
+                   safeValue(athleteBodyComp.weight_control_kg) > 0 ? `Calorie deficit: ${Math.round(safeValue(athleteBodyComp.weight_control_kg) * 625)} kcal/day` :
+                   safeValue(athleteBodyComp.weight_control_kg) < -2 ? `Calorie surplus: ${Math.round(Math.abs(safeValue(athleteBodyComp.weight_control_kg)) * 625)} kcal/day` : 'Balanced nutrition'}
                 </div>
               </div>
             </div>
@@ -1267,8 +1333,8 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
               <div>
                 <div className="font-medium">Timeline</div>
                 <div>
-                  {Math.abs(athleteBodyComp.weight_control_kg) > 5 ? `${Math.round(Math.abs(athleteBodyComp.weight_control_kg) * 2.4)} weeks` :
-                   Math.abs(athleteBodyComp.weight_control_kg) > 2 ? `${Math.round(Math.abs(athleteBodyComp.weight_control_kg) * 1.5)} weeks` : '4-6 weeks'}
+                  {Math.abs(safeValue(athleteBodyComp.weight_control_kg)) > 5 ? `${Math.round(Math.abs(safeValue(athleteBodyComp.weight_control_kg)) * 2.4)} weeks` :
+                   Math.abs(safeValue(athleteBodyComp.weight_control_kg)) > 2 ? `${Math.round(Math.abs(safeValue(athleteBodyComp.weight_control_kg)) * 1.5)} weeks` : '4-6 weeks'}
                 </div>
               </div>
             </div>
@@ -1297,7 +1363,7 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-blue-700">Basal Metabolic Rate</span>
-                <span className="text-lg font-bold text-blue-600">{athleteBodyComp.basal_metabolic_rate_kcal} kcal</span>
+                <span className="text-lg font-bold text-blue-600">{safeValue(athleteBodyComp.basal_metabolic_rate_kcal)} kcal</span>
               </div>
               <div className="text-xs text-blue-600 mb-2">Daily calories burned at rest</div>
               <div className="w-full bg-blue-200 rounded-full h-2">
@@ -1335,7 +1401,7 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-purple-700">Fat-Free Body Weight</span>
-                <span className="text-lg font-bold text-purple-600">{athleteBodyComp.fat_free_body_weight_kg.toFixed(1)} kg</span>
+                <span className="text-lg font-bold text-purple-600">{safeValue(athleteBodyComp.fat_free_body_weight_kg).toFixed(1)} kg</span>
               </div>
               <div className="text-xs text-purple-600 mb-2">Weight without fat</div>
               <div className="w-full bg-purple-200 rounded-full h-2">
@@ -1349,7 +1415,7 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-orange-700">Subcutaneous Fat</span>
-                <span className="text-lg font-bold text-orange-600">{athleteBodyComp.subcutaneous_fat_percent.toFixed(1)}%</span>
+                <span className="text-lg font-bold text-orange-600">{safeValue(athleteBodyComp.subcutaneous_fat_percent).toFixed(1)}%</span>
               </div>
               <div className="text-xs text-orange-600 mb-2">Fat under the skin</div>
               <div className="w-full bg-orange-200 rounded-full h-2">
@@ -1385,7 +1451,7 @@ const ScaleReport: React.FC<ScaleReportProps> = ({ athleteId }) => {
             </div>
             <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-4 rounded-lg text-center">
               <div className="text-sm font-medium text-pink-700 mb-1">SMI</div>
-              <div className="text-2xl font-bold text-pink-600 mb-1">{athleteBodyComp.smi_kg_m2.toFixed(1)}</div>
+              <div className="text-2xl font-bold text-pink-600 mb-1">{safeValue(athleteBodyComp.smi_kg_m2).toFixed(1)}</div>
               <div className="text-xs text-pink-600">kg/m²</div>
               <div className={`text-xs mt-2 px-2 py-1 rounded-full ${
                 athleteBodyComp.smi_kg_m2 >= 7.0 ? 'bg-green-100 text-green-800' :

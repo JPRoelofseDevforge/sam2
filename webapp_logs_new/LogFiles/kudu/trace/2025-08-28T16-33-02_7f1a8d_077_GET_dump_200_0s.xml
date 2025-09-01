@@ -1,6 +1,0 @@
-<step title="Incoming Request" date="2025-08-28T16:33:02.817" instance="7f1a8d" url="/dump" method="GET" type="request" pid="820,1,29" Host="samdashboardapi.scm.azurewebsites.net" User-Agent="AZURECLI/2.76.0 (MSI)" Accept-Encoding="identity" Authorization="Bea..." x-ms-client-request-id="a8c3dfe2-842c-11f0-95f2-fcb0de71a262" X-ARR-LOG-ID="a8c3dfe2-842c-11f0-95f2-fcb0de71a262" CLIENT-IP="102.66.125.105:64863" X-SITE-DEPLOYMENT-ID="samdashboardapi" WAS-DEFAULT-HOSTNAME="samdashboardapi.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/dump" X-Client-IP="102.66.125.105" X-Client-Port="64863" >
-  <step title="Cleanup Xml Logs" date="2025-08-28T16:33:02.819" >
-    <step title="Cleanup Infos" date="2025-08-28T16:33:02.824" totalFiles="286" totalCleanup="126" /><!-- duration: 1ms -->
-  </step><!-- duration: 7ms -->
-  <step title="Outgoing response" date="2025-08-28T16:33:03.223" type="response" statusCode="200" statusText="OK" /><!-- duration: 1ms -->
-</step><!-- duration: 408ms -->

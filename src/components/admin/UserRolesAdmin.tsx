@@ -131,38 +131,38 @@ export const UserRolesAdmin: React.FC<{ onNavigate?: (view: 'overview') => void 
 
       {showForm && (
         <div className="bg-white/20 rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-semibold text-white mb-4">
+          <h3 className="text-xl font-semibold text-black mb-4">
             {editingRole ? 'Edit User Role' : 'Add New User Role'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-white mb-2">Role Name *</label>
+                <label className="block text-black mb-2">Role Name *</label>
                 <input
                   type="text"
                   value={formData.role_name}
                   onChange={(e) => setFormData({...formData, role_name: e.target.value})}
-                  className="w-full p-2 rounded bg-white/20 text-white border border-white/30"
+                  className="w-full p-2 rounded bg-white/20 text-black border border-white/30"
                   required
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-white mb-2">Description</label>
+                <label className="block text-black mb-2">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full p-2 rounded bg-white/20 text-white border border-white/30 h-24"
+                  className="w-full p-2 rounded bg-white/20 text-black border border-white/30 h-24"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-white mb-2">Permissions (JSON) *</label>
+                <label className="block text-black mb-2">Permissions (JSON) *</label>
                 <textarea
                   value={formData.permissions}
                   onChange={(e) => setFormData({...formData, permissions: e.target.value})}
-                  className="w-full p-2 rounded bg-white/20 text-white border border-white/30 h-32 font-mono text-sm"
+                  className="w-full p-2 rounded bg-white/20 text-black border border-white/30 h-32 font-mono text-sm"
                   required
                 />
-                <p className="text-white/70 text-sm mt-1">
+                <p className="text-gray-700 text-sm mt-1">
                   Enter valid JSON for permissions. Example: {"{"}"all": true{"}"}
                 </p>
               </div>
@@ -174,7 +174,7 @@ export const UserRolesAdmin: React.FC<{ onNavigate?: (view: 'overview') => void 
                   onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
                   className="mr-2"
                 />
-                <label htmlFor="is_active" className="text-white">Active</label>
+                <label htmlFor="is_active" className="text-black">Active</label>
               </div>
             </div>
             <div className="flex gap-2">

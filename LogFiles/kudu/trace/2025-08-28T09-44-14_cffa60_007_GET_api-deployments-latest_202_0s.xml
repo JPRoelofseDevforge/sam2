@@ -1,9 +1,0 @@
-<step title="Incoming Request" date="2025-08-28T09:44:14.494" instance="cffa60" url="/api/deployments/latest?deployer=OneDeploy&amp;time=2025-08-28_09-43-55Z" method="GET" type="request" pid="820,1,27" Host="samdashboardapi.scm.azurewebsites.net" User-Agent="GITHUBACTIONS_DeployWebAppToAzure_19c9d7508924a527ab10b75d8dbb4827cb35707276962fd3a666e3ae3b53fd43" Authorization="Bea..." Content-Type="application/json; charset=utf-8" Cookie="ARRAffinity=cffa603b527b73222a88daf0b604414660554e5ab36fe7957082eb16607b0ed4;Path=/;HttpOnly;Secure;Domain=samdashboardapi.scm.azurewebsites.net; ARRAffinitySameSite=cffa603b527b73222a88daf0b604414660554e5ab36fe7957082eb16607b0ed4;Path=/;HttpOnly;SameSite=None;Secure;Domain=samdashboardapi.scm.azurewebsites.net" Content-Length="0" X-ARR-LOG-ID="25852bb8-eb5f-456c-9cf1-e75a14b25333" CLIENT-IP="68.220.60.150:54272" X-SITE-DEPLOYMENT-ID="samdashboardapi" WAS-DEFAULT-HOSTNAME="samdashboardapi.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/deployments/latest?deployer=OneDeploy&amp;time=2025-08-28_09-43-55Z" X-Client-IP="68.220.60.150" X-Client-Port="54272" >
-  <step title="Cleanup Xml Logs" date="2025-08-28T09:44:14.499" /><!-- duration: 10ms -->
-  <step title="DeploymentService.GetResult" date="2025-08-28T09:44:14.539" >
-    <step title="DeploymentService.GetLatestDeployment" date="2025-08-28T09:44:14.545" >
-      <step title="DeploymentManager.GetResults" date="2025-08-28T09:44:14.548" /><!-- duration: 208ms -->
-    </step><!-- duration: 214ms -->
-  </step><!-- duration: 223ms -->
-  <step title="Outgoing response" date="2025-08-28T09:44:14.766" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 3ms -->
-</step><!-- duration: 280ms -->

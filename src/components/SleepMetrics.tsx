@@ -161,6 +161,12 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
     ? biometricData.slice(-7) 
     : biometricData.slice(-30);
   
+  // Debug: Log sleep timing data to understand what's available
+  console.log('🔍 SleepMetrics: Analyzing sleep timing data for', filteredData.length, 'records');
+  filteredData.forEach((data, index) => {
+    console.log(`📊 Record ${index + 1}: sleep_onset_time="${data.sleep_onset_time}", wake_time="${data.wake_time}", sleep_duration=${data.sleep_duration_h}`);
+  });
+
   // Calculate sleep metrics
   const sleepDebtData = filteredData.map(data => {
     // Calculate recommended sleep based on age and athlete type (simplified)
@@ -170,20 +176,32 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
     
     // Calculate time in bed from sleep onset and wake time
     const parseTimeToMinutes = (timeString: string) => {
+      if (!timeString || timeString === '00:00' || timeString === '') {
+        return null; // Return null for invalid/missing times
+      }
       const [hours, minutes] = timeString.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) {
+        return null;
+      }
       return hours * 60 + minutes;
     };
-    
-    const sleepOnsetMinutes = parseTimeToMinutes(data.sleep_onset_time || '00:00');
-    const wakeMinutes = parseTimeToMinutes(data.wake_time || '00:00');
-    
-    // Handle case where wake time is next day (before sleep onset)
-    let timeInBedMinutes = wakeMinutes - sleepOnsetMinutes;
-    if (timeInBedMinutes < 0) {
-      timeInBedMinutes += 24 * 60; // Add 24 hours in minutes
+
+    const sleepOnsetMinutes = parseTimeToMinutes(data.sleep_onset_time || '');
+    const wakeMinutes = parseTimeToMinutes(data.wake_time || '');
+
+    // Calculate time in bed - use fallback if timing data is missing
+    let timeInBedHours = 0;
+    if (sleepOnsetMinutes !== null && wakeMinutes !== null) {
+      // Handle case where wake time is next day (before sleep onset)
+      let timeInBedMinutes = wakeMinutes - sleepOnsetMinutes;
+      if (timeInBedMinutes < 0) {
+        timeInBedMinutes += 24 * 60; // Add 24 hours in minutes
+      }
+      timeInBedHours = timeInBedMinutes / 60;
+    } else {
+      // Fallback: estimate time in bed as sleep duration + 30 minutes (for falling asleep)
+      timeInBedHours = data.sleep_duration_h + 0.5;
     }
-    
-    const timeInBedHours = timeInBedMinutes / 60;
     
     return {
       date: data.date,
@@ -193,20 +211,39 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
       deepSleep: data.deep_sleep_pct,
       remSleep: data.rem_sleep_pct,
       lightSleep: data.light_sleep_pct,
-      sleepEfficiency: calculateSleepEfficiency(data.sleep_duration_h, timeInBedHours),
+      sleepEfficiency: (() => {
+        const efficiency = calculateSleepEfficiency(data.sleep_duration_h, timeInBedHours);
+        console.log(`📊 Sleep Efficiency calc: sleep=${data.sleep_duration_h}h, timeInBed=${timeInBedHours}h, efficiency=${efficiency}%`);
+        return efficiency;
+      })(),
       sleepOnsetTime: data.sleep_onset_time || '00:00',
       wakeTime: data.wake_time || '00:00',
-      chronotype: determineChronotype(data.sleep_onset_time || '00:00', data.wake_time || '00:00'),
+      chronotype: (data.sleep_onset_time && data.sleep_onset_time !== '00:00' && data.wake_time && data.wake_time !== '00:00')
+        ? determineChronotype(data.sleep_onset_time, data.wake_time)
+        : 'Unknown (Missing timing data)',
       sleepStressIndicators: getSleepStressIndicators([data])
     };
   });
   
-  // Calculate sleep consistency
-  const sleepOnsetTimes = filteredData.map(d => d.sleep_onset_time || '00:00');
-  const wakeTimes = filteredData.map(d => d.wake_time || '00:00');
-  const sleepConsistency = calculateSleepConsistency(sleepOnsetTimes, wakeTimes);
-  const consistencyLevel = getConsistencyLevel(sleepConsistency);
-  const consistencyColor = getConsistencyColor(sleepConsistency);
+  // Calculate sleep consistency - only use data with valid timing
+  const validTimingData = filteredData.filter(d =>
+    d.sleep_onset_time && d.sleep_onset_time !== '00:00' &&
+    d.wake_time && d.wake_time !== '00:00'
+  );
+
+  let sleepConsistency = 0;
+  let consistencyLevel = 'Unknown';
+  let consistencyColor = '#9CA3AF';
+
+  if (validTimingData.length >= 2) {
+    const sleepOnsetTimes = validTimingData.map(d => d.sleep_onset_time!);
+    const wakeTimes = validTimingData.map(d => d.wake_time!);
+    sleepConsistency = calculateSleepConsistency(sleepOnsetTimes, wakeTimes);
+    consistencyLevel = getConsistencyLevel(sleepConsistency);
+    consistencyColor = getConsistencyColor(sleepConsistency);
+  } else {
+    consistencyLevel = 'Insufficient Data';
+  }
   
   // Calculate average sleep stage percentages
   const avgDeepSleep = filteredData.reduce((sum, d) => sum + d.deep_sleep_pct, 0) / filteredData.length;
@@ -253,14 +290,33 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
   // Sleep timing chart data - convert time strings to minutes for better visualization
   const sleepTimingChartData = sleepDebtData.map(d => {
     const parseTimeToMinutes = (timeString: string) => {
+      if (!timeString || timeString === '00:00' || timeString === '') {
+        return null; // Return null for invalid/missing times
+      }
       const [hours, minutes] = timeString.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) {
+        return null;
+      }
       return hours * 60 + minutes;
     };
-    
+
+    const sleepOnset = parseTimeToMinutes(d.sleepOnsetTime);
+    const wakeTime = parseTimeToMinutes(d.wakeTime);
+
+    // If timing data is missing, provide reasonable estimates based on sleep duration
+    const estimatedSleepOnset = sleepOnset !== null ? sleepOnset :
+      d.sleepDuration >= 8 ? 1320 : // 10 PM for long sleepers
+      d.sleepDuration >= 7 ? 1380 : // 11 PM for normal sleepers
+      1440; // 12 AM for short sleepers
+
+    const estimatedWakeTime = wakeTime !== null ? wakeTime :
+      estimatedSleepOnset + (d.sleepDuration * 60);
+
     return {
       date: d.date,
-      sleepOnset: parseTimeToMinutes(d.sleepOnsetTime),
-      wakeTime: parseTimeToMinutes(d.wakeTime)
+      sleepOnset: estimatedSleepOnset,
+      wakeTime: estimatedWakeTime % 1440, // Wrap around 24 hours
+      hasRealTimingData: sleepOnset !== null && wakeTime !== null
     };
   });
   
@@ -383,10 +439,10 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
                   {sleepDebtData.length > 0 ? sleepDebtData[sleepDebtData.length - 1].chronotype : 'Unknown'}
                 </p>
                 <p className="text-sm text-gray-600 mt-1">
-                  {sleepDebtData.length > 0 && isChronotypeOptimal(
-                    sleepDebtData[sleepDebtData.length - 1].chronotype, 
+                  {sleepDebtData.length > 0 && !sleepDebtData[sleepDebtData.length - 1].chronotype.includes('Unknown') && isChronotypeOptimal(
+                    sleepDebtData[sleepDebtData.length - 1].chronotype,
                     'Optimal window'
-                  ) ? 'Within optimal window' : 'Outside optimal window'}
+                  ) ? 'Within optimal window' : sleepDebtData[sleepDebtData.length - 1]?.chronotype.includes('Unknown') ? 'Insufficient timing data' : 'Outside optimal window'}
                 </p>
               </div>
             </div>
@@ -456,7 +512,14 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sleep Efficiency */}
         <div className="card-enhanced p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Sleep Efficiency</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            📊 Sleep Efficiency
+            {sleepDebtData.some(d => !d.sleepOnsetTime || d.sleepOnsetTime === '00:00' || !d.wakeTime || d.wakeTime === '00:00') && (
+              <span className="text-sm font-normal text-gray-600 ml-2">
+                (estimated where timing data unavailable)
+              </span>
+            )}
+          </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={sleepEfficiencyChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -534,7 +597,14 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
       
       {/* Sleep Timing */}
       <div className="card-enhanced p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">⏰ Sleep Timing</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          ⏰ Sleep Timing
+          {sleepTimingChartData.some(d => !d.hasRealTimingData) && (
+            <span className="text-sm font-normal text-gray-600 ml-2">
+              (estimated times where data unavailable)
+            </span>
+          )}
+        </h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={sleepTimingChartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -546,7 +616,15 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
             />
             <Tooltip
                           contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', color: '#1f2937' }}
-                          formatter={(value) => [formatMinutesToTime(Number(value)), 'Time']}
+                          formatter={(value, name, props) => {
+                            const timeStr = formatMinutesToTime(Number(value));
+                            const isEstimated = !props.payload.hasRealTimingData;
+                            return [
+                              `${timeStr}${isEstimated ? ' (estimated)' : ''}`,
+                              name
+                            ];
+                          }}
+                          labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString()}`}
                         />
             <Legend />
             <Line 

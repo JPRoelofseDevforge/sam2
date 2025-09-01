@@ -5,9 +5,13 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   base: '/',
+  server: {
+    port: 5173,
+    host: true,
+  },
   assetsInclude: ['**/*.glb', '**/*.gltf'],
   optimizeDeps: {
-    exclude: ['lucide-react', 'pg', 'dotenv'],
+    exclude: ['lucide-react'],
   },
   envPrefix: 'VITE_',
   build: {
@@ -15,13 +19,6 @@ export default defineConfig({
     watch: null,
     // Optimize chunk splitting
     rollupOptions: {
-      external: (id) => {
-        // Exclude Node.js specific modules from browser bundle
-        if (id === 'pg' || id.startsWith('pg/')) {
-          return true;
-        }
-        return false;
-      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],

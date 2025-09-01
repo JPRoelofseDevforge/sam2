@@ -1,6 +1,17 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { useAuth as useAuthContext } from '../auth/AuthContext';
 import { apiPost } from '../utils/api';
+
+// Performance monitoring for hooks
+const hookPerformanceMonitor = {
+  logHookRender: (hookName: string, dependencies?: any[]) => {
+    console.log(`🔄 Hook re-render: ${hookName}`, dependencies ? { deps: dependencies } : {});
+  },
+
+  logHookEffect: (hookName: string, effectName: string) => {
+    console.log(`⚡ Hook effect: ${hookName}.${effectName}`);
+  }
+};
 
 /**
  * Enhanced authentication hook with additional utilities
@@ -51,12 +62,15 @@ export const useAuthState = () => {
  * Hook for checking authentication status
  */
 export const useAuthCheck = () => {
+  hookPerformanceMonitor.logHookRender('useAuthCheck');
   const { isAuthenticated, user } = useAuthContext();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    hookPerformanceMonitor.logHookEffect('useAuthCheck', 'authCheckTimer');
     // Simulate auth check completion
     const timer = setTimeout(() => {
+      console.log('🔄 useAuthCheck: Auth check completed');
       setIsChecking(false);
     }, 100);
 
@@ -75,39 +89,58 @@ export const useAuthCheck = () => {
  * Hook for protected routes
  */
 export const useProtectedRoute = (requireAdmin: boolean = false) => {
+  hookPerformanceMonitor.logHookRender('useProtectedRoute', [requireAdmin]);
   const { isAuthenticated, user, isAdmin } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
 
+  // Memoize the admin check to prevent unnecessary re-runs
+  const adminCheckResult = useCallback(async () => {
+    if (requireAdmin) {
+      return await isAdmin();
+    }
+    return true;
+  }, [requireAdmin, isAdmin]);
+
   useEffect(() => {
+    hookPerformanceMonitor.logHookEffect('useProtectedRoute', 'checkAccess');
+    let isMounted = true;
+
     const checkAccess = async () => {
+      console.log('🔄 useProtectedRoute: Checking access', { isAuthenticated, requireAdmin, userId: user?.user_id });
       setIsLoading(true);
 
       if (!isAuthenticated) {
-        setHasAccess(false);
-        setIsLoading(false);
+        console.log('🔄 useProtectedRoute: Not authenticated, denying access');
+        if (isMounted) {
+          setHasAccess(false);
+          setIsLoading(false);
+        }
         return;
       }
 
-      if (requireAdmin) {
-        const adminStatus = await isAdmin();
-        setHasAccess(adminStatus);
-      } else {
-        setHasAccess(true);
-      }
+      const accessResult = await adminCheckResult();
+      console.log('🔄 useProtectedRoute: Access check result', { accessResult });
 
-      setIsLoading(false);
+      if (isMounted) {
+        setHasAccess(accessResult);
+        setIsLoading(false);
+      }
     };
 
     checkAccess();
-  }, [isAuthenticated, user, requireAdmin, isAdmin]);
 
-  return {
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, adminCheckResult]); // Removed user and isAdmin from dependencies
+
+  return useMemo(() => ({
     hasAccess,
     isLoading,
     isAuthenticated,
     user,
-  };
+  }), [hasAccess, isLoading, isAuthenticated, user]);
 };
 
 /**
@@ -167,27 +200,41 @@ export const usePermissions = () => {
  * Hook for session management
  */
 export const useSession = () => {
+  hookPerformanceMonitor.logHookRender('useSession');
   const { user, token } = useAuthContext();
   const [sessionTime, setSessionTime] = useState(0);
   const [isExpiring, setIsExpiring] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    hookPerformanceMonitor.logHookEffect('useSession', 'sessionTimer');
+    if (!token) {
+      setSessionTime(0);
+      setIsExpiring(false);
+      return;
+    }
 
-    // Update session time every minute
+    console.log('🔄 useSession: Starting session timer');
+    // Update session time every 5 minutes instead of every minute to reduce re-renders
     const interval = setInterval(() => {
-      setSessionTime(prev => prev + 1);
-    }, 60000);
+      setSessionTime(prev => {
+        const newTime = prev + 5; // Increment by 5 minutes
+        console.log('🔄 useSession: Session time updated', { sessionTime: newTime });
+        return newTime;
+      });
+    }, 300000); // 5 minutes instead of 1 minute
 
     return () => clearInterval(interval);
   }, [token]);
 
   useEffect(() => {
+    hookPerformanceMonitor.logHookEffect('useSession', 'expirationCheck');
     // Warn user when session is about to expire (after 20 minutes)
-    if (sessionTime > 20) {
-      setIsExpiring(true);
+    const shouldExpire = sessionTime > 20;
+    if (shouldExpire !== isExpiring) {
+      console.log('🔄 useSession: Session expiring warning', { sessionTime, shouldExpire });
+      setIsExpiring(shouldExpire);
     }
-  }, [sessionTime]);
+  }, [sessionTime, isExpiring]);
 
   const extendSession = useCallback(async () => {
     try {

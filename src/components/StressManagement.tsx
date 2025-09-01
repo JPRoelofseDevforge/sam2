@@ -1,21 +1,21 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
   ReferenceLine,
   AreaChart,
   Area
 } from 'recharts';
 import { BiometricData, Athlete } from '../types';
-import { athletes } from '../data/mockData';
+import { dataService } from '../services/dataService';
 import { 
   getRestingHRStatus, 
   getHRVStatus, 
@@ -57,14 +57,48 @@ interface StressZone {
   bgColor: string;
 }
 
-export const StressManagement: React.FC<StressManagementProps> = ({ 
-  athleteId, 
-  biometricData 
+export const StressManagement: React.FC<StressManagementProps> = ({
+  athleteId,
+  biometricData
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d'>('7d');
   const [whoopSelectedPeriod, setWhoopSelectedPeriod] = useState<'24h' | '7d'>('24h');
-  
-  const athlete: Athlete | undefined = athletes.find(a => a.athlete_id === athleteId);
+  const [athlete, setAthlete] = useState<Athlete | undefined>(undefined);
+  const [athleteLoading, setAthleteLoading] = useState<boolean>(true);
+  const [athleteError, setAthleteError] = useState<string | null>(null);
+
+  // Fetch athlete data on component mount
+  useEffect(() => {
+    const fetchAthlete = async () => {
+      try {
+        setAthleteLoading(true);
+        setAthleteError(null);
+
+        // Convert athleteId to number if it's a string
+        const numericAthleteId = typeof athleteId === 'string' ? parseInt(athleteId, 10) : athleteId;
+
+        const athleteData = await dataService.getAthleteData(numericAthleteId);
+        setAthlete(athleteData.athlete);
+
+        // Also update the biometricData prop if it's not provided or needs refreshing
+        if (!biometricData.length && athleteData.biometricData.length) {
+          // Note: This is a workaround since biometricData is a prop
+          // In a real implementation, you might want to lift this state up
+          console.log('Biometric data loaded from API:', athleteData.biometricData.length, 'records');
+        }
+      } catch (error) {
+        console.error('Failed to fetch athlete data:', error);
+        setAthleteError('Failed to load athlete data');
+      } finally {
+        setAthleteLoading(false);
+      }
+    };
+
+    if (athleteId) {
+      fetchAthlete();
+    }
+  }, [athleteId, biometricData.length]);
+
   const athleteAge = athlete?.age || 25;
 
   // Process data for charts
@@ -336,6 +370,56 @@ export const StressManagement: React.FC<StressManagementProps> = ({
   const formatTime = (timeString: string) => {
     return timeString;
   };
+
+  // Show loading state for athlete data
+  if (athleteLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p className="text-white">Loading athlete data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state for athlete data
+  if (athleteError) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+            <h3 className="text-lg font-semibold text-white mb-2">Failed to Load Athlete Data</h3>
+            <p className="text-gray-300 mb-4">{athleteError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show no data state
+  if (!athlete) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="text-gray-400 text-4xl mb-4">👤</div>
+            <h3 className="text-lg font-semibold text-white mb-2">Athlete Not Found</h3>
+            <p className="text-gray-300">No athlete data available for the selected athlete.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

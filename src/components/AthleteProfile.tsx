@@ -22,11 +22,15 @@ import { PredictiveAnalytics } from './PredictiveAnalytics';
 import { SleepMetrics } from './SleepMetrics';
 import { StressManagement } from './StressManagement';
 import { WeatherImpact } from './WeatherImpact';
-import { PathologyAnalysis } from './PathologyAnalysis';
+import { BloodResults } from './BloodResults';
 import { CircadianRhythm } from './CircadianRhythm';
+import { HormoneBalanceChart } from './HormoneBalanceChart';
+import { HeartRateTrendChart } from './HeartRateTrendChart';
+import { SleepMetricsChart } from './SleepMetricsChart';
+import { TrainingLoadChart } from './TrainingLoadChart';
 
 interface AthleteProfileProps {
-  athleteId: string;
+  athleteId: number;
   onBack: () => void;
 }
 
@@ -34,7 +38,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
     athleteId,
       onBack
     }) => {
-      const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'pathology' | 'circadian'>('metrics');
+      const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian'>('metrics');
     const tabContentRef = useRef<HTMLDivElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
   
@@ -47,30 +51,47 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
 
   // Fetch athlete data from database
   useEffect(() => {
+    let isMounted = true;
+
     const fetchAthleteData = async () => {
       try {
+        if (!isMounted) return;
+
         setDataLoading(true);
+
         // Fetch individual athlete data
         const data = await dataService.getAthleteData(athleteId, true); // true = use database
+
+        if (!isMounted) return;
+
+        // Set state with the received data
         setAthlete(data.athlete);
-        setAthleteBiometrics(data.biometricData);
-        setAthleteGenetics(data.geneticProfile);
+        setAthleteBiometrics(data.biometricData || []);
+        setAthleteGenetics(data.geneticProfile || []);
+
 
         // Also fetch all biometric data for team averages
         const allData = await dataService.getData(true);
-        setAllBiometricData(allData.biometricData);
+        if (!isMounted) return;
 
+        setAllBiometricData(allData.biometricData || []);
       } catch (error) {
-        console.error('Failed to fetch athlete data:', error);
-        // Data service will automatically fall back to mock data
+        if (!isMounted) return;
+        console.error('❌ AthleteProfile: Failed to fetch athlete data:', error);
+        // Data service will return empty arrays if database is unavailable
       } finally {
-        setDataLoading(false);
+        if (isMounted) {
+          setDataLoading(false);
+        }
       }
     };
 
     fetchAthleteData();
-    // Removed automatic refresh to prevent constant re-renders
-    // Data will only refresh when athleteId changes or component mounts
+
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
   }, [athleteId]);
 
   // Show loading state while fetching data
@@ -96,12 +117,31 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
     );
   }
 
-  const alert = generateAlert(athleteId, athleteBiometrics, athleteGenetics);
-  const latest = athleteBiometrics[athleteBiometrics.length - 1];
+  const alert = generateAlert(athlete?.athlete_id || '', athleteBiometrics, athleteGenetics);
+
+  // Filter for valid biometric records (those with actual data, not just $ref)
+  const validBiometricData = athleteBiometrics.filter(record => {
+    const isValid = record &&
+                   record.athlete_id &&
+                   record.athlete_id !== '' &&
+                   record.date &&
+                   record.date !== '' &&
+                   typeof record.hrv_night === 'number' &&
+                   record.hrv_night >= 0 &&
+                   typeof record.resting_hr === 'number' &&
+                   record.resting_hr >= 0;
+
+    return isValid;
+  });
+
+  // Get the most recent valid record
+  const latest = validBiometricData.length > 0 ? validBiometricData[validBiometricData.length - 1] : null;
   const readinessScore = latest ? calculateReadinessScore(latest) : 0;
   const geneticInsights = getGeneticInsights(athleteGenetics);
 
-  const geneticDict = athleteGenetics.reduce((acc, profile) => {
+
+  const geneticArray = Array.isArray(athleteGenetics) ? athleteGenetics : [];
+  const geneticDict = geneticArray.reduce((acc, profile) => {
     acc[profile.gene] = profile.genotype;
     return acc;
   }, {} as Record<string, string>);
@@ -115,22 +155,22 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
   ];
 
   const tabs = [
-    { id: 'metrics' as const, label: 'Current Metrics', icon: '📊', count: latest ? 9 : 0 },
-    { id: 'pathology' as const, label: 'Pathology Analysis', icon: '🩸', count: 1 },
+    { id: 'metrics' as const, label: 'Current Metrics', icon: '📊', count: athleteBiometrics.length > 0 ? 9 : 0 },
+    { id: 'bloodResults' as const, label: 'Blood Results', icon: '🩸', count: 1 },
     { id: 'circadian' as const, label: 'Circadian Rhythm', icon: '⏰', count: 1 },
     { id: 'trends' as const, label: 'Trends & Analysis', icon: '📈', count: athleteBiometrics.length },
     { id: 'insights' as const, label: 'Predictive Insights', icon: '🧠', count: geneticInsights.length },
     { id: 'scaleReport' as const, label: 'Scale Report', icon: '⚖️', count: 1 },
     { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 },
-    { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: 0 },
-    { id: 'recoveryTimeline' as const, label: 'Recovery Timeline', icon: '📅', count: 0 },
-    { id: 'pharmacogenomics' as const, label: 'Pharmacogenomics', icon: '💊', count: 0 },
-    { id: 'nutrigenomics' as const, label: 'Nutrigenomics', icon: '🥗', count: 0 },
-    { id: 'recoveryGenes' as const, label: 'Recovery Genes', icon: '🧬', count: 0 },
-    { id: 'sleep' as const, label: 'Sleep Metrics', icon: '🌙', count: 0 },
-    { id: 'stress' as const, label: 'Stress Management', icon: '🧘', count: 0 },
-    { id: 'predictive' as const, label: 'Predictive Analytics', icon: '🔮', count: 0 },
-    { id: 'weather' as const, label: 'Weather Impact', icon: '🌤️', count: 0 }
+    { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: athleteBiometrics.length },
+    { id: 'recoveryTimeline' as const, label: 'Recovery Timeline', icon: '📅', count: athleteBiometrics.length },
+    { id: 'pharmacogenomics' as const, label: 'Pharmacogenomics', icon: '💊', count: athleteGenetics.length },
+    { id: 'nutrigenomics' as const, label: 'Nutrigenomics', icon: '🥗', count: athleteGenetics.length },
+    { id: 'recoveryGenes' as const, label: 'Recovery Genes', icon: '🧬', count: athleteGenetics.length },
+    { id: 'sleep' as const, label: 'Sleep Metrics', icon: '🌙', count: athleteBiometrics.length },
+    { id: 'stress' as const, label: 'Stress Management', icon: '🧘', count: athleteBiometrics.length },
+    { id: 'predictive' as const, label: 'Predictive Analytics', icon: '🔮', count: athleteBiometrics.length },
+    { id: 'weather' as const, label: 'Weather Impact', icon: '🌤️', count: 1 }
   ];
 
   // Helper for getting label color class
@@ -238,6 +278,16 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
 
       {/* Tab Content */}
       <div ref={tabContentRef} className="mt-6">
+        {activeTab === 'bloodResults' && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-6">🩸 Blood Results</h2>
+            <BloodResults athleteId={athleteId} />
+            <div className="mt-8">
+              <HormoneBalanceChart athleteId={athleteId} />
+            </div>
+          </div>
+        )}
+
         {activeTab === 'metrics' && latest && (
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
@@ -259,7 +309,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 subtitle={readinessScore > 75 ? "Excellent recovery" : "Moderate recovery"}
                 trend={readinessScore > 75 ? "up" : "down"}
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.hrv_night }))}
-                teamAverage={getTeamAverage('hrv_night', athleteId, allBiometricData)}
+                teamAverage={getTeamAverage('hrv_night', athlete?.athlete_id || '', allBiometricData)}
                 goalValue={50}
                 goalLabel="Target"
               />
@@ -273,7 +323,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 subtitle={latest.resting_hr < 60 ? "Optimal" : latest.resting_hr < 65 ? "Good" : "Elevated"}
                 trend={latest.resting_hr < 60 ? "up" : "down"}
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.resting_hr }))}
-                teamAverage={getTeamAverage('resting_hr', athleteId, allBiometricData)}
+                teamAverage={getTeamAverage('resting_hr', athlete?.athlete_id || '', allBiometricData)}
                 goalValue={60}
                 goalLabel="Ideal"
               />
@@ -287,11 +337,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 subtitle={latest.deep_sleep_pct > 20 ? "Restorative" : "Low"}
                 trend={latest.deep_sleep_pct > 20 ? "up" : "down"}
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.deep_sleep_pct }))}
-                teamAverage={getTeamAverage('deep_sleep_pct', athleteId, allBiometricData)}
+                teamAverage={getTeamAverage('deep_sleep_pct', athlete?.athlete_id || '', allBiometricData)}
                 goalValue={20}
                 goalLabel="Min"
               />
-              
+
               {/* REM Sleep */}
               <MetricCard
                 title="REM Sleep"
@@ -301,11 +351,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 subtitle={latest.rem_sleep_pct > 18 ? "Cognitive recovery" : "Below ideal"}
                 trend={latest.rem_sleep_pct > 18 ? "up" : "down"}
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.rem_sleep_pct }))}
-                teamAverage={getTeamAverage('rem_sleep_pct', athleteId, allBiometricData)}
+                teamAverage={getTeamAverage('rem_sleep_pct', athlete?.athlete_id || '', allBiometricData)}
                 goalValue={18}
                 goalLabel="Target"
               />
-              
+
               {/* Sleep Duration */}
               <MetricCard
                 title="Sleep Duration"
@@ -315,11 +365,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 subtitle={latest.sleep_duration_h >= 7 ? "Adequate" : "Short"}
                 trend={latest.sleep_duration_h >= 7 ? "up" : "down"}
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.sleep_duration_h }))}
-                teamAverage={getTeamAverage('sleep_duration_h', athleteId, allBiometricData)}
+                teamAverage={getTeamAverage('sleep_duration_h', athlete?.athlete_id || '', allBiometricData)}
                 goalValue={7}
                 goalLabel="Recommended"
               />
-              
+
               {/* SpO₂ */}
               <MetricCard
                 title="SpO₂ (Night)"
@@ -329,11 +379,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 subtitle={latest.spo2_night > 96 ? "Normal" : "Monitor"}
                 trend={latest.spo2_night > 96 ? "up" : "down"}
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.spo2_night }))}
-                teamAverage={getTeamAverage('spo2_night', athleteId, allBiometricData)}
+                teamAverage={getTeamAverage('spo2_night', athlete?.athlete_id || '', allBiometricData)}
                 goalValue={96}
                 goalLabel="Healthy"
               />
-              
+
               {/* Respiratory Rate */}
               <MetricCard
                 title="Respiratory Rate"
@@ -343,11 +393,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 subtitle={latest.resp_rate_night <= 16 ? "Normal" : "Elevated"}
                 trend={latest.resp_rate_night <= 16 ? "up" : "down"}
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.resp_rate_night }))}
-                teamAverage={getTeamAverage('resp_rate_night', athleteId, allBiometricData)}
+                teamAverage={getTeamAverage('resp_rate_night', athlete?.athlete_id || '', allBiometricData)}
                 goalValue={16}
                 goalLabel="Max"
               />
-              
+
               {/* Body Temp */}
               <MetricCard
                 title="Body Temp"
@@ -357,11 +407,11 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 subtitle={Math.abs(latest.temp_trend_c - 36.8) < 0.3 ? "Stable" : "Elevated"}
                 trend={Math.abs(latest.temp_trend_c - 36.8) < 0.3 ? "up" : "down"}
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.temp_trend_c }))}
-                teamAverage={getTeamAverage('temp_trend_c', athleteId, allBiometricData)}
+                teamAverage={getTeamAverage('temp_trend_c', athlete?.athlete_id || '', allBiometricData)}
                 goalValue={36.8}
                 goalLabel="Normal"
               />
-              
+
               {/* Training Load */}
               <MetricCard
                 title="Training Load"
@@ -371,10 +421,17 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                 subtitle={latest.training_load_pct > 85 ? "High" : "Moderate"}
                 trend="neutral"
                 data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.training_load_pct }))}
-                teamAverage={getTeamAverage('training_load_pct', athleteId, allBiometricData)}
+                teamAverage={getTeamAverage('training_load_pct', athlete?.athlete_id || '', allBiometricData)}
                 goalValue={85}
                 goalLabel="Optimal"
               />
+            </div>
+
+            {/* New Charts Grid */}
+            <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <HeartRateTrendChart athleteId={athleteId} />
+              <SleepMetricsChart athleteId={athleteId} />
+              <TrainingLoadChart athleteId={athleteId} />
             </div>
 
             {/* Summary Banner */}
@@ -391,18 +448,12 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
           </div>
         )}
 
-        {activeTab === 'pathology' && (
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-6">🩸 Pathology Analysis</h2>
-            <PathologyAnalysis athleteId={athleteId} />
-          </div>
-        )}
 
         {activeTab === 'circadian' && (
           <CircadianRhythm
             biometricData={athleteBiometrics}
             geneticData={athleteGenetics}
-            athleteId={athleteId}
+            athleteId={athlete?.athlete_id || ''}
           />
         )}
 
@@ -484,93 +535,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
               )}
             </section>
 
-            {/* Nutrition & Genetics Interactions */}
-            <section>
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <span className="bg-amber-100 p-1.5 rounded-full text-amber-700 text-lg">🥗</span>
-                <span className="text-white">Nutrition & Genetics Interactions</span>
-              </h3>
-
-              <div className="space-y-4">
-                {athleteGenetics.map((g, i) => {
-                  const tipMap: Record<string, { trait: string; tip: string }> = {
-                    ACTN3: {
-                      trait: 'Power vs Endurance',
-                      tip: g.genotype === 'RR'
-                        ? 'High-protein and creatine supplementation may enhance power output.'
-                        : g.genotype === 'XX'
-                        ? 'Higher fat oxidation — consider moderate-fat, endurance-focused diet with antioxidant-rich foods.'
-                        : 'Hybrid profile — balance protein and complex carbs for mixed training.',
-                    },
-                    PPARGC1A: {
-                      trait: 'Mitochondrial Biogenesis',
-                      tip: g.genotype.includes('Ser')
-                        ? 'May benefit from polyphenol-rich foods (green tea, berries) to support mitochondrial function.'
-                        : 'Responds well to omega-3s and aerobic training for metabolic efficiency.',
-                    },
-                    BDNF: {
-                      trait: 'Neuroplasticity & Recovery',
-                      tip: g.genotype === 'Met/Met' || g.genotype === 'Val/Met'
-                        ? 'Increase omega-3 (DHA) and curcumin to support brain-derived neurotrophic factor.'
-                        : 'Naturally high BDNF — maintain with sleep and resistance training.',
-                    },
-                    ADRB2: {
-                      trait: 'Fat Metabolism',
-                      tip: g.genotype === 'Arg16Arg'
-                        ? 'Better fat mobilization — time fats around training; avoid excess pre-sleep.'
-                        : g.genotype === 'Gly16Gly'
-                        ? 'Reduced lipolysis — prioritize carb availability for high-intensity work.'
-                        : 'Mixed response — use periodized nutrition (low-fat on recovery days).',
-                    },
-                    PER3: {
-                      trait: 'Chronotype & Sleep',
-                      tip: g.genotype === 'long'
-                        ? 'Morning type — consume protein-rich breakfast; avoid late carbs.'
-                        : 'Evening type — use magnesium and tart cherry juice to support sleep onset.',
-                    },
-                    CLOCK: {
-                      trait: 'Circadian Rhythm',
-                      tip: g.genotype === 'AA'
-                        ? 'Strong circadian drive — eat meals at consistent times; avoid snacks after 8 PM.'
-                        : 'Irregular rhythm — use morning light and time-restricted eating (10-hour window).',
-                    },
-                  };
-
-                  const content = tipMap[g.gene];
-                  if (!content) return null;
-
-                  return (
-                    <div
-                      key={i}
-                      className="card-enhanced p-5"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-semibold text-amber-700">{g.gene}</h4>
-                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
-                          Nutrition
-                        </span>
-                      </div>
-                      <p className="text-gray-700 text-sm">
-                        <strong className="text-amber-600">Trait:</strong> {content.trait}
-                      </p>
-                      <p className="text-gray-600 text-sm mt-1 leading-relaxed">
-                        <strong className="text-amber-600">Nutrition Tip:</strong> {content.tip}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {athleteGenetics.length === 0 && (
-                <div className="card-enhanced rounded-xl p-6 text-center">
-                  <p className="text-gray-700">🧬 No genetic data available for nutrition insights</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Unlock personalized nutrition strategies with genetic testing.
-                  </p>
-                </div>
-              )}
-            </section>
-
+          
             {/* Performance Forecast */}
             {athleteBiometrics.length >= 3 && latest && (
               <section className="card-enhanced p-6">
@@ -676,7 +641,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                   'Morning sunlight resets circadian rhythm — get 10 mins upon waking.',
                   'Omega-3s may enhance recovery in BDNF Met carriers.',
                   'Caffeine clearance is slower in evening types (PER3 long) — avoid after 2 PM.',
-                ][athleteId.charCodeAt(athleteId.length - 1) % 7]}
+                ][(athlete?.athlete_id || '').charCodeAt((athlete?.athlete_id || '').length - 1) % 7]}
               </p>
             </section>
           </div>
@@ -686,56 +651,56 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
         {activeTab === 'scaleReport' && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-6">⚖️ Scale Report</h2>
-            <ScaleReport athleteId={athleteId} />
+            <ScaleReport athleteId={athlete?.athlete_id || ''} />
           </div>
         )}
 
         {activeTab === 'digitalTwin' && (
-          <DigitalTwin3D athleteId={athleteId} />
+          <DigitalTwin3D athleteId={athlete?.athlete_id || ''} />
         )}
-        
-        
+
+
         {activeTab === 'trainingLoad' && (
           <TrainingLoadHeatmap />
         )}
-        
+
         {activeTab === 'recoveryTimeline' && (
-          <RecoveryTimeline athleteId={athleteId} />
+          <RecoveryTimeline athleteId={athlete?.athlete_id || ''} />
         )}
-        
+
         {activeTab === 'pharmacogenomics' && (
-          <Pharmacogenomics athleteId={athleteId} />
+          <Pharmacogenomics athleteId={athlete?.athlete_id || ''} />
         )}
-        
+
         {activeTab === 'nutrigenomics' && (
-          <Nutrigenomics athleteId={athleteId} />
+          <Nutrigenomics athleteId={athlete?.athlete_id || ''} />
         )}
-        
+
         {activeTab === 'recoveryGenes' && (
-          <RecoveryGenePanel athleteId={athleteId} />
+          <RecoveryGenePanel athleteId={athlete?.athlete_id || ''} />
         )}
-        
+
         {activeTab === 'predictive' && (
-                <PredictiveAnalytics athleteId={athleteId} />
+                <PredictiveAnalytics athleteId={athlete?.athlete_id || ''} />
               )}
-        
+
               {activeTab === 'sleep' && (
                 <SleepMetrics
                   biometricData={athleteBiometrics}
-                  athleteId={athleteId}
+                  athleteId={athlete?.athlete_id || ''}
                 />
               )}
-              
+
               {activeTab === 'stress' && (
                 <StressManagement
-                  athleteId={athleteId}
+                  athleteId={athlete?.athlete_id || ''}
                   biometricData={athleteBiometrics}
                 />
               )}
-              
+
               {activeTab === 'weather' && (
                 <WeatherImpact
-                  athleteId={athleteId}
+                  athleteId={athlete?.athlete_id || ''}
                   geneticData={athleteGenetics}
                 />
               )}

@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { geneticProfiles, athletes } from '../data/mockData';
+import React, { useMemo, useState, useEffect } from 'react';
+import { geneticProfileService } from '../services/dataService';
+import { GeneticProfile } from '../types';
 
 interface SupplementRecommendation {
   supplement: string;
@@ -12,13 +13,51 @@ interface SupplementRecommendation {
 }
 
 export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) => {
+  const [geneticProfiles, setGeneticProfiles] = useState<GeneticProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [athleteName, setAthleteName] = useState<string>('');
+
+  // Fetch genetic profiles for the athlete
+  useEffect(() => {
+    const fetchGeneticData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Convert string athleteId to number for API call
+        const athleteIdNum = parseInt(athleteId, 10);
+        if (isNaN(athleteIdNum)) {
+          throw new Error('Invalid athlete ID');
+        }
+
+        const profiles = await geneticProfileService.getGeneticProfileByAthlete(athleteIdNum);
+        setGeneticProfiles(profiles);
+
+        // For now, we'll use a placeholder name since athlete service might not be available
+        // In a real implementation, you'd fetch athlete details separately
+        setAthleteName(`Athlete ${athleteId}`);
+
+      } catch (err) {
+        console.error('Failed to fetch genetic profiles:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load genetic data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (athleteId) {
+      fetchGeneticData();
+    }
+  }, [athleteId]);
+
   // Get nutrigenomics recommendations for the athlete
   const supplementRecommendations = useMemo<SupplementRecommendation[]>(() => {
-    const athleteGenetics = geneticProfiles.filter(g => g.athlete_id === athleteId);
     const recommendations: SupplementRecommendation[] = [];
-    
+    const geneticArray = Array.isArray(geneticProfiles) ? geneticProfiles : [];
+
     // Common genetic variants affecting nutrition and supplementation
-    athleteGenetics.forEach(profile => {
+    geneticArray.forEach(profile => {
       switch(profile.gene) {
         case 'MTHFR':
           if (profile.genotype === 'TT' || profile.genotype === 'CT') {
@@ -33,7 +72,7 @@ export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) =>
             });
           }
           break;
-          
+
         case 'VDR':
           if (profile.genotype === 'FF' || profile.genotype === 'Ff') {
             recommendations.push({
@@ -47,7 +86,7 @@ export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) =>
             });
           }
           break;
-          
+
         case 'FTO':
           if (profile.genotype === 'AA' || profile.genotype === 'AT') {
             recommendations.push({
@@ -61,7 +100,7 @@ export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) =>
             });
           }
           break;
-          
+
         case 'ACTN3':
           if (profile.genotype === 'XX') {
             recommendations.push({
@@ -85,7 +124,7 @@ export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) =>
             });
           }
           break;
-          
+
         case 'PPARGC1A':
           if (profile.genotype.includes('Ser')) {
             recommendations.push({
@@ -97,7 +136,7 @@ export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) =>
               timing: 'With dinner',
               priority: 'medium'
             });
-            
+
             recommendations.push({
               supplement: 'Coenzyme Q10',
               gene: profile.gene,
@@ -109,7 +148,7 @@ export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) =>
             });
           }
           break;
-          
+
         case 'ADRB2':
           if (profile.genotype === 'Gly16Gly') {
             recommendations.push({
@@ -123,7 +162,7 @@ export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) =>
             });
           }
           break;
-          
+
         case 'NOS3':
           if (profile.genotype === 'CC' || profile.genotype === 'CT') {
             recommendations.push({
@@ -139,19 +178,53 @@ export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) =>
           break;
       }
     });
-    
-    return recommendations;
-  }, [athleteId]);
 
-  // Get athlete name
-  const athlete = athletes.find(a => a.athlete_id === athleteId);
+    return recommendations;
+  }, [geneticProfiles]);
   
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="card-enhanced p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Nutrigenomics Report</h2>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-gray-600">Loading genetic data...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="card-enhanced p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Nutrigenomics Report</h2>
+          <div className="text-center py-12">
+            <div className="text-red-500 mb-4">⚠️</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Genetic Data</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="card-enhanced p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Nutrigenomics Report</h2>
         <p className="text-gray-600 mb-6">
-          Personalized supplement recommendations for {athlete?.name}
+          Personalized supplement recommendations for {athleteName}
         </p>
         
         {supplementRecommendations.length > 0 ? (
@@ -223,7 +296,7 @@ export const Nutrigenomics: React.FC<{ athleteId: string }> = ({ athleteId }) =>
       <div className="card-enhanced p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Genetic Profile Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {geneticProfiles
+          {(Array.isArray(geneticProfiles) ? geneticProfiles : [])
             .filter(g => g.athlete_id === athleteId)
             .map((profile, index) => (
               <div key={index} className="p-4 bg-gray-50 rounded-lg">

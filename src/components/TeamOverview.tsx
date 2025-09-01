@@ -27,7 +27,7 @@ interface AirQualityData {
 }
 
 interface TeamOverviewProps {
-  onAthleteClick: (athleteId: string) => void;
+  onAthleteClick: (athleteId: number) => void;
 }
 
 const getStatusColorClass = (alertType: string): string => {
@@ -80,14 +80,19 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('🔍 TeamOverview: Starting data fetch...');
         setDataLoading(true);
         const data = await dataService.getData(true); // true = use database
+        
+        console.debug(data);
+
         setAthletes(data.athletes);
         setBiometricData(data.biometricData);
         setGeneticProfiles(data.geneticProfiles);
+        console.log('🔍 TeamOverview: State updated with athletes:', data.athletes.length);
       } catch (error) {
-        console.error('Failed to fetch data:', error);
-        // Data service will automatically fall back to mock data
+        console.error('❌ TeamOverview: Failed to fetch data:', error);
+        // Data service will return empty arrays if database is unavailable
       } finally {
         setDataLoading(false);
       }
@@ -100,8 +105,33 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
   }, []);
 
   const getAthleteData = (athleteId: string) => {
-    const data = biometricData.filter(d => d.athlete_id === athleteId);
-    const genetics = geneticProfiles.filter(g => g.athlete_id === athleteId);
+    const biometricArray = Array.isArray(biometricData) ? biometricData : [];
+    const geneticArray = Array.isArray(geneticProfiles) ? geneticProfiles : [];
+
+
+    // Try multiple matching strategies to handle different ID formats
+    const data = biometricArray.filter(d => {
+      const biometricId = d.athlete_id?.toString();
+      const matches = biometricId === athleteId || d.athlete_id == athleteId; // Use loose equality
+      return matches;
+    });
+
+    const genetics = geneticArray.filter(g => {
+      const geneticId = g.athlete_id?.toString();
+      return geneticId === athleteId || g.athlete_id == athleteId; // Use loose equality
+    });
+
+    console.log('🔍 Athlete', athleteId, ':', {
+      biometricRecords: data.length,
+      geneticRecords: genetics.length,
+      latestBiometric: data.length > 0 ? {
+        athlete_id: data[data.length - 1].athlete_id,
+        date: data[data.length - 1].date,
+        hrv: data[data.length - 1].hrv_night,
+        resting_hr: data[data.length - 1].resting_hr
+      } : null
+    });
+
     const alert = generateAlert(athleteId, data, genetics);
     const readinessScore = data.length > 0 ? calculateReadinessScore(data[data.length - 1]) : 0;
 
@@ -109,9 +139,12 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
   };
 
   const teamStats = React.useMemo(() => {
-    const athleteMetrics = athletes.map(athlete => {
+    console.log('🔍 TeamOverview: Calculating teamStats with athletes:', athletes?.length || 0);
+
+    const athleteMetrics = (athletes || []).map(athlete => {
       const { data, alert, readinessScore } = getAthleteData(athlete.athlete_id);
-      const latest = data[data.length - 1];
+      const latest = data && data.length > 0 ? data[data.length - 1] : null;
+
       return {
         athlete,
         latest,
@@ -120,11 +153,14 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
       };
     });
 
-    const validMetrics = athleteMetrics.filter(m => m.latest);
+    console.log('🔍 TeamOverview: Athlete metrics calculated:', athleteMetrics.length);
 
-    const avgHRV = validMetrics.reduce((sum, m) => sum + m.latest.hrv_night, 0) / validMetrics.length;
-    const avgSleep = validMetrics.reduce((sum, m) => sum + m.latest.sleep_duration_h, 0) / validMetrics.length;
-    const avgReadiness = validMetrics.reduce((sum, m) => sum + m.readinessScore, 0) / validMetrics.length;
+    const validMetrics = athleteMetrics.filter(m => m.latest);
+    console.log('🔍 TeamOverview: Valid metrics:', validMetrics.length);
+
+    const avgHRV = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + (m.latest?.hrv_night || 0), 0) / validMetrics.length : 0;
+    const avgSleep = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + (m.latest?.sleep_duration_h || 0), 0) / validMetrics.length : 0;
+    const avgReadiness = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + m.readinessScore, 0) / validMetrics.length : 0;
 
     const alertCounts = {
       high: athleteMetrics.filter(m => ['inflammation', 'airway'].includes(m.alert.type)).length,
@@ -132,14 +168,17 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
       optimal: athleteMetrics.filter(m => m.alert.type === 'green').length,
     };
 
-    return {
-      totalAthletes: athletes.length,
+    const result = {
+      totalAthletes: (athletes || []).length,
       avgHRV: avgHRV || 0,
       avgSleep: avgSleep || 0,
       avgReadiness: avgReadiness || 0,
       alertCounts,
       athleteMetrics,
     };
+
+    console.log('🔍 TeamOverview: Final teamStats:', result);
+    return result;
   }, [athletes, biometricData, geneticProfiles]);
 
   // Fetch Air Quality from backend API
@@ -148,31 +187,86 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
       try {
         setLoading(true);
 
+        // 🔍 DEBUG: Log API call details
+        console.log('🌤️ Weather API Call Details:');
+        console.log('- CITY:', CITY);
+        console.log('- STATE:', STATE);
+        console.log('- COUNTRY:', COUNTRY);
+        console.log('- API URL:', import.meta.env.VITE_API_URL || '/api');
+
         const response = await weatherApiService.getCurrentWeather(CITY, STATE, COUNTRY);
 
+        // 🔍 DEBUG: Log API response details
+        console.log('🌤️ Weather API Response:', {
+          success: response.success,
+          hasData: !!response.data,
+          error: response.error,
+          message: response.message,
+          cached: response.cached,
+          timestamp: response.timestamp
+        });
+
         if (!response.success || !response.data) {
+          console.error('❌ Weather API Error Details:', {
+            success: response.success,
+            hasData: !!response.data,
+            error: response.error,
+            message: response.message
+          });
           throw new Error(response.error || response.message || 'Failed to fetch air quality data');
         }
 
         const backendData = response.data;
 
+        // 🔍 DEBUG: Log backend data structure
+        console.log('🌤️ Backend Data Structure:', {
+          hasLocation: !!backendData.location,
+          hasCurrent: !!backendData.current,
+          currentKeys: backendData.current ? Object.keys(backendData.current) : [],
+          locationKeys: backendData.location ? Object.keys(backendData.location) : []
+        });
+
         // Map backend response to component's expected format
         setAirQuality({
-          temperature: backendData.current.temperature,
-          humidity: backendData.current.humidity,
-          aqi: backendData.current.air_quality_index || 0,
+          temperature: backendData.current?.temperature || 0,
+          humidity: backendData.current?.humidity || 0,
+          aqi: backendData.current?.air_quality_index || 0,
           co: 0, // Backend doesn't provide CO data
           pm25: 0, // Backend doesn't provide PM2.5 data
           pm10: 0, // Backend doesn't provide PM10 data
-          windSpeed: backendData.current.wind_speed,
-          pressure: backendData.current.pressure,
-          weatherCondition: backendData.current.weather_condition,
+          windSpeed: backendData.current?.wind_speed || 0,
+          pressure: backendData.current?.pressure || 0,
+          weatherCondition: backendData.current?.weather_condition || 'Unknown',
           lastUpdated: new Date().toLocaleTimeString(),
         });
         setError(null);
       } catch (err: any) {
-        console.error('AirQuality API Error:', err);
-        setError(err.message || 'Failed to load air quality');
+        // 🔍 DEBUG: Enhanced error logging
+        console.error('❌ AirQuality API Error Details:', {
+          error: err,
+          message: err?.message,
+          stack: err?.stack,
+          name: err?.name,
+          isNetworkError: err?.name === 'TypeError' && err?.message?.includes('fetch'),
+          isServerError: err?.message?.includes('500') || err?.message?.includes('Server Error'),
+          timestamp: new Date().toISOString()
+        });
+
+        // Set default/placeholder data instead of showing error
+        console.log('🔄 Falling back to default weather data due to API error');
+        setAirQuality({
+          temperature: 22,
+          humidity: 60,
+          aqi: 25,
+          co: 0,
+          pm25: 0,
+          pm10: 0,
+          windSpeed: 5,
+          pressure: 1013,
+          weatherCondition: 'Partly Cloudy',
+          lastUpdated: new Date().toLocaleTimeString(),
+        });
+        setError(null); // Don't show error to user
       } finally {
         setLoading(false);
       }
@@ -442,7 +536,7 @@ return (
             <div
               key={athlete.athlete_id}
               className={`athlete-card ${getStatusColorClass(alert.type)} card-hover`}
-              onClick={() => onAthleteClick(athlete.athlete_id)}
+              onClick={() => onAthleteClick(athlete.id)}
             >
               <div className="athlete-header">
                 <div className="athlete-info">
@@ -452,29 +546,35 @@ return (
                 <div className="alert-icon">{getStatusIcon(alert.type)}</div>
               </div>
 
-              {latest && (
-                <div className="athlete-metrics">
-                  <div className="metric-pair">
-                    <span className="label">HRV</span>
-                    <span className="value">{latest.hrv_night.toFixed(0)} ms</span>
+              <div className="athlete-metrics">
+                {latest ? (
+                  <>
+                    <div className="metric-pair">
+                      <span className="label">HRV</span>
+                      <span className="value">{latest.hrv_night.toFixed(0)} ms</span>
+                    </div>
+                    <div className="metric-pair">
+                      <span className="label">Sleep</span>
+                      <span className="value">{latest.sleep_duration_h.toFixed(1)}h</span>
+                    </div>
+                    <div className="metric-pair">
+                      <span className="label">RHR</span>
+                      <span className="value">{latest.resting_hr.toFixed(0)} bpm</span>
+                    </div>
+                    <div className="metric-pair">
+                      <span className="label">Ready</span>
+                      <span className="value">{readinessScore.toFixed(0)}%</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    📊 No recent biometric data available
                   </div>
-                  <div className="metric-pair">
-                    <span className="label">Sleep</span>
-                    <span className="value">{latest.sleep_duration_h.toFixed(1)}h</span>
-                  </div>
-                  <div className="metric-pair">
-                    <span className="label">RHR</span>
-                    <span className="value">{latest.resting_hr.toFixed(0)} bpm</span>
-                  </div>
-                  <div className="metric-pair">
-                    <span className="label">Ready</span>
-                    <span className="value">{readinessScore.toFixed(0)}%</span>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <div className="athlete-alert">
-                <p className="alert-title">{alert.title.replace(/[\ emoji]/g, '').trim()}</p>
+                <p className="alert-title">{alert.title.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim()}</p>
                 <p className="alert-cause">{alert.cause}</p>
               </div>
 

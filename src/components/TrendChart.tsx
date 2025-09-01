@@ -294,36 +294,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         </section>
       )}
 
-      {/* 6. Readiness Calendar */}
-      <section className="card-enhanced p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">📅 Readiness Calendar (Last 7 Weeks)</h3>
-        <div className="grid grid-cols-7 gap-1 max-w-md mx-auto mb-4">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="text-center text-xs font-medium text-gray-600 py-1">
-              {day}
-            </div>
-          ))}
-          {calendarData.map((d, i) => (
-            <div
-              key={i}
-              className={`w-full aspect-square flex items-center justify-center text-xs text-white font-bold rounded-md transition-all ${getColor(d.value)}`}
-              title={d.value ? `${d.value}% ready` : 'No data'}
-            >
-              {d.value !== null ? Math.round(d.value / 10) : ''}
-            </div>
-          ))}
-        </div>
-        <div className="text-sm text-gray-600">
-          <p className="mb-2">This calendar shows your daily readiness scores over the past 7 weeks:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>🟢 Green (76-100%): Optimal recovery state</li>
-            <li>🟡 Yellow (51-75%): Moderate recovery, monitor trends</li>
-            <li>🔴 Red (0-50%): Fatigue detected, prioritize recovery</li>
-            <li>⚪ Gray: No data available for this date</li>
-          </ul>
-        </div>
-      </section>
-
+   
       {/* 7. Genetic Predisposition Radar */}
       {geneticData.length > 0 && (
         <section>

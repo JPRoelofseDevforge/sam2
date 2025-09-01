@@ -27,7 +27,7 @@
    NODE_ENV=development
 
    # API Configuration for frontend
-   VITE_API_URL=http://localhost:3001/api
+   VITE_API_URL=http://localhost:5288/api
    ```
 
 ### Running the Application
@@ -56,7 +56,7 @@ npm run dev
 ### Accessing the Application
 Once both servers are running:
 - Frontend: http://localhost:5173
-- API: http://localhost:3001/api
+- API: http://localhost:5288/api
 
 ### Admin Dashboard
 To access the admin dashboard:
@@ -66,6 +66,6 @@ To access the admin dashboard:
 
 ### Troubleshooting
 If you encounter the error "SyntaxError: Unexpected token '<', "<!doctype "... is not valid JSON":
-1. Ensure the API server is running on port 3001
-2. Check that the VITE_API_URL in your .env file is correctly set to http://localhost:3001/api
-3. Verify that you can access http://localhost:3001/api/health in your browser
+1. Ensure the API server is running on port 5288
+2. Check that the VITE_API_URL in your .env file is correctly set to http://localhost:5288/api
+3. Verify that you can access http://localhost:5288/api/health in your browser

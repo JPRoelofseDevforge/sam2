@@ -40,6 +40,8 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   goalValue,
   goalLabel = 'Goal',
 }) => {
+  // Handle undefined/null values by providing defaults
+  const safeValue = value ?? 0;
   const trendColor =
     trend === 'up'
       ? 'text-green-600'
@@ -58,13 +60,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   }));
 
   // Determine domain for Y-axis
-  const allValues = [...sortedData.map(d => d.value), teamAverage, goalValue].filter(Boolean) as number[];
+  const allValues = [...sortedData.map(d => d.value), safeValue, teamAverage, goalValue].filter(Boolean) as number[];
   const minValue = Math.min(...allValues) * 0.98;
   const maxValue = Math.max(...allValues) * 1.02;
 
 const getStatus = () => {
-  if (value >= goalValue!) return 'good';
-  if (value >= goalValue! * 0.85) return 'warning';
+  if (safeValue >= goalValue!) return 'good';
+  if (safeValue >= goalValue! * 0.85) return 'warning';
   return 'alert';
 };
 
@@ -84,7 +86,7 @@ const dotColor =
 
       {/* Value */}
       <div className="flex items-baseline mb-2">
-        <span className="text-2xl font-bold text-gray-900">{value.toFixed(1)}</span>
+        <span className="text-2xl font-bold text-gray-900">{safeValue.toFixed(1)}</span>
         <span className="text-sm text-gray-500 ml-1">{unit}</span>
       </div>
       

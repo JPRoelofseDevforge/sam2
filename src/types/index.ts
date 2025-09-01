@@ -1,4 +1,5 @@
 export interface Athlete {
+  id: number; // Primary key from database
   athlete_id: string;
   name: string;
   sport: string;
@@ -158,7 +159,7 @@ export interface BloodResults {
   id?: number; // Primary key, auto-incrementing
   AthleteId: number; // Foreign key to athletes table (note: capital A)
   name: string;
-  code: number;
+  
   date?: string; // Optional date for tracking multiple tests
   created_at?: string; // Timestamp
 
@@ -251,6 +252,13 @@ export interface ApiResponse<T> {
   error?: string;
   message?: string;
   success: boolean;
+}
+
+// JCRing.Api Response Format
+export interface JCApiResponse<T> {
+  Code: number;
+  Info: string;
+  Data?: T;
 }
 
 export interface PaginatedResponse<T> {
