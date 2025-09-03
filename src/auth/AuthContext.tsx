@@ -549,7 +549,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         loginUrl,
         API_BASE_URL,
         env_VITE_API_URL: import.meta.env.VITE_API_URL,
-        env_VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL
+        env_VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+        fullUrl: loginUrl,
+        isProduction: import.meta.env.PROD
       });
 
       const response = await fetch(loginUrl, {
@@ -560,11 +562,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ username, password }),
       });
 
-      console.log('🔍 DEBUG: Login response', {
+      console.log('🔍 DEBUG: Login response details', {
         status: response.status,
         statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
+        url: response.url,
+        headers: Object.fromEntries(response.headers.entries()),
+        ok: response.ok
       });
+
+      // Log response body for debugging 404 errors
+      if (!response.ok) {
+        try {
+          const errorText = await response.text();
+          console.error('🔍 DEBUG: Login error response body:', errorText);
+
+          // Suggest alternative endpoint for 404 errors
+          if (response.status === 404) {
+            const alternativeUrl = API_BASE_URL.includes('/api')
+              ? loginUrl.replace('/api/auth/login', '/auth/login')
+              : loginUrl.replace('/auth/login', '/api/auth/login');
+            console.warn('🔍 DEBUG: 404 Error - Try alternative endpoint:', alternativeUrl);
+          }
+        } catch (e) {
+          console.error('🔍 DEBUG: Could not read error response body:', e);
+        }
+      }
 
       if (response.ok) {
         const data = await response.json();
