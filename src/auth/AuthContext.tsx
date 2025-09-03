@@ -328,6 +328,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 DEBUG: Login response data', data);
 
         // Handle JCRing.Api response format
         if (data && typeof data === 'object' && 'Code' in data && 'Info' in data) {
@@ -543,6 +544,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
     try {
       const loginUrl = `${API_BASE_URL}/auth/login`;
+      console.log('🔍 DEBUG: Login attempt', {
+        username,
+        loginUrl,
+        API_BASE_URL,
+        env_VITE_API_URL: import.meta.env.VITE_API_URL,
+        env_VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL
+      });
 
       const response = await fetch(loginUrl, {
         method: 'POST',
@@ -550,6 +558,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, password }),
+      });
+
+      console.log('🔍 DEBUG: Login response', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       });
 
       if (response.ok) {
@@ -627,7 +641,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return false;
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('🔍 DEBUG: Login failed with error:', error);
       return false;
     }
   }, [API_BASE_URL, storeAuthData, setTokenLogged, setUserLogged, setIsAuthenticatedLogged, isRefreshing, refreshToken]);
