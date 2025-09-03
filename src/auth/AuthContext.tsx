@@ -176,13 +176,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Clear authentication state
   const clearAuthState = useCallback(() => {
+    console.log('🔄 LOGOUT: Clearing authentication state started');
     performanceMonitor.logAuthChange('clearAuthState', { reason: 'manual_clear' });
     setIsAuthenticatedLogged(false);
     setUserLogged(null);
     setTokenLogged(null);
+    console.log('🔄 LOGOUT: Authentication state cleared (isAuthenticated=false, user=null, token=null)');
     safeLocalStorage.removeItem('authToken');
     safeLocalStorage.removeItem('user');
     safeLocalStorage.removeItem('authData');
+    console.log('🔄 LOGOUT: Local storage cleared (authToken, user, authData removed)');
 
     // Clear any pending intervals
     if (refreshIntervalRef.current) {
@@ -193,6 +196,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
     }
+    console.log('🔄 LOGOUT: Intervals and timeouts cleared');
   }, []);
 
   // Store authentication data securely
@@ -668,6 +672,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [API_BASE_URL, storeAuthData, setTokenLogged, setUserLogged, setIsAuthenticatedLogged, isRefreshing, refreshToken]);
   const logout = useCallback(() => {
+    console.log('🔄 LOGOUT: Logout function called');
     clearAuthState();
   }, [clearAuthState]);
 
