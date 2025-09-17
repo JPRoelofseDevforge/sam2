@@ -9,7 +9,7 @@ const performanceMonitor = {
   logAuthChange: (action: string, details?: any) => {
     const timestamp = Date.now();
     performanceMonitor.authStateChanges.push({ timestamp, action, details });
-    console.log(`🔄 Auth Change [${new Date(timestamp).toISOString()}]: ${action}`, details);
+    // Removed console.log to prevent excessive output
 
     // Keep only last 50 entries to prevent memory leaks
     if (performanceMonitor.authStateChanges.length > 50) {
@@ -176,16 +176,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Clear authentication state
   const clearAuthState = useCallback(() => {
-    console.log('🔄 LOGOUT: Clearing authentication state started');
     performanceMonitor.logAuthChange('clearAuthState', { reason: 'manual_clear' });
     setIsAuthenticatedLogged(false);
     setUserLogged(null);
     setTokenLogged(null);
-    console.log('🔄 LOGOUT: Authentication state cleared (isAuthenticated=false, user=null, token=null)');
     safeLocalStorage.removeItem('authToken');
     safeLocalStorage.removeItem('user');
     safeLocalStorage.removeItem('authData');
-    console.log('🔄 LOGOUT: Local storage cleared (authToken, user, authData removed)');
 
     // Clear any pending intervals
     if (refreshIntervalRef.current) {
@@ -196,7 +193,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
     }
-    console.log('🔄 LOGOUT: Intervals and timeouts cleared');
   }, []);
 
   // Store authentication data securely
@@ -332,7 +328,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🔍 DEBUG: Login response data', data);
 
         // Handle JCRing.Api response format
         if (data && typeof data === 'object' && 'Code' in data && 'Info' in data) {
@@ -548,15 +543,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
     try {
       const loginUrl = `${API_BASE_URL}/auth/login`;
-      console.log('🔍 DEBUG: Login attempt', {
-        username,
-        loginUrl,
-        API_BASE_URL,
-        env_VITE_API_URL: import.meta.env.VITE_API_URL,
-        env_VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
-        fullUrl: loginUrl,
-        isProduction: import.meta.env.PROD
-      });
 
       const response = await fetch(loginUrl, {
         method: 'POST',
@@ -566,29 +552,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ username, password }),
       });
 
-      console.log('🔍 DEBUG: Login response details', {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-        headers: Object.fromEntries(response.headers.entries()),
-        ok: response.ok
-      });
-
       // Log response body for debugging 404 errors
       if (!response.ok) {
         try {
           const errorText = await response.text();
-          console.error('🔍 DEBUG: Login error response body:', errorText);
+          console.error('Login error:', errorText);
 
           // Suggest alternative endpoint for 404 errors
           if (response.status === 404) {
             const alternativeUrl = API_BASE_URL.includes('/api')
               ? loginUrl.replace('/api/auth/login', '/auth/login')
               : loginUrl.replace('/auth/login', '/api/auth/login');
-            console.warn('🔍 DEBUG: 404 Error - Try alternative endpoint:', alternativeUrl);
+            console.warn('404 Error - Try alternative endpoint:', alternativeUrl);
           }
         } catch (e) {
-          console.error('🔍 DEBUG: Could not read error response body:', e);
+          console.error('Could not read error response body:', e);
         }
       }
 
@@ -667,12 +645,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return false;
     } catch (error) {
-      console.error('🔍 DEBUG: Login failed with error:', error);
+      console.error('Login failed:', error);
       return false;
     }
   }, [API_BASE_URL, storeAuthData, setTokenLogged, setUserLogged, setIsAuthenticatedLogged, isRefreshing, refreshToken]);
   const logout = useCallback(() => {
-    console.log('🔄 LOGOUT: Logout function called');
     clearAuthState();
   }, [clearAuthState]);
 

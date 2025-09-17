@@ -69,7 +69,6 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
         setAthleteBiometrics(data.biometricData || []);
         setAthleteGenetics(data.geneticProfile || []);
 
-
         // Also fetch all biometric data for team averages
         const allData = await dataService.getData(true);
         if (!isMounted) return;
@@ -77,7 +76,6 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
         setAllBiometricData(allData.biometricData || []);
       } catch (error) {
         if (!isMounted) return;
-        console.error('❌ AthleteProfile: Failed to fetch athlete data:', error);
         // Data service will return empty arrays if database is unavailable
       } finally {
         if (isMounted) {
@@ -117,28 +115,42 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
     );
   }
 
-  const alert = generateAlert(athlete?.athlete_id || '', athleteBiometrics, athleteGenetics);
+  const alert = generateAlert(athlete?.athlete_id || athleteId.toString(), athleteBiometrics, athleteGenetics);
 
-  // Filter for valid biometric records (those with actual data, not just $ref)
+  // Filter for valid biometric records (those with athlete_id and date)
   const validBiometricData = athleteBiometrics.filter(record => {
-    const isValid = record &&
-                   record.athlete_id &&
-                   record.athlete_id !== '' &&
-                   record.date &&
-                   record.date !== '' &&
-                   typeof record.hrv_night === 'number' &&
-                   record.hrv_night >= 0 &&
-                   typeof record.resting_hr === 'number' &&
-                   record.resting_hr >= 0;
+    // Must have valid athlete_id and date
+    const hasValidIdentifiers = record &&
+                               record.athlete_id &&
+                               record.athlete_id !== '' &&
+                               record.date &&
+                               record.date !== '';
 
-    return isValid;
+    // Must have at least one meaningful biometric value (not null, undefined, or 0)
+    const hasBiometricData = record &&
+                            (record.hrv_night && record.hrv_night > 0) ||
+                            (record.resting_hr && record.resting_hr > 0) ||
+                            (record.deep_sleep_pct && record.deep_sleep_pct > 0) ||
+                            (record.rem_sleep_pct && record.rem_sleep_pct > 0) ||
+                            (record.sleep_duration_h && record.sleep_duration_h > 0) ||
+                            (record.spo2_night && record.spo2_night > 0) ||
+                            (record.resp_rate_night && record.resp_rate_night > 0) ||
+                            (record.temp_trend_c && record.temp_trend_c > 0) ||
+                            (record.training_load_pct && record.training_load_pct > 0);
+
+    return hasValidIdentifiers && hasBiometricData;
   });
 
-  // Get the most recent valid record
-  const latest = validBiometricData.length > 0 ? validBiometricData[validBiometricData.length - 1] : null;
+  // Get the most recent valid record (sort by date first)
+  const sortedValidData = validBiometricData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  console.log('Sorted Valid Biometric Data:', sortedValidData);
+  const latest = sortedValidData.length > 0 ? sortedValidData[0] : null;
+  console.log('Latest Biometric Record:', latest);
+
+  // Create sorted biometric data for charts (sort all data by date for consistent chart ordering)
+  const sortedBiometricData = athleteBiometrics.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const readinessScore = latest ? calculateReadinessScore(latest) : 0;
   const geneticInsights = getGeneticInsights(athleteGenetics);
-
 
   const geneticArray = Array.isArray(athleteGenetics) ? athleteGenetics : [];
   const geneticDict = geneticArray.reduce((acc, profile) => {
@@ -201,32 +213,40 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
           
           <div>
             <h3 className="text-lg font-semibold mb-2 text-gray-900">🧬 Genetic Profile</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {Object.entries(geneticDict).slice(0, 10).map(([gene, genotype], index) => (
-                <div key={gene} className="text-sm text-gray-700">
-                  <strong>{gene}:</strong> {genotype}
+            {Object.entries(geneticDict).length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(geneticDict).slice(0, 10).map(([gene, genotype], index) => (
+                    <div key={gene} className="text-sm text-gray-700">
+                      <strong>{gene}:</strong> {genotype}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            {Object.entries(geneticDict).length > 10 && (
-              <div className="text-xs text-gray-500 mt-2">
-                Showing top 10 of {Object.entries(geneticDict).length} genes
-              </div>
+                {Object.entries(geneticDict).length > 10 && (
+                  <div className="text-xs text-gray-500 mt-2">
+                    Showing top 10 of {Object.entries(geneticDict).length} genes
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-sm text-gray-500">No genetic data available</div>
             )}
           </div>
           
           <div className="text-center">
-            <div className="text-4xl font-bold mb-2 text-gray-900">{readinessScore.toFixed(0)}%</div>
+            <div className="text-4xl font-bold mb-2 text-gray-900">
+              {latest ? `${readinessScore.toFixed(0)}%` : 'N/A'}
+            </div>
             <div className="text-gray-600">Readiness Score</div>
             <div className="text-sm text-gray-500 mt-1">
-              Based on HRV, RHR, Sleep & SpO₂
+              {latest ? 'Based on HRV, RHR, Sleep & SpO₂' : 'No biometric data available'}
             </div>
           </div>
         </div>
       </div>
 
       {/* Current Alert */}
-      <AlertCard alert={alert} />
+      {/* <AlertCard alert={alert} /> */}
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
@@ -288,163 +308,170 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
           </div>
         )}
 
-        {activeTab === 'metrics' && latest && (
+        {activeTab === 'metrics' && (
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-              <h2 className="text-2xl font-bold text-white">📊 Today's Readiness Metrics</h2>
-              <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
-                <span className={`w-2 h-2 rounded-full ${readinessScore > 75 ? 'bg-green-500' : readinessScore > 50 ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
-                {athlete.name.split(' ')[0]} is{' '}
-                {readinessScore > 75 ? 'ready' : readinessScore > 50 ? 'recovering' : 'fatigued'}
+              <h2 className="text-2xl font-bold text-white">📊 Current Readiness Metrics</h2>
+              {latest && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
+                  <span className={`w-2 h-2 rounded-full ${readinessScore > 75 ? 'bg-green-500' : readinessScore > 50 ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
+                  {athlete.name.split(' ')[0]} is{' '}
+                  {readinessScore > 75 ? 'ready' : readinessScore > 50 ? 'recovering' : 'fatigued'}
+                </div>
+              )}
+            </div>
+
+            {latest ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {/* HRV */}
+                  <MetricCard
+                    title="HRV (Night)"
+                    value={latest.hrv_night || 0}
+                    unit="ms"
+                    icon="❤️"
+                    subtitle={readinessScore > 75 ? "Excellent recovery" : "Moderate recovery"}
+                    trend={readinessScore > 75 ? "up" : "down"}
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.hrv_night || 0 }))}
+                    teamAverage={getTeamAverage('hrv_night', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={50}
+                    goalLabel="Target"
+                  />
+
+                  {/* Resting HR */}
+                  <MetricCard
+                    title="Resting HR"
+                    value={latest.resting_hr || 0}
+                    unit="bpm"
+                    icon="❤️"
+                    subtitle={(latest.resting_hr || 0) < 60 ? "Optimal" : (latest.resting_hr || 0) < 65 ? "Good" : "Elevated"}
+                    trend={(latest.resting_hr || 0) < 60 ? "up" : "down"}
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.resting_hr || 0 }))}
+                    teamAverage={getTeamAverage('resting_hr', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={60}
+                    goalLabel="Ideal"
+                  />
+
+                  {/* Deep Sleep */}
+                  <MetricCard
+                    title="Deep Sleep"
+                    value={latest.deep_sleep_pct || 0}
+                    unit="%"
+                    icon="💤"
+                    subtitle={(latest.deep_sleep_pct || 0) > 20 ? "Restorative" : "Low"}
+                    trend={(latest.deep_sleep_pct || 0) > 20 ? "up" : "down"}
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.deep_sleep_pct || 0 }))}
+                    teamAverage={getTeamAverage('deep_sleep_pct', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={20}
+                    goalLabel="Min"
+                  />
+
+                  {/* REM Sleep */}
+                  <MetricCard
+                    title="REM Sleep"
+                    value={latest.rem_sleep_pct || 0}
+                    unit="%"
+                    icon="🧠"
+                    subtitle={(latest.rem_sleep_pct || 0) > 18 ? "Cognitive recovery" : "Below ideal"}
+                    trend={(latest.rem_sleep_pct || 0) > 18 ? "up" : "down"}
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.rem_sleep_pct || 0 }))}
+                    teamAverage={getTeamAverage('rem_sleep_pct', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={18}
+                    goalLabel="Target"
+                  />
+
+                  {/* Sleep Duration */}
+                  <MetricCard
+                    title="Sleep Duration"
+                    value={latest.sleep_duration_h || 0}
+                    unit="h"
+                    icon="🌙"
+                    subtitle={(latest.sleep_duration_h || 0) >= 7 ? "Adequate" : "Short"}
+                    trend={(latest.sleep_duration_h || 0) >= 7 ? "up" : "down"}
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.sleep_duration_h || 0 }))}
+                    teamAverage={getTeamAverage('sleep_duration_h', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={7}
+                    goalLabel="Recommended"
+                  />
+
+                  {/* SpO₂ */}
+                  <MetricCard
+                    title="SpO₂ (Night)"
+                    value={latest.spo2_night || 0}
+                    unit="%"
+                    icon="🫁"
+                    subtitle={(latest.spo2_night || 0) > 96 ? "Normal" : "Monitor"}
+                    trend={(latest.spo2_night || 0) > 96 ? "up" : "down"}
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.spo2_night || 0 }))}
+                    teamAverage={getTeamAverage('spo2_night', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={96}
+                    goalLabel="Healthy"
+                  />
+
+                  {/* Respiratory Rate */}
+                  <MetricCard
+                    title="Respiratory Rate"
+                    value={latest.resp_rate_night || 0}
+                    unit="/min"
+                    icon="🌬️"
+                    subtitle={(latest.resp_rate_night || 0) <= 16 ? "Normal" : "Elevated"}
+                    trend={(latest.resp_rate_night || 0) <= 16 ? "up" : "down"}
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.resp_rate_night || 0 }))}
+                    teamAverage={getTeamAverage('resp_rate_night', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={16}
+                    goalLabel="Max"
+                  />
+
+                  {/* Body Temp */}
+                  <MetricCard
+                    title="Body Temp"
+                    value={latest.temp_trend_c || 0}
+                    unit="°C"
+                    icon="🌡️"
+                    subtitle={Math.abs((latest.temp_trend_c || 0) - 36.8) < 0.3 ? "Stable" : "Elevated"}
+                    trend={Math.abs((latest.temp_trend_c || 0) - 36.8) < 0.3 ? "up" : "down"}
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.temp_trend_c || 0 }))}
+                    teamAverage={getTeamAverage('temp_trend_c', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={36.8}
+                    goalLabel="Normal"
+                  />
+
+                  {/* Training Load */}
+                  <MetricCard
+                    title="Training Load"
+                    value={latest.training_load_pct || 0}
+                    unit="%"
+                    icon="💪"
+                    subtitle={(latest.training_load_pct || 0) > 85 ? "High" : "Moderate"}
+                    trend="neutral"
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.training_load_pct || 0 }))}
+                    teamAverage={getTeamAverage('training_load_pct', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={85}
+                    goalLabel="Optimal"
+                  />
+                </div>
+
+
+                {/* Summary Banner */}
+                <div className="mt-8 card-enhanced p-5">
+                  <h3 className="font-semibold text-gray-900 mb-2">📋 Readiness Summary</h3>
+                  <p className="text-gray-700 text-sm">
+                    {readinessScore > 75
+                      ? `${athlete.name.split(' ')[0]} shows strong recovery markers. Ready for high-intensity training.`
+                      : readinessScore > 50
+                      ? `Recovery is moderate. Consider active recovery or technique work.`
+                      : `Fatigue detected. Prioritize sleep, hydration, and low-intensity sessions.`}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 card-enhanced rounded-xl">
+                <p className="text-gray-600 mb-2">📊 No biometric data available</p>
+                <p className="text-sm text-gray-500">
+                  Biometric data is required to display readiness metrics. Please ensure wearable data is being collected and synced.
+                </p>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {/* HRV */}
-              <MetricCard
-                title="HRV (Night)"
-                value={latest.hrv_night}
-                unit="ms"
-                icon="❤️"
-                subtitle={readinessScore > 75 ? "Excellent recovery" : "Moderate recovery"}
-                trend={readinessScore > 75 ? "up" : "down"}
-                data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.hrv_night }))}
-                teamAverage={getTeamAverage('hrv_night', athlete?.athlete_id || '', allBiometricData)}
-                goalValue={50}
-                goalLabel="Target"
-              />
-              
-              {/* Resting HR */}
-              <MetricCard
-                title="Resting HR"
-                value={latest.resting_hr}
-                unit="bpm"
-                icon="❤️"
-                subtitle={latest.resting_hr < 60 ? "Optimal" : latest.resting_hr < 65 ? "Good" : "Elevated"}
-                trend={latest.resting_hr < 60 ? "up" : "down"}
-                data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.resting_hr }))}
-                teamAverage={getTeamAverage('resting_hr', athlete?.athlete_id || '', allBiometricData)}
-                goalValue={60}
-                goalLabel="Ideal"
-              />
-              
-              {/* Deep Sleep */}
-              <MetricCard
-                title="Deep Sleep"
-                value={latest.deep_sleep_pct}
-                unit="%"
-                icon="💤"
-                subtitle={latest.deep_sleep_pct > 20 ? "Restorative" : "Low"}
-                trend={latest.deep_sleep_pct > 20 ? "up" : "down"}
-                data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.deep_sleep_pct }))}
-                teamAverage={getTeamAverage('deep_sleep_pct', athlete?.athlete_id || '', allBiometricData)}
-                goalValue={20}
-                goalLabel="Min"
-              />
-
-              {/* REM Sleep */}
-              <MetricCard
-                title="REM Sleep"
-                value={latest.rem_sleep_pct}
-                unit="%"
-                icon="🧠"
-                subtitle={latest.rem_sleep_pct > 18 ? "Cognitive recovery" : "Below ideal"}
-                trend={latest.rem_sleep_pct > 18 ? "up" : "down"}
-                data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.rem_sleep_pct }))}
-                teamAverage={getTeamAverage('rem_sleep_pct', athlete?.athlete_id || '', allBiometricData)}
-                goalValue={18}
-                goalLabel="Target"
-              />
-
-              {/* Sleep Duration */}
-              <MetricCard
-                title="Sleep Duration"
-                value={latest.sleep_duration_h}
-                unit="h"
-                icon="🌙"
-                subtitle={latest.sleep_duration_h >= 7 ? "Adequate" : "Short"}
-                trend={latest.sleep_duration_h >= 7 ? "up" : "down"}
-                data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.sleep_duration_h }))}
-                teamAverage={getTeamAverage('sleep_duration_h', athlete?.athlete_id || '', allBiometricData)}
-                goalValue={7}
-                goalLabel="Recommended"
-              />
-
-              {/* SpO₂ */}
-              <MetricCard
-                title="SpO₂ (Night)"
-                value={latest.spo2_night}
-                unit="%"
-                icon="🫁"
-                subtitle={latest.spo2_night > 96 ? "Normal" : "Monitor"}
-                trend={latest.spo2_night > 96 ? "up" : "down"}
-                data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.spo2_night }))}
-                teamAverage={getTeamAverage('spo2_night', athlete?.athlete_id || '', allBiometricData)}
-                goalValue={96}
-                goalLabel="Healthy"
-              />
-
-              {/* Respiratory Rate */}
-              <MetricCard
-                title="Respiratory Rate"
-                value={latest.resp_rate_night}
-                unit="/min"
-                icon="🌬️"
-                subtitle={latest.resp_rate_night <= 16 ? "Normal" : "Elevated"}
-                trend={latest.resp_rate_night <= 16 ? "up" : "down"}
-                data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.resp_rate_night }))}
-                teamAverage={getTeamAverage('resp_rate_night', athlete?.athlete_id || '', allBiometricData)}
-                goalValue={16}
-                goalLabel="Max"
-              />
-
-              {/* Body Temp */}
-              <MetricCard
-                title="Body Temp"
-                value={latest.temp_trend_c}
-                unit="°C"
-                icon="🌡️"
-                subtitle={Math.abs(latest.temp_trend_c - 36.8) < 0.3 ? "Stable" : "Elevated"}
-                trend={Math.abs(latest.temp_trend_c - 36.8) < 0.3 ? "up" : "down"}
-                data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.temp_trend_c }))}
-                teamAverage={getTeamAverage('temp_trend_c', athlete?.athlete_id || '', allBiometricData)}
-                goalValue={36.8}
-                goalLabel="Normal"
-              />
-
-              {/* Training Load */}
-              <MetricCard
-                title="Training Load"
-                value={latest.training_load_pct}
-                unit="%"
-                icon="💪"
-                subtitle={latest.training_load_pct > 85 ? "High" : "Moderate"}
-                trend="neutral"
-                data={athleteBiometrics.slice(-7).map(d => ({ date: d.date, value: d.training_load_pct }))}
-                teamAverage={getTeamAverage('training_load_pct', athlete?.athlete_id || '', allBiometricData)}
-                goalValue={85}
-                goalLabel="Optimal"
-              />
-            </div>
-
-            {/* New Charts Grid */}
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <HeartRateTrendChart athleteId={athleteId} />
-              <SleepMetricsChart athleteId={athleteId} />
-              <TrainingLoadChart athleteId={athleteId} />
-            </div>
-
-            {/* Summary Banner */}
-            <div className="mt-8 card-enhanced p-5">
-              <h3 className="font-semibold text-gray-900 mb-2">📋 Readiness Summary</h3>
-              <p className="text-gray-700 text-sm">
-                {readinessScore > 75
-                  ? `${athlete.name.split(' ')[0]} shows strong recovery markers. Ready for high-intensity training.`
-                  : readinessScore > 50
-                  ? `Recovery is moderate. Consider active recovery or technique work.`
-                  : `Fatigue detected. Prioritize sleep, hydration, and low-intensity sessions.`}
-              </p>
-            </div>
+            )}
           </div>
         )}
 
@@ -461,7 +488,19 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
           <div>
             <h2 className="text-2xl font-bold text-white mb-6">Performance Trends</h2>
             {athleteBiometrics.length >= 2 ? (
-              <TrendChart data={athleteBiometrics} />
+              <TrendChart data={athleteBiometrics.map(d => ({
+                ...d,
+                hrv_night: d.hrv_night || 0,
+                resting_hr: d.resting_hr || 0,
+                spo2_night: d.spo2_night || 0,
+                resp_rate_night: d.resp_rate_night || 0,
+                deep_sleep_pct: d.deep_sleep_pct || 0,
+                rem_sleep_pct: d.rem_sleep_pct || 0,
+                light_sleep_pct: d.light_sleep_pct || 0,
+                sleep_duration_h: d.sleep_duration_h || 0,
+                temp_trend_c: d.temp_trend_c || 0,
+                training_load_pct: d.training_load_pct || 0
+              }))} />
             ) : (
               <div className="text-center py-12 card-enhanced rounded-xl">
                 <p className="text-gray-600 mb-2">📊 Insufficient data for trend analysis</p>
@@ -556,9 +595,9 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                         { label: 'Resting HR', value: latest.resting_hr, unit: 'bpm', ideal: '↓', desc: 'Cardiac stress' },
                         { label: 'Sleep Duration', value: latest.sleep_duration_h, unit: 'h', ideal: '↑', desc: 'Recovery quality' },
                       ].map((item) => {
-                        const isGood = item.ideal === '↑' 
-                          ? (item.value > (item.label === 'HRV' ? 50 : 7)) 
-                          : (item.value < (item.label === 'Resting HR' ? 65 : 0));
+                        const isGood = item.ideal === '↑'
+                          ? ((item.value || 0) > (item.label === 'HRV' ? 50 : 7))
+                          : ((item.value || 0) < (item.label === 'Resting HR' ? 65 : 0));
                         return (
                           <div
                             key={item.label}
@@ -570,7 +609,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
                             </div>
                             <div className="text-right">
                               <div className="font-bold text-gray-900">
-                                {item.value.toFixed(1)} {item.unit}
+                                {(item.value || 0).toFixed(1)} {item.unit}
                               </div>
                               <div className={`text-xs font-medium ${isGood ? 'text-green-600' : 'text-red-600'}`}>
                                 {item.ideal} {isGood ? 'Optimal' : 'Needs work'}

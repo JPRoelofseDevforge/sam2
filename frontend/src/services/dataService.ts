@@ -5,12 +5,25 @@ import authService, { jcringApi, ApiError, AuthError } from './authService';
 
 // Transform backend athlete data to frontend format
 const transformAthletesData = (backendAthletes: any[]): Athlete[] => {
+  const calculateAge = (dob: string | Date | undefined): number => {
+    if (!dob) return 0;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   return backendAthletes.map(athlete => {
+    const rawId = athlete.Id || athlete.$id || athlete.id;
     const transformedAthlete = {
-      id: athlete.$id || athlete.Id || athlete.id,
+      id: rawId,
       athlete_id: (athlete.UnionId || athlete.unionId)?.toString() || '',
-      name: athlete.FullName || athlete.fullName || 'Athlete Unknown',
-      age: athlete.Age || athlete.age || 0,
+      name: `${athlete.FirstName || ''} ${athlete.LastName || ''}`.trim() || athlete.FullName || athlete.fullName || 'Athlete Unknown',
+      age: athlete.Age || athlete.age || calculateAge(athlete.DateOfBirth || athlete.dateOfBirth),
       sport: athlete.SportName || athlete.sportName || 'General',
       team: 'Default Team',
       baseline_start_date: undefined,
@@ -47,7 +60,8 @@ const transformBiometricData = (backendData: any[]): BiometricData[] => {
       item.Hrv ??
       item.heart_rate_variability ??
       item.hrv_night ??
-      item.HRVNight
+      item.HRVNight ??
+      item.HrvNight  // Match the actual backend field name
     );
 
     // Scale up HRV if it's stored as decimal (e.g., 6.55 -> 65.5)
@@ -60,7 +74,8 @@ const transformBiometricData = (backendData: any[]): BiometricData[] => {
       item.Rhr ??
       item.resting_heart_rate ??
       item.resting_hr ??
-      item.RestingHR
+      item.RestingHR ??
+      item.RestingHr  // Match the actual backend field name
     );
 
     // Try multiple possible field names for Sleep
@@ -69,8 +84,9 @@ const transformBiometricData = (backendData: any[]): BiometricData[] => {
       item.Sleep ??
       item.sleep_duration ??
       item.sleep_hours ??
-      item.SleepDuration??
-      item.sleep_duration_h
+      item.SleepDuration ??
+      item.sleep_duration_h ??
+      item.SleepDurationH  // Match the actual backend field name
     );
 
     // Try multiple possible field names for Recovery Score
@@ -142,17 +158,17 @@ const transformBiometricData = (backendData: any[]): BiometricData[] => {
       date: item.Date || item.date || '',
       hrv_night: scaledHrvValue,
       resting_hr: restingHrValue,
-      spo2_night: getNumericValue(item.SpO2 ?? item.SPO2 ?? item.SpO2Night, 0),
-      resp_rate_night: getNumericValue(item.RespiratoryRate ?? item.RespRate ?? item.RespiratoryRateNight, 0),
-      deep_sleep_pct: getNumericValue(item.DeepSleep ?? item.DeepSleepPct ?? item.DeepSleepPercent, 0),
-      rem_sleep_pct: getNumericValue(item.RemSleep ?? item.RemSleepPct ?? item.RemSleepPercent, 0),
-      light_sleep_pct: getNumericValue(item.LightSleep ?? item.LightSleepPct ?? item.LightSleepPercent, 0),
+      spo2_night: getNumericValue(item.SpO2 ?? item.SPO2 ?? item.SpO2Night ?? item.Spo2Night, 0),
+      resp_rate_night: getNumericValue(item.RespiratoryRate ?? item.RespRate ?? item.RespiratoryRateNight ?? item.RespRateNight, 0),
+      deep_sleep_pct: getNumericValue(item.DeepSleep ?? item.DeepSleepPct ?? item.DeepSleepPercent ?? item.DeepSleepPct, 0),
+      rem_sleep_pct: getNumericValue(item.RemSleep ?? item.RemSleepPct ?? item.RemSleepPercent ?? item.RemSleepPct, 0),
+      light_sleep_pct: getNumericValue(item.LightSleep ?? item.LightSleepPct ?? item.LightSleepPercent ?? item.LightSleepPct, 0),
       sleep_duration_h: sleepValue,
-      temp_trend_c: getNumericValue(item.BodyTemperature ?? item.Temperature ?? item.BodyTemp, 0),
+      temp_trend_c: getNumericValue(item.BodyTemperature ?? item.Temperature ?? item.BodyTemp ?? item.TempTrendC, 0),
       training_load_pct: trainingLoadValue,
       sleep_onset_time: item.SleepOnsetTime ?? item.SleepOnset,
       wake_time: item.WakeTime ?? item.WakeUpTime,
-      avg_heart_rate: getNumericValue(item.avg_heart_rate ?? item.avg_heart_rate, 0),
+      avg_heart_rate: getNumericValue(item.avg_heart_rate ?? item.avg_heart_rate ?? item.AvgHeartRate, 0),
     };
 
 
@@ -200,11 +216,16 @@ const aggregateByDate = (data: any[], valueKey: string): Record<string, number> 
 
 // Transform backend genetic profile data to frontend format
 const transformGeneticProfileData = (backendData: any[]): GeneticProfile[] => {
-  return backendData.map(item => ({
-    athlete_id: item.AthleteId?.toString() || item.UnionId || '',
-    gene: item.GeneName || item.Gene || '',
-    genotype: item.Variant || item.Genotype || ''
-  }));
+  return backendData
+    .filter(item => {
+      // Filter out $ref objects that don't contain actual data
+      return !item.$ref && (item.AthleteId || item.UnionId || item.GeneName || item.Gene || item.Variant || item.Genotype);
+    })
+    .map(item => ({
+      athlete_id: item.AthleteId?.toString() || item.UnionId || '',
+      gene: item.GeneName || item.Gene || '',
+      genotype: item.Variant || item.Genotype || ''
+    }));
 };
 
 // Transform backend blood results data to frontend format
@@ -477,9 +498,31 @@ export const athleteService = {
   // Get single athlete by Id (number)
   async getAthleteById(athleteId: number): Promise<Athlete> {
     const response = await api.get(`/athletes/${athleteId}`);
-    const athleteData = response.data.Data;
-    return athleteData; // Extract data from JCRing.Api response
+    let athleteData: any = null;
+    const respData = response.data;
+    if (respData && typeof respData === 'object') {
+      if (respData.Data) {
+        if (Array.isArray(respData.Data)) {
+          athleteData = respData.Data[0] || null;
+        } else if (respData.Data.$values && Array.isArray(respData.Data.$values)) {
+          athleteData = respData.Data.$values[0] || null;
+        } else {
+          athleteData = respData.Data;
+        }
+      } else if (Array.isArray(respData)) {
+        athleteData = respData[0] || null;
+      } else if (respData.$values && Array.isArray(respData.$values)) {
+        athleteData = respData.$values[0] || null;
+      } else {
+        athleteData = respData;
+      }
+    }
+    if (!athleteData || typeof athleteData !== 'object') {
+      throw new Error(`Athlete with ID ${athleteId} not found`);
+    }
+    return transformAthletesData([athleteData])[0];
   },
+
 
   // Get athletes by team/organization
   async getAthletesByTeam(organizationId: number): Promise<Athlete[]> {
@@ -496,7 +539,6 @@ export const biometricDataService = {
   // Get all biometric data
   async getAllBiometricData(athleteId: number, startDate?: string, endDate?: string, page: number = 1, limit: number = 50): Promise<BiometricData[]> {
     try {
-      console.log('getAllBiometricData called with athleteId:', athleteId, 'type:', typeof athleteId);
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
@@ -505,14 +547,20 @@ export const biometricDataService = {
       params.append('limit', limit.toString());
 
       const url = `/Wearable/biometric/${athleteId}?${params.toString()}`;
-      
+
       const response = await wearableApi.get(url);
-      // Assume response structure {code: 1, data: array}, parse to array
-      const rawData = response.data?.data || response.data || [];
-      console.log('Raw biometric data fetched:', rawData, 'records');
+      // Handle .NET JSON serialization format with $values
+      let rawData = response.data?.data || response.data || [];
+
+      // Extract array from .NET $values format
+      if (rawData && typeof rawData === 'object' && rawData.$values && Array.isArray(rawData.$values)) {
+        rawData = rawData.$values;
+      }
+
+      console.log('Raw biometric data response:', rawData);
       // Transform to BiometricData (assume aggregated data with fields like date, steps, heartRate, temperature, spo2, etc.)
       let transformedData = Array.isArray(rawData) ? transformBiometricData(rawData) : [];
-      
+      console.log('Transformed biometric data:', transformedData);
       // Client-side filter by dates if provided (backend may not filter fully)
       if (startDate || endDate) {
         transformedData = transformedData.filter(item => {
@@ -534,10 +582,8 @@ export const biometricDataService = {
     } catch (error) {
       // Handle 404 errors gracefully - athlete not found, return empty array
       if (error instanceof AxiosError && error.response?.status === 404) {
-        console.log('Athlete not found (404), returning empty array');
         return [];
       }
-      console.error('Error fetching biometric data:', error);
       return [];
     }
   },
@@ -545,7 +591,6 @@ export const biometricDataService = {
   // Get biometric data for all athletes in one call
   async getAllAthletesBiometricData(startDate?: string, endDate?: string, page: number = 1, limit: number = 1000): Promise<BiometricData[]> {
     try {
-      console.log('getAllBiometricData called with startDate:', startDate, 'endDate:', endDate, 'page:', page, 'limit:', limit);
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
@@ -556,8 +601,6 @@ export const biometricDataService = {
       const url = `/Wearable/biometric/all?${params.toString()}`;
 
       const response = await wearableApi.get(url);
-      console.log('Raw API response:', response);
-      console.log('Raw API response.data:', response.data);
 
       // Handle different response formats
       let rawData = [];
@@ -573,12 +616,9 @@ export const biometricDataService = {
           // Handle .NET JSON serialization format
           rawData = response.data.$values;
         } else {
-          console.warn('Unexpected response format:', response.data);
           rawData = [];
         }
       }
-
-      console.log('Raw all biometric data fetched:', rawData.length, 'records');
 
       // Transform to BiometricData format
       const transformedData = Array.isArray(rawData) ? transformBiometricData(rawData) : [];
@@ -600,10 +640,8 @@ export const biometricDataService = {
       const endIdx = startIdx + limit;
       const paginatedData = filteredData.slice(startIdx, endIdx);
 
-      console.log('Transformed and filtered biometric data:', paginatedData.length, 'records');
       return paginatedData;
     } catch (error) {
-      console.error('Error fetching all biometric data:', error);
       return [];
     }
   },
@@ -644,13 +682,26 @@ export const biometricDataService = {
         })
       );
 
-      // Transform and merge all data by date, fill missing fields with defaults
+      // Transform and merge all data by date, accumulating non-default fields from each data type
       const allDailyData: any[] = [];
       responses.forEach(({ dataType, data }) => {
         if (data && Array.isArray(data)) {
           const transformed = transformBiometricData(data);
           transformed.forEach((item: any) => {
-            allDailyData.push(item);
+            const partial: any = { date: item.date, athlete_id: athleteId.toString() };
+            Object.keys(item).forEach((key: string) => {
+              if (key !== 'date' && key !== 'athlete_id') {
+                const value = item[key];
+                if (value !== undefined && value !== null &&
+                    (typeof value !== 'number' || value !== 0) &&
+                    (typeof value !== 'string' || value !== '')) {
+                  partial[key] = value;
+                }
+              }
+            });
+            if (Object.keys(partial).length > 2) {
+              allDailyData.push(partial);
+            }
           });
         }
       });
@@ -693,7 +744,6 @@ export const biometricDataService = {
       const { startDate, endDate } = getDefaultDateRange();
       return await biometricDataService.getAllBiometricData(parseInt(athleteId), startDate, endDate, 1, 50);
     } catch (error) {
-      console.error('Error fetching latest biometric data:', error);
       return [];
     }
   },
@@ -728,10 +778,26 @@ export const geneticProfileService = {
   async getGeneticProfileByAthlete(athleteId: number): Promise<GeneticProfile[]> {
     try {
       const response = await api.get(`/genetic-profiles/athletes/${athleteId}`);
-      // Handle .NET JSON serialization format with $values
-      const data = response.data.Data;
-      const extractedData = data?.$values || data || [];
-      return Array.isArray(extractedData) ? transformGeneticProfileData(extractedData) : [];
+      let data: any = response.data.Data || response.data;
+
+      // Handle nested structure with profiles.$values
+      let geneticProfiles: any[] = [];
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        // Check for nested profiles structure
+        if (data.profiles && data.profiles.$values && Array.isArray(data.profiles.$values)) {
+          geneticProfiles = data.profiles.$values;
+        } else if (data.profiles && Array.isArray(data.profiles)) {
+          geneticProfiles = data.profiles;
+        } else if (data.$values && Array.isArray(data.$values)) {
+          geneticProfiles = data.$values;
+        } else if (Array.isArray(data)) {
+          geneticProfiles = data;
+        }
+      } else if (Array.isArray(data)) {
+        geneticProfiles = data;
+      }
+
+      return transformGeneticProfileData(geneticProfiles);
     } catch (error) {
       return [];
     }
@@ -922,16 +988,14 @@ export const dashboardService = {
     try {
       const athletesResponse = await athleteService.getAllAthletes(1, 50);
       const athletes = athletesResponse.athletes || [];
-      console.log('Fetched athletes:', athletes);
 
       // Fetch biometric data for all athletes in one call (optimized)
       let biometricData: BiometricData[] = [];
       try {
         // Use the new single API call instead of looping through athletes
         biometricData = await biometricDataService.getAllAthletesBiometricData(undefined, undefined, 1, 1000);
-        
+
       } catch (error) {
-        console.warn('Failed to fetch biometric data for all athletes:', error);
         biometricData = []; // Ensure it's always an array
       }
 
@@ -961,8 +1025,6 @@ export const dashboardService = {
         geneticProfiles = []; // Ensure it's always an array
       }
 
-      // Log the final result
-
       // Fetch latest blood results for all athletes
       let bloodResults: BloodResults[] = [];
       try {
@@ -970,8 +1032,6 @@ export const dashboardService = {
       } catch (error) {
         bloodResults = []; // Ensure it's always an array
       }
-
-      // Log the final result
 
       return {
         athletes,
@@ -1001,8 +1061,7 @@ export const dashboardService = {
   }> {
     try {
       // First get the athlete by UnionId
-      const athleteResponse = await athleteService.getAthleteById(athleteId);
-      const athlete = athleteResponse ? transformAthletesData([athleteResponse])[0] : undefined;
+      const athlete = await athleteService.getAthleteById(athleteId);
 
       if (!athlete) {
         return {
@@ -1014,11 +1073,11 @@ export const dashboardService = {
         };
       }
 
-      // Fetch biometric data for this athlete (try with broader date range to get more historical data)
+      // Fetch biometric data for this athlete using the database ID (which the backend converts to UnionId)
       let biometricData: BiometricData[] = [];
       try {
-        // Skip date parameters entirely since backend doesn't support them properly
-        biometricData = await biometricDataService.getBiometricDataByAthlete(athlete.id);
+        // Use the database ID - the backend controller will convert it to UnionId for wearable data
+        biometricData = await biometricDataService.getAllBiometricData(athleteId, undefined, undefined, 1, 1000) as BiometricData[];
       } catch (error) {
         biometricData = []; // Ensure it's always an array
       }
@@ -1026,7 +1085,7 @@ export const dashboardService = {
       // Fetch genetic profile for this athlete
       let geneticProfile: GeneticProfile[] = [];
       try {
-        geneticProfile = await geneticProfileService.getGeneticProfileByAthlete(athlete.id);
+        geneticProfile = await geneticProfileService.getGeneticProfileByAthlete(athleteId);
       } catch (error) {
         geneticProfile = []; // Ensure it's always an array
       }
@@ -1035,7 +1094,7 @@ export const dashboardService = {
       let bodyComposition: BodyComposition[] = [];
       try {
         // Skip date parameters entirely since backend doesn't support them properly
-        bodyComposition = await bodyCompositionService.getBodyCompositionByAthlete(athlete.id);
+        bodyComposition = await bodyCompositionService.getBodyCompositionByAthlete(athleteId);
       } catch (error) {
         bodyComposition = []; // Ensure it's always an array
       }
@@ -1043,7 +1102,7 @@ export const dashboardService = {
       // Fetch blood results for this athlete
       let bloodResults: BloodResults[] = [];
       try {
-        bloodResults = await bloodResultsService.getBloodResultsByAthlete(athlete.id);
+        bloodResults = await bloodResultsService.getBloodResultsByAthlete(athleteId);
       } catch (error) {
         bloodResults = []; // Ensure it's always an array
       }
@@ -1065,6 +1124,7 @@ export const dashboardService = {
       };
     }
   },
+
 };
 
 // =====================================================
@@ -1084,7 +1144,6 @@ export const dataService = {
       try {
         // Try to get data from database
         const data = await dashboardService.getDashboardData();
-        
         return data;
       } catch (error) {
         // Return empty arrays instead of throwing error
@@ -1144,6 +1203,7 @@ export const dataService = {
       };
     }
   },
+
 
   async getWomenHealthRecords(startDay: string, endDay: string): Promise<WomenHealthRecord[]> {
     try {

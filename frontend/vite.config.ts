@@ -27,7 +27,7 @@ export default defineConfig({
         },
       },
     },
-    // Enable source maps only in development
+    // Enable source maps for development
     sourcemap: process.env.NODE_ENV === 'development',
     // Optimize build performance
     minify: 'esbuild',

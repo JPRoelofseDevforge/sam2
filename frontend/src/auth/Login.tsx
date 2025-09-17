@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
 export const Login: React.FC = React.memo(() => {
-  console.log('🔄 Login: Component re-rendered');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

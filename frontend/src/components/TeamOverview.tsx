@@ -85,9 +85,9 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
         
 
         setAthletes(data.athletes);
-        console.log('Fetched athletes:', data.athletes);
+        
         setBiometricData(data.biometricData);
-        console.log('Fetched biometricData:', data.biometricData);
+        
         setGeneticProfiles(data.geneticProfiles);
       } catch (error) {
         // Data service will return empty arrays if database is unavailable
@@ -108,7 +108,6 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
 
     // Debug: Show what athlete IDs are available in biometric data
     const uniqueBiometricIds = [...new Set(biometricArray.map(d => d.athlete_id))];
-    console.log('Available biometric athlete_ids:', uniqueBiometricIds);
 
     // Try multiple matching strategies to handle different ID formats
     const data = biometricArray.filter(d => {
@@ -151,6 +150,7 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
       // API returns latest data first, so take the first item (most recent)
       const latest = data && data.length > 0 ? data[0] : null;
 
+
       return {
         athlete,
         latest,
@@ -158,7 +158,6 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
         readinessScore,
       };
     });
-
 
     const validMetrics = athleteMetrics.filter(m => m.latest);
 
@@ -525,7 +524,7 @@ return (
                 </div>
                 <div className="metric-pair">
                   <span className="label">RHR</span>
-                  <span className="value">{latest?.avg_heart_rate ? latest?.avg_heart_rate.toFixed(0) + ' bpm' : (latest?.avg_heart_rate ? latest.avg_heart_rate.toFixed(0) + ' bpm' : 'N/A')}</span>
+                  <span className="value">{latest?.resting_hr ? latest.resting_hr.toFixed(0) + ' bpm' : 'N/A'}</span>
                 </div>
               
                 

@@ -5,19 +5,16 @@ import { TeamComparisonDashboard } from './components/TeamComparisonDashboard';
 import { TrainingLoadHeatmap } from './components/TrainingLoadHeatmap';
 import { RecoveryTimeline } from './components/RecoveryTimeline';
 import { PredictiveAnalytics } from './components/PredictiveAnalytics';
-import { UserManagement } from './components/UserManagement';
+import { AdminDashboard } from './components/AdminDashboard';
 import { WeatherImpactTest } from './components/WeatherImpactTest';
 import { Login } from './auth/Login';
 import { useAuth } from './auth/AuthContext';
 
 function App() {
-  console.log('🔄 App: Component re-rendered');
   const [currentView, setCurrentView] = useState<'team' | 'athlete' | 'comparison' | 'trainingLoad' | 'recoveryTimeline' | 'predictive' | 'whoopStress' | 'userManagement' | 'weatherTest'>('team');
   const [selectedAthleteId, setSelectedAthleteId] = useState<number | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
-
-  console.log('🔄 App: Auth state', { isAuthenticated, currentView, selectedAthleteId });
 
   const handleAthleteClick = (athleteId: number) => {
     setSelectedAthleteId(athleteId);
@@ -143,16 +140,7 @@ function App() {
             >
               User Management
             </button>
-            <button
-              onClick={() => handleNavClick('weatherTest')}
-              className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                currentView === 'weatherTest'
-                  ? 'border-blue-500 text-gray-900'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Weather Test
-            </button>
+          
             <button
               onClick={logout}
               className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
@@ -244,19 +232,7 @@ function App() {
           >
             User Management
           </button>
-          <button
-            onClick={() => {
-              handleNavClick('weatherTest');
-              setIsMobileMenuOpen(false);
-            }}
-            className={`mobile-menu-item block pl-3 pr-4 py-2 border-l-4 text-base font-medium w-full text-left ${
-              currentView === 'weatherTest'
-                ? 'mobile-menu-item active bg-blue-50 border-blue-500 text-blue-700'
-                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
-            }`}
-          >
-            Weather Test
-          </button>
+         
           <button
             onClick={() => {
               logout();
@@ -298,7 +274,7 @@ function App() {
           </div>
         </div>
       ) : currentView === 'userManagement' ? (
-        <UserManagement />
+        <AdminDashboard />
       ) : currentView === 'weatherTest' ? (
         <WeatherImpactTest />
       ) : null}
