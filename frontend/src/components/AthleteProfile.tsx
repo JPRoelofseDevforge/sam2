@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   generateAlert,
   calculateReadinessScore,
@@ -29,15 +30,10 @@ import { HeartRateTrendChart } from './HeartRateTrendChart';
 import { SleepMetricsChart } from './SleepMetricsChart';
 import { TrainingLoadChart } from './TrainingLoadChart';
 
-interface AthleteProfileProps {
-  athleteId: number;
-  onBack: () => void;
-}
-
-export const AthleteProfile: React.FC<AthleteProfileProps> = ({
-    athleteId,
-      onBack
-    }) => {
+export const AthleteProfile: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const athleteId = parseInt(id || '0');
       const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian'>('metrics');
     const tabContentRef = useRef<HTMLDivElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
@@ -106,7 +102,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
       <div className="text-center py-12">
         <p className="text-gray-600">Athlete not found</p>
         <button
-          onClick={onBack}
+          onClick={() => navigate('/')}
           className="mt-4 text-blue-600 hover:text-blue-800"
         >
           ← Back to Team Overview
@@ -196,7 +192,7 @@ export const AthleteProfile: React.FC<AthleteProfileProps> = ({
       <div className="card-enhanced p-6">
         <div className="flex items-start justify-between mb-4">
           <button
-            onClick={onBack}
+            onClick={() => navigate('/')}
             className="flex items-center text-gray-700 hover:text-gray-900 transition-colors duration-200 mb-4"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />

@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
 export const Login: React.FC = React.memo(() => {
@@ -6,16 +7,19 @@ export const Login: React.FC = React.memo(() => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     const success = await login(username, password);
     if (!success) {
       setError('Invalid username or password');
+    } else {
+      // Navigate to the main dashboard after successful login
+      navigate('/', { replace: true });
     }
-    // If login successful, component will re-render due to context change
   };
 
   const handleUsernameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

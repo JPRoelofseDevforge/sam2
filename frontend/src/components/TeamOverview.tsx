@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { generateAlert, calculateReadinessScore } from '../utils/analytics';
 import { Athlete, BiometricData, GeneticProfile } from '../types';
 import dataService from '../services/dataService';
@@ -24,10 +25,6 @@ interface AirQualityData {
   pressure: number;
   weatherCondition: string;
   lastUpdated: string;
-}
-
-interface TeamOverviewProps {
-  onAthleteClick: (athleteId: number) => void;
 }
 
 const getStatusColorClass = (alertType: string): string => {
@@ -67,7 +64,8 @@ const CITY = import.meta.env.VITE_CITY || 'Pretoria';
 const STATE = import.meta.env.VITE_STATE || 'Gauteng';
 const COUNTRY = import.meta.env.VITE_COUNTRY || 'South Africa';
 
-export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) => {
+export const TeamOverview: React.FC = () => {
+  const navigate = useNavigate();
   const [airQuality, setAirQuality] = useState<AirQualityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,7 +141,7 @@ export const TeamOverview: React.FC<TeamOverviewProps> = ({ onAthleteClick }) =>
     return { data, genetics, alert, readinessScore };
   };
 
-  const teamStats = React.useMemo(() => {
+  const teamStats = useMemo(() => {
 
     const athleteMetrics = (athletes || []).map(athlete => {
       const { data, alert, readinessScore } = getAthleteData(athlete.athlete_id);
@@ -503,7 +501,7 @@ return (
             <div
               key={athlete.id || index}
               className={`athlete-card ${getStatusColorClass(alert.type)} card-hover`}
-              onClick={() => onAthleteClick(athlete.id)}
+              onClick={() => navigate(`/athlete/${athlete.id}`)}
             >
               <div className="athlete-header">
                 <div className="athlete-info">

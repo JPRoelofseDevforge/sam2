@@ -8,6 +8,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    https: false, // Use HTTP for frontend, HTTPS for backend API
   },
   assetsInclude: ['**/*.glb', '**/*.gltf'],
   optimizeDeps: {

@@ -13,7 +13,7 @@ export {
   SkeletonTable,
   SkeletonList
 } from './Skeleton';
-export { ErrorBoundary, withErrorBoundary, useAsyncError } from './ErrorBoundary';
+export { default as ErrorBoundary } from './ErrorBoundary';
 
 // Re-export existing components for convenience
 export { MetricCard } from '../MetricCard';
