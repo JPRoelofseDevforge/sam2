@@ -16,6 +16,8 @@ export default defineConfig({
   },
   envPrefix: 'VITE_',
   build: {
+    // Output directory for Azure Static Web Apps
+    outDir: 'build',
     // Enable build caching
     watch: null,
     // Optimize chunk splitting
