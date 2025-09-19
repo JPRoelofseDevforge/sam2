@@ -340,60 +340,82 @@ const transformBloodResultsData = (backendData: any[]): BloodResults[] => {
 };
 // Transform backend body composition data to frontend format
 const transformBodyCompositionData = (backendData: any[]): BodyComposition[] => {
-  return backendData.map(item => {
-    // Helper function to safely get numeric values with default 0
-    const getNumericValue = (value: any, defaultValue: number = 0): number => {
-      if (value === null || value === undefined || value === '') return defaultValue;
-      const num = Number(value);
-      return isNaN(num) ? defaultValue : num;
-    };
+  console.log('Raw backend data:', backendData);
 
-    // Map API properties to expected frontend properties
-    const weightKg = getNumericValue(item.Weight);
-    const bodyFatRate = getNumericValue(item.BodyFat);
-    const muscleMassKg = getNumericValue(item.MuscleMass);
-    const boneDensity = getNumericValue(item.BoneDensity);
+  return backendData
+    .filter(item => {
+      // Filter out $ref objects (JSON serialization optimization)
+      if (item.$ref) {
+        console.log('Filtering out $ref object:', item);
+        return false;
+      }
 
-    // Calculate derived properties
-    const fatMassKg = (bodyFatRate / 100) * weightKg;
-    const fatFreeBodyWeightKg = weightKg - fatMassKg;
+      // Filter out records with missing essential data
+      const hasEssentialData = item.Id && item.AthleteId && item.MeasurementDate;
+      if (!hasEssentialData) {
+        console.log('Filtering out record due to missing essential data:', item);
+      }
+      return hasEssentialData;
+    })
+    .map(item => {
+      // Helper function to safely get numeric values with default 0
+      const getNumericValue = (value: any, defaultValue: number = 0): number => {
+        if (value === null || value === undefined || value === '') return defaultValue;
+        const num = Number(value);
+        return isNaN(num) ? defaultValue : num;
+      };
 
-    // Assume skeletal muscle is a portion of total muscle mass (typically 50-60%)
-    const skeletalMuscleKg = muscleMassKg * 0.55;
+      // Helper function to safely get date values
+      const getDateValue = (value: any): string => {
+        if (!value) return '';
+        try {
+          // Handle different date formats
+          let dateString = value.toString();
 
-    // Set reasonable defaults for other properties
-    const transformed = {
-      athlete_id: item.AthleteId?.toString() || item.UnionId || '',
-      date: item.MeasurementDate || item.date || '',
-      weight_kg: weightKg,
-      body_fat_rate: bodyFatRate,
-      muscle_mass_kg: muscleMassKg,
-      bone_density: boneDensity,
-      fat_mass_kg: fatMassKg,
-      skeletal_muscle_kg: skeletalMuscleKg,
-      fat_free_body_weight_kg: fatFreeBodyWeightKg,
-      target_weight_kg: getNumericValue(item.TargetWeight, weightKg), // Default to current weight if not provided
-      weight_range_min: getNumericValue(item.WeightRangeMin, weightKg * 0.9), // Default to 90% of current
-      weight_range_max: getNumericValue(item.WeightRangeMax, weightKg * 1.1), // Default to 110% of current
-      bmi: getNumericValue(item.BMI, 22), // Default BMI
-      visceral_fat_grade: getNumericValue(item.VisceralFatGrade, 5), // Default grade
-      basal_metabolic_rate_kcal: getNumericValue(item.BasalMetabolicRate, 1800), // Default BMR
-      subcutaneous_fat_percent: getNumericValue(item.SubcutaneousFatPercent, bodyFatRate * 0.8), // Estimate
-      body_age: getNumericValue(item.BodyAge, 25), // Default body age
-      smi_kg_m2: getNumericValue(item.SMI, 7.0), // Default skeletal muscle index
-      symmetry: item.Symmetry || {
-        arm_mass_right_kg: muscleMassKg * 0.05,
-        arm_mass_left_kg: muscleMassKg * 0.05,
-        leg_mass_right_kg: muscleMassKg * 0.25,
-        leg_mass_left_kg: muscleMassKg * 0.25,
-        trunk_mass_kg: muscleMassKg * 0.4
-      },
-      // Include any other properties from the API response
-      ...item
-    };
+          // Remove timezone info if present (e.g., +00, +02, etc.)
+          dateString = dateString.replace(/([+-]\d{2}):?(\d{2})?$/, '');
 
-    return transformed;
-  });
+          const date = new Date(dateString);
+          return isNaN(date.getTime()) ? '' : value;
+        } catch {
+          return '';
+        }
+      };
+
+      // Map API properties directly to frontend properties
+      const transformed = {
+        id: item.Id,
+        athleteId: item.AthleteId,
+        measurementDate: getDateValue(item.MeasurementDate),
+        weight: getNumericValue(item.Weight),
+        bodyFat: getNumericValue(item.BodyFat),
+        muscleMass: getNumericValue(item.MuscleMass),
+        boneDensity: getNumericValue(item.BoneDensity),
+        targetWeight: getNumericValue(item.TargetWeight),
+        weightRangeMin: getNumericValue(item.WeightRangeMin),
+        weightRangeMax: getNumericValue(item.WeightRangeMax),
+        bmi: getNumericValue(item.BMI),
+        visceralFatGrade: getNumericValue(item.VisceralFatGrade),
+        basalMetabolicRate: getNumericValue(item.BasalMetabolicRate),
+        subcutaneousFatPercent: getNumericValue(item.SubcutaneousFatPercent),
+        bodyAge: getNumericValue(item.BodyAge),
+        smi: getNumericValue(item.SMI),
+        armMassRightKg: getNumericValue(item.ArmMassRightKg),
+        armMassLeftKg: getNumericValue(item.ArmMassLeftKg),
+        legMassRightKg: getNumericValue(item.LegMassRightKg),
+        legMassLeftKg: getNumericValue(item.LegMassLeftKg),
+        trunkMassKg: getNumericValue(item.TrunkMassKg),
+        ArmMassRightFatKg: getNumericValue(item.ArmMassRightFatKg),
+        ArmMassLeftFatKg: getNumericValue(item.ArmMassLeftFatKg),
+        LegMassRightFatKg: getNumericValue(item.LegMassRightFatKg),
+        LegMassLeftFatKg: getNumericValue(item.LegMassLeftFatKg),
+        TrunkMassFatKg: getNumericValue(item.TrunkMassFatKg),
+        // Include athlete navigation property if available (may be null for general endpoint)
+        athlete: item.Athlete || null
+      };
+
+      return transformed;
+    });
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5288/api';
@@ -836,7 +858,12 @@ export const bodyCompositionService = {
       params.append('page', page.toString());
       params.append('limit', limit.toString());
 
-      const response = await api.get(`/body-composition?${params.toString()}`);
+      const response = await api.get(`/body-composition?${params.toString()}`, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
       const rawData = response.data.Data;
       if (Array.isArray(rawData)) {
         return transformBodyCompositionData(rawData);
@@ -854,33 +881,45 @@ export const bodyCompositionService = {
     startDate?: string,
     endDate?: string
   ): Promise<BodyComposition[]> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
+    // First try the general endpoint to get all data, then filter
+    try {
+      console.log('Trying general body-composition endpoint for athlete', athleteId);
 
-    const response = await api.get(`/athletes/${athleteId}/body-composition?${params.toString()}`);
-    // Handle .NET JSON serialization format with $values
-    const data = response.data.Data;
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
 
-    let extractedData: any[] = [];
-    if (data) {
-      if (Array.isArray(data)) {
-        extractedData = data;
-      } else if (data.records && data.records.$values && Array.isArray(data.records.$values)) {
-        // API returns data in nested structure: Data.records.$values
-        extractedData = data.records.$values;
-      } else if (data.$values && Array.isArray(data.$values)) {
-        extractedData = data.$values;
-      } else if (typeof data === 'object') {
-        // Try to extract as array from object properties
-        extractedData = Object.values(data).filter(item => typeof item === 'object' && item !== null);
+      const response = await api.get(`/body-composition?${params.toString()}`);
+      console.log('General API Response:', response.data);
+
+      const data = response.data.Data;
+
+      let allData: any[] = [];
+      if (data) {
+        if (Array.isArray(data)) {
+          allData = data;
+        } else if (data.records && data.records.$values && Array.isArray(data.records.$values)) {
+          allData = data.records.$values;
+        } else if (data.$values && Array.isArray(data.$values)) {
+          allData = data.$values;
+        }
       }
+
+      console.log('All body composition data:', allData);
+
+      // Filter by athleteId
+      const athleteData = allData.filter(item => item && item.AthleteId === athleteId);
+      console.log('Filtered data for athlete', athleteId, ':', athleteData);
+
+      // Transform data to match frontend expectations
+      const transformedData = transformBodyCompositionData(athleteData);
+      console.log('Final transformed data for athlete', athleteId, ':', transformedData);
+
+      return transformedData;
+    } catch (error) {
+      console.error('Error fetching body composition data:', error);
+      return [];
     }
-
-    // Transform data to match frontend expectations
-    const transformedData = Array.isArray(extractedData) ? transformBodyCompositionData(extractedData) : [];
-
-    return transformedData;
   },
 
   // Get latest body composition for all athletes
@@ -916,6 +955,17 @@ export const bodyCompositionService = {
   // Insert/Update body composition data
   async saveBodyComposition(athleteId: number, data: Omit<BodyComposition, 'athlete_id'>): Promise<void> {
     await api.post(`/athletes/${athleteId}/body-composition`, data);
+  },
+
+  // Delete body composition record
+  async deleteBodyComposition(recordId: number): Promise<void> {
+    await api.delete(`/body-composition/${recordId}`);
+  },
+
+  // Get all athletes
+  async getAllAthletes(page: number = 1, limit: number = 50): Promise<Athlete[]> {
+    const response = await athleteService.getAllAthletes(page, limit);
+    return response.athletes || [];
   },
 };
 

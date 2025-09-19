@@ -13,6 +13,7 @@ const RecoveryTimeline = lazy(() => import('./components/RecoveryTimeline').then
 const PredictiveAnalytics = lazy(() => import('./components/PredictiveAnalytics').then(module => ({ default: module.PredictiveAnalytics })));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const WeatherImpactTest = lazy(() => import('./components/WeatherImpactTest').then(module => ({ default: module.WeatherImpactTest })));
+const BodyCompositionManagement = lazy(() => import('./components/BodyCompositionManagement').then(module => ({ default: module.BodyCompositionManagement })));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -54,6 +55,7 @@ const AppContent: React.FC = () => {
               <Route path="/predictive" element={<PredictiveAnalytics />} />
               <Route path="/user-management" element={<AdminDashboard />} />
               <Route path="/weather-test" element={<WeatherImpactTest />} />
+              <Route path="/body-composition" element={<BodyCompositionManagement />} />
               <Route path="/athlete/:id" element={<AthleteProfile />} />
               <Route path="/login" element={<Login />} />
               <Route path="*" element={<Navigate to="/" replace />} />

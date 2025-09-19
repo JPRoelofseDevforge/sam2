@@ -92,6 +92,9 @@ const Navigation: React.FC<NavigationProps> = ({ isMobileMenuOpen, setIsMobileMe
             <Link to="/predictive" className={getNavLinkClass('/predictive')}>
               Predictive Analytics
             </Link>
+            <Link to="/body-composition" className={getNavLinkClass('/body-composition')}>
+              Body Composition
+            </Link>
             <Link to="/user-management" className={getNavLinkClass('/user-management')}>
               User Management
             </Link>
@@ -143,6 +146,13 @@ const Navigation: React.FC<NavigationProps> = ({ isMobileMenuOpen, setIsMobileMe
             className={getMobileNavLinkClass('/predictive')}
           >
             Predictive Analytics
+          </Link>
+          <Link
+            to="/body-composition"
+            onClick={() => handleNavClick('/body-composition')}
+            className={getMobileNavLinkClass('/body-composition')}
+          >
+            Body Composition
           </Link>
           <Link
             to="/user-management"

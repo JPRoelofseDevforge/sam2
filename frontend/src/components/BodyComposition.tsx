@@ -22,7 +22,7 @@ export const BodyComposition: React.FC<BodyCompositionProps> = ({ data, history 
 
   // Sort history by date
   const sortedHistory = hasHistory
-    ? [...history].sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime())
+    ? [...history].sort((a, b) => new Date(a.measurementDate).getTime() - new Date(b.measurementDate).getTime())
     : [];
 
   // BMI & Body Fat Status

@@ -135,37 +135,35 @@ export interface MuscleSymmetry {
 
 
 export interface BodyComposition {
-  athlete_id: string;
-  date?: string; // Optional for single entry, required for history
+  id: number;
+  athleteId: number;
+  measurementDate: string;
+  weight: number;
+  bodyFat: number;
+  muscleMass: number;
+  boneDensity: number;
+  targetWeight?: number;
+  weightRangeMin?: number;
+  weightRangeMax?: number;
+  bmi?: number;
+  visceralFatGrade?: number;
+  basalMetabolicRate?: number;
+  subcutaneousFatPercent?: number;
+  bodyAge?: number;
+  smi?: number;
+  armMassRightKg?: number;
+  armMassLeftKg?: number;
+  legMassRightKg?: number;
+  legMassLeftKg?: number;
+  trunkMassKg?: number;
+  ArmMassRightFatKg?: number;
+  ArmMassLeftFatKg?: number;
+  LegMassRightFatKg?: number;
+  LegMassLeftFatKg?: number;
+  TrunkMassFatKg?: number;
 
-  weight_kg: number;
-  weight_range_min: number;
-  weight_range_max: number;
-
-  fat_mass_kg: number;
-  fat_mass_range_min: number;
-  fat_mass_range_max: number;
-
-  muscle_mass_kg: number;
-  muscle_mass_range_min: number;
-  muscle_mass_range_max: number;
-
-  skeletal_muscle_kg: number;
-  body_fat_rate: number;
-  bmi: number;
-  target_weight_kg: number;
-  weight_control_kg: number;
-  fat_control_kg: number;
-  muscle_control_kg: number;
-  visceral_fat_grade: number;
-  basal_metabolic_rate_kcal: number;
-  fat_free_body_weight_kg: number;
-  subcutaneous_fat_percent: number;
-  smi_kg_m2: number;
-  body_age: number;
-
-  // New: Symmetry
-  symmetry?: MuscleSymmetry;
+  // Navigation property
+  athlete?: Athlete;
 }
 
 

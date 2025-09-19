@@ -1,18 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   generateAlert,
   calculateReadinessScore,
-  getGeneticInsights
+  getGeneticInsights,
+  getTeamAverage
 } from '../utils/analytics';
 import { Athlete, BiometricData, GeneticProfile, BodyComposition as BodyCompositionType } from '../types';
-import dataService from '../services/dataService';
+import { useIndividualAthleteData, useTeamData } from '../hooks/useAthleteData';
 import { MetricCard } from './MetricCard';
 import { AlertCard } from './AlertCard';
 import { TrendChart } from './TrendChart';
 import ScaleReport from './ScaleReport';
 import { ArrowLeft } from 'lucide-react';
-import { getTeamAverage } from '../utils/analytics';
 import { DigitalTwin3D } from './DigitalTwin';
 import { TrainingLoadHeatmap } from './TrainingLoadHeatmap';
 import { RecoveryTimeline } from './RecoveryTimeline';
@@ -29,64 +29,20 @@ import { HormoneBalanceChart } from './HormoneBalanceChart';
 import { HeartRateTrendChart } from './HeartRateTrendChart';
 import { SleepMetricsChart } from './SleepMetricsChart';
 import { TrainingLoadChart } from './TrainingLoadChart';
+import { filterValidBiometricData, sortBiometricDataByDate, getLatestBiometricRecord, getSortedBiometricDataForCharts } from '../utils/athleteUtils';
 
 export const AthleteProfile: React.FC = () => {
+  console.log('🔍 DEBUG: AthleteProfile component rendering');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const athleteId = parseInt(id || '0');
-      const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian'>('metrics');
-    const tabContentRef = useRef<HTMLDivElement>(null);
+       const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian'>('metrics');
+     const tabContentRef = useRef<HTMLDivElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
   
-  // State for database data
-  const [athlete, setAthlete] = useState<Athlete | undefined>(undefined);
-  const [athleteBiometrics, setAthleteBiometrics] = useState<BiometricData[]>([]);
-  const [athleteGenetics, setAthleteGenetics] = useState<GeneticProfile[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [allBiometricData, setAllBiometricData] = useState<BiometricData[]>([]);
-
-  // Fetch athlete data from database
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchAthleteData = async () => {
-      try {
-        if (!isMounted) return;
-
-        setDataLoading(true);
-
-        // Fetch individual athlete data
-        const data = await dataService.getAthleteData(athleteId, true); // true = use database
-
-        if (!isMounted) return;
-
-        // Set state with the received data
-        setAthlete(data.athlete);
-        setAthleteBiometrics(data.biometricData || []);
-        setAthleteGenetics(data.geneticProfile || []);
-
-        // Also fetch all biometric data for team averages
-        const allData = await dataService.getData(true);
-        if (!isMounted) return;
-
-        setAllBiometricData(allData.biometricData || []);
-      } catch (error) {
-        if (!isMounted) return;
-        // Data service will return empty arrays if database is unavailable
-      } finally {
-        if (isMounted) {
-          setDataLoading(false);
-        }
-      }
-    };
-
-    fetchAthleteData();
-
-    // Cleanup function to prevent state updates on unmounted component
-    return () => {
-      isMounted = false;
-    };
-  }, [athleteId]);
+  // Use custom hooks for data fetching
+  const { athlete, biometricData: athleteBiometrics, geneticProfiles: athleteGenetics, loading: dataLoading } = useIndividualAthleteData(athleteId, true);
+  const { biometricData: allBiometricData } = useTeamData(true);
 
   // Show loading state while fetching data
   if (dataLoading) {
@@ -113,38 +69,15 @@ export const AthleteProfile: React.FC = () => {
 
   const alert = generateAlert(athlete?.athlete_id || athleteId.toString(), athleteBiometrics, athleteGenetics);
 
-  // Filter for valid biometric records (those with athlete_id and date)
-  const validBiometricData = athleteBiometrics.filter(record => {
-    // Must have valid athlete_id and date
-    const hasValidIdentifiers = record &&
-                               record.athlete_id &&
-                               record.athlete_id !== '' &&
-                               record.date &&
-                               record.date !== '';
+  // Process biometric data using utility functions
+  console.log(`🔍 DEBUG: Processing ${athleteBiometrics.length} biometric records for athlete ${athleteId}`);
+  const validBiometricData = filterValidBiometricData(athleteBiometrics);
+  console.log(`🔍 DEBUG: Filtered to ${validBiometricData.length} valid biometric records`);
 
-    // Must have at least one meaningful biometric value (not null, undefined, or 0)
-    const hasBiometricData = record &&
-                            (record.hrv_night && record.hrv_night > 0) ||
-                            (record.resting_hr && record.resting_hr > 0) ||
-                            (record.deep_sleep_pct && record.deep_sleep_pct > 0) ||
-                            (record.rem_sleep_pct && record.rem_sleep_pct > 0) ||
-                            (record.sleep_duration_h && record.sleep_duration_h > 0) ||
-                            (record.spo2_night && record.spo2_night > 0) ||
-                            (record.resp_rate_night && record.resp_rate_night > 0) ||
-                            (record.temp_trend_c && record.temp_trend_c > 0) ||
-                            (record.training_load_pct && record.training_load_pct > 0);
+  const latest = getLatestBiometricRecord(validBiometricData);
+  console.log('🔍 DEBUG: Latest Biometric Record date:', latest?.date);
 
-    return hasValidIdentifiers && hasBiometricData;
-  });
-
-  // Get the most recent valid record (sort by date first)
-  const sortedValidData = validBiometricData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  console.log('Sorted Valid Biometric Data:', sortedValidData);
-  const latest = sortedValidData.length > 0 ? sortedValidData[0] : null;
-  console.log('Latest Biometric Record:', latest);
-
-  // Create sorted biometric data for charts (sort all data by date for consistent chart ordering)
-  const sortedBiometricData = athleteBiometrics.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const sortedBiometricData = getSortedBiometricDataForCharts(athleteBiometrics);
   const readinessScore = latest ? calculateReadinessScore(latest) : 0;
   const geneticInsights = getGeneticInsights(athleteGenetics);
 
@@ -476,7 +409,7 @@ export const AthleteProfile: React.FC = () => {
           <CircadianRhythm
             biometricData={athleteBiometrics}
             geneticData={athleteGenetics}
-            athleteId={athlete?.athlete_id || ''}
+            athleteId={athleteId.toString()}
           />
         )}
 
@@ -686,12 +619,12 @@ export const AthleteProfile: React.FC = () => {
         {activeTab === 'scaleReport' && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-6">⚖️ Scale Report</h2>
-            <ScaleReport athleteId={athlete?.athlete_id || ''} />
+            <ScaleReport athleteId={athleteId.toString()} />
           </div>
         )}
 
         {activeTab === 'digitalTwin' && (
-          <DigitalTwin3D athleteId={athlete?.athlete_id || ''} />
+          <DigitalTwin3D athleteId={athleteId.toString()} />
         )}
 
 
@@ -700,42 +633,42 @@ export const AthleteProfile: React.FC = () => {
         )}
 
         {activeTab === 'recoveryTimeline' && (
-          <RecoveryTimeline athleteId={athlete?.athlete_id || ''} />
+          <RecoveryTimeline athleteId={athleteId.toString()} />
         )}
 
         {activeTab === 'pharmacogenomics' && (
-          <Pharmacogenomics athleteId={athlete?.athlete_id || ''} />
+          <Pharmacogenomics athleteId={athleteId.toString()} />
         )}
 
         {activeTab === 'nutrigenomics' && (
-          <Nutrigenomics athleteId={athlete?.athlete_id || ''} />
+          <Nutrigenomics athleteId={athleteId.toString()} />
         )}
 
         {activeTab === 'recoveryGenes' && (
-          <RecoveryGenePanel athleteId={athlete?.athlete_id || ''} />
+          <RecoveryGenePanel athleteId={athleteId.toString()} />
         )}
 
         {activeTab === 'predictive' && (
-                <PredictiveAnalytics athleteId={athlete?.athlete_id || ''} />
+                <PredictiveAnalytics athleteId={athleteId.toString()} />
               )}
 
               {activeTab === 'sleep' && (
                 <SleepMetrics
                   biometricData={athleteBiometrics}
-                  athleteId={athlete?.athlete_id || ''}
+                  athleteId={athleteId.toString()}
                 />
               )}
 
               {activeTab === 'stress' && (
                 <StressManagement
-                  athleteId={athlete?.athlete_id || ''}
+                  athleteId={athleteId.toString()}
                   biometricData={athleteBiometrics}
                 />
               )}
 
               {activeTab === 'weather' && (
                 <WeatherImpact
-                  athleteId={athlete?.athlete_id || ''}
+                  athleteId={athleteId.toString()}
                   geneticData={athleteGenetics}
                 />
               )}
