@@ -406,7 +406,7 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900">Current Sleep Debt</h4>
-                <p className="text-2xl font-bold mt-1">
+                <p className="text-2xl font-bold mt-1  text-gray-900">
                   {sleepDebtData.length > 0 ? 
                     sleepDebtData[sleepDebtData.length - 1].sleepDebt.toFixed(1) : '0.0'} hours
                 </p>
@@ -419,7 +419,7 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
               
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900">Sleep Consistency</h4>
-                <p className="text-2xl font-bold mt-1">
+                <p className="text-2xl font-bold mt-1  text-gray-900">
                   {sleepConsistency.toFixed(1)} min
                 </p>
                 <p className="text-sm text-gray-600 mt-1">
