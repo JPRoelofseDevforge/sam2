@@ -1342,5 +1342,34 @@ export const dataService = {
 
 };
 
+// =====================================================
+// CHAT AI SERVICES
+// =====================================================
+
+export const chatAIService = {
+  // Send message to AI through backend
+  async askAI(athleteId: number, message: string): Promise<{
+    response: string;
+    athlete: string;
+    context: {
+      hasBiometrics: boolean;
+      biometricCount: number;
+      geneticCount: number;
+    };
+  }> {
+    try {
+      const response = await api.post('/chat-ai/ask', {
+        athleteId,
+        message
+      });
+
+      return response.data.Data || response.data;
+    } catch (error) {
+      console.error('Error calling ChatAI service:', error);
+      throw error;
+    }
+  },
+};
+
 // Export default service
 export default dataService;

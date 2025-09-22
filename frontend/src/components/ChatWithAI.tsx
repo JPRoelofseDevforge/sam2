@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Athlete, BiometricData, GeneticProfile } from '../types';
+import { chatAIService } from '../services/dataService';
 
 interface ChatWithAIProps {
   athlete: Athlete;
@@ -22,7 +23,7 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [useOfflineMode, setUseOfflineMode] = useState(true);
+  const [useOfflineMode, setUseOfflineMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -94,105 +95,14 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
 
     try {
       const context = prepareAthleteContext();
-      // Try multiple ways to get the API key for different deployment environments
-      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY ||
-                     (window as any).ENV?.OpenRouterAPiKeyAzure ||
-                     (window as any).OpenRouterAPiKeyAzure ||
-                     import.meta.env.VITE_APP_OPENROUTER_API_KEY ||
-                     process.env?.OpenRouterAPiKeyAzure ||
-                     // Azure Static Web Apps specific patterns
-                     (window as any).__AZURE_STATIC_WEB_APPS_ENV__?.OpenRouterAPiKeyAzure ||
-                     // Try to get from Azure Static Web Apps build-time injection
-                     (import.meta as any).env?.AZURE_OPENROUTER_API_KEY ||
-                     // Azure Static Web Apps runtime environment variables
-                     (window as any).AZURE_STATIC_WEB_APPS_API_TOKEN_OPENROUTERAPIKEYAZURE ||
-                     // Azure Static Web Apps - try common patterns
-                     (window as any).OPENROUTERAPIKEYAZURE ||
-                     (window as any).openRouterAPiKeyAzure ||
-                     // Check if it's available in Azure Static Web Apps context
-                     (window as any).swa?.env?.OpenRouterAPiKeyAzure ||
-                     // Azure Static Web Apps - check for environment variables in the global scope
-                     (globalThis as any).OpenRouterAPiKeyAzure ||
-                     // Azure Static Web Apps - check for Azure-specific global object
-                     (window as any).azure?.env?.OpenRouterAPiKeyAzure;
 
-      // Debug: Log available environment variables (without exposing the actual key)
-      console.log('🔍 DEBUG: Environment check:', {
-        hasViteKey: !!import.meta.env.VITE_OPENROUTER_API_KEY,
-        hasWindowEnv: !!(window as any).ENV,
-        hasWindowDirect: !!(window as any).OpenRouterAPiKeyAzure,
-        hasViteAppKey: !!import.meta.env.VITE_APP_OPENROUTER_API_KEY,
-        hasProcessEnv: !!process.env?.OpenRouterAPiKeyAzure,
-        hasAzureStatic: !!(window as any).__AZURE_STATIC_WEB_APPS_ENV__,
-        hasAzureEnv: !!(import.meta as any).env?.AZURE_OPENROUTER_API_KEY,
-        hasAzureToken: !!(window as any).AZURE_STATIC_WEB_APPS_API_TOKEN_OPENROUTERAPIKEYAZURE,
-        hasWindowUppercase: !!(window as any).OPENROUTERAPIKEYAZURE,
-        hasWindowLowercase: !!(window as any).openRouterAPiKeyAzure,
-        hasSwaEnv: !!(window as any).swa?.env?.OpenRouterAPiKeyAzure,
-        hasGlobalThis: !!(globalThis as any).OpenRouterAPiKeyAzure,
-        hasAzureGlobal: !!(window as any).azure?.env?.OpenRouterAPiKeyAzure,
-        isProduction: import.meta.env.PROD,
-        isDev: import.meta.env.DEV
-      });
-
-      if (!apiKey) {
-        console.warn('⚠️ No API key found in any environment variable');
-        throw new Error('OpenRouter API key not configured. Please set the API key in your deployment environment variables.');
-      }
-
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Athlete Performance Dashboard'
-        },
-        body: JSON.stringify({
-          model: 'meta-llama/llama-3.2-3b-instruct:free',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an AI assistant specialized in athlete performance analysis. You have access to detailed information about ${athlete.name}, a ${athlete.age}-year-old ${athlete.sport} athlete from ${athlete.team}.
-
-Athlete Context:
-- Latest Biometrics (${context.latestBiometrics?.date || 'N/A'}): HRV: ${context.latestBiometrics?.hrv_night || 'N/A'}ms, Resting HR: ${context.latestBiometrics?.resting_hr || 'N/A'}bpm, Deep Sleep: ${context.latestBiometrics?.deep_sleep_pct || 'N/A'}%, REM Sleep: ${context.latestBiometrics?.rem_sleep_pct || 'N/A'}%, Sleep Duration: ${context.latestBiometrics?.sleep_duration_h || 'N/A'}h, SpO2: ${context.latestBiometrics?.spo2_night || 'N/A'}%, Training Load: ${context.latestBiometrics?.training_load_pct || 'N/A'}%
-- Genetic Profile: ${Object.keys(context.geneticProfile).length > 0 ? Object.entries(context.geneticProfile).slice(0, 5).map(([gene, genotype]) => `${gene}: ${genotype}`).join(', ') + (Object.keys(context.geneticProfile).length > 5 ? '...' : '') : 'No genetic data available'}
-- Total Records: ${context.totalBiometricRecords} biometric records, ${context.totalGeneticMarkers} genetic markers
-
-Provide helpful, evidence-based insights about training, recovery, nutrition, and performance optimization. Be specific to this athlete's data and genetic profile when relevant.`
-            },
-            ...messages.map(msg => ({
-              role: msg.role,
-              content: msg.content
-            })),
-            {
-              role: 'user',
-              content: userMessage.content
-            }
-          ],
-          max_tokens: 1000,
-          temperature: 0.7
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OpenRouter API Error Response:', errorText);
-        throw new Error(`API request failed: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('OpenRouter API Response:', data);
-
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error('Invalid response format from OpenRouter API');
-      }
+      // Call backend API instead of OpenRouter directly
+      const result = await chatAIService.askAI(parseInt(athlete.athlete_id), userMessage.content);
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.choices[0].message.content || 'Sorry, I received an empty response from the AI service.',
+        content: result.response,
         timestamp: new Date()
       };
 
