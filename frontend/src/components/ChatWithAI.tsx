@@ -94,12 +94,17 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
 
     try {
       const context = prepareAthleteContext();
+      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+
+      if (!apiKey) {
+        throw new Error('OpenRouter API key not configured. Please set VITE_OPENROUTER_API_KEY in your environment variables.');
+      }
 
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer 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',
+          'Authorization': `Bearer ${apiKey}`,
           'HTTP-Referer': window.location.origin,
           'X-Title': 'Athlete Performance Dashboard'
         },

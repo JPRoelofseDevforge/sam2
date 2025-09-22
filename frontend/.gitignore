@@ -21,6 +21,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Environment variables (contain sensitive API keys)
 .env
 !.env.production
+!.env.development
 dist/
