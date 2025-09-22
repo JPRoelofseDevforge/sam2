@@ -94,10 +94,13 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
 
     try {
       const context = prepareAthleteContext();
-      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+      // Try multiple ways to get the API key for different deployment environments
+      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY ||
+                     import.meta.env.OpenRouterAPiKeyAzure ||
+                     import.meta.env.VITE_APP_OPENROUTER_API_KEY;
 
       if (!apiKey) {
-        throw new Error('OpenRouter API key not configured. Please set VITE_OPENROUTER_API_KEY in your environment variables.');
+        throw new Error('OpenRouter API key not configured. Please set the API key in your deployment environment variables.');
       }
 
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -167,7 +170,7 @@ Provide helpful, evidence-based insights about training, recovery, nutrition, an
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `${offlineResponse}\n\n⚠️ **AI Service Unavailable** - Using intelligent offline analysis based on ${athlete.name}'s actual biometric and genetic data. (Online mode available in production with GitHub Secrets)`,
+        content: `${offlineResponse}\n\n⚠️ **AI Service Unavailable** - Using intelligent offline analysis based on ${athlete.name}'s actual biometric and genetic data. (Online mode available in Azure production deployment)`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -230,18 +233,17 @@ Provide helpful, evidence-based insights about training, recovery, nutrition, an
               className={`px-3 py-1 text-xs rounded-full transition-colors ${
                 useOfflineMode
                   ? 'bg-green-100 text-green-700 border border-green-300'
-                  : 'bg-gray-100 text-gray-500 border border-gray-300'
+                  : 'bg-blue-100 text-blue-700 border border-blue-300'
               }`}
-              disabled={!useOfflineMode}
             >
-              {useOfflineMode ? '📱 Active' : '🌐 Production'}
+              {useOfflineMode ? '📱 Offline' : '🌐 Azure'}
             </button>
           </div>
         </div>
         <p className="text-sm text-gray-600">
           {useOfflineMode
             ? '📱 AI Assistant using intelligent analysis of athlete data'
-            : '🌐 AI service available in production (requires GitHub Secrets)'
+            : '🌐 AI service available in Azure production deployment'
           }
         </p>
       </div>
@@ -252,10 +254,10 @@ Provide helpful, evidence-based insights about training, recovery, nutrition, an
           <div className="text-center py-8 text-gray-500">
             <div className="text-4xl mb-3">🤖</div>
             <p className="font-medium mb-2">AI Assistant for {athlete.name}</p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-800 font-medium mb-2">📱 Intelligent Analysis Mode</p>
-              <p className="text-xs text-blue-700">
-                Using advanced algorithms to analyze {athlete.name}'s biometric data, genetic profile, and performance metrics.
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-green-800 font-medium mb-2">🤖 AI Assistant Active</p>
+              <p className="text-xs text-green-700">
+                Connected to AI service with access to {athlete.name}'s complete biometric data, genetic profile, and performance history.
               </p>
             </div>
             <div className="text-sm space-y-1">
