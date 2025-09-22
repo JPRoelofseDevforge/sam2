@@ -25,6 +25,7 @@ import { StressManagement } from './StressManagement';
 import { WeatherImpact } from './WeatherImpact';
 import { BloodResults } from './BloodResults';
 import { CircadianRhythm } from './CircadianRhythm';
+import { ChatWithAI } from './ChatWithAI';
 import { HormoneBalanceChart } from './HormoneBalanceChart';
 import { HeartRateTrendChart } from './HeartRateTrendChart';
 import { SleepMetricsChart } from './SleepMetricsChart';
@@ -36,7 +37,7 @@ export const AthleteProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const athleteId = parseInt(id || '0');
-       const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian'>('metrics');
+       const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian' | 'chatAI'>('metrics');
      const tabContentRef = useRef<HTMLDivElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
   
@@ -111,7 +112,8 @@ export const AthleteProfile: React.FC = () => {
     { id: 'sleep' as const, label: 'Sleep Metrics', icon: '🌙', count: athleteBiometrics.length },
     { id: 'stress' as const, label: 'Stress Management', icon: '🧘', count: athleteBiometrics.length },
     { id: 'predictive' as const, label: 'Predictive Analytics', icon: '🔮', count: athleteBiometrics.length },
-    { id: 'weather' as const, label: 'Weather Impact', icon: '🌤️', count: 1 }
+    { id: 'weather' as const, label: 'Weather Impact', icon: '🌤️', count: 1 },
+    { id: 'chatAI' as const, label: 'Chat With AI', icon: '🤖', count: 1 }
   ];
 
   // Helper for getting label color class
@@ -671,6 +673,17 @@ export const AthleteProfile: React.FC = () => {
                   athleteId={athleteId.toString()}
                   geneticData={athleteGenetics}
                 />
+              )}
+
+              {activeTab === 'chatAI' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-6">🤖 Chat With AI</h2>
+                  <ChatWithAI
+                    athlete={athlete}
+                    biometricData={athleteBiometrics}
+                    geneticProfiles={athleteGenetics}
+                  />
+                </div>
               )}
 
       </div>
