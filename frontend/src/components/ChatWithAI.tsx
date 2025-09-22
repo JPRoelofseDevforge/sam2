@@ -96,10 +96,47 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
       const context = prepareAthleteContext();
       // Try multiple ways to get the API key for different deployment environments
       const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY ||
-                     import.meta.env.OpenRouterAPiKeyAzure ||
-                     import.meta.env.VITE_APP_OPENROUTER_API_KEY;
+                     (window as any).ENV?.OpenRouterAPiKeyAzure ||
+                     (window as any).OpenRouterAPiKeyAzure ||
+                     import.meta.env.VITE_APP_OPENROUTER_API_KEY ||
+                     process.env?.OpenRouterAPiKeyAzure ||
+                     // Azure Static Web Apps specific patterns
+                     (window as any).__AZURE_STATIC_WEB_APPS_ENV__?.OpenRouterAPiKeyAzure ||
+                     // Try to get from Azure Static Web Apps build-time injection
+                     (import.meta as any).env?.AZURE_OPENROUTER_API_KEY ||
+                     // Azure Static Web Apps runtime environment variables
+                     (window as any).AZURE_STATIC_WEB_APPS_API_TOKEN_OPENROUTERAPIKEYAZURE ||
+                     // Azure Static Web Apps - try common patterns
+                     (window as any).OPENROUTERAPIKEYAZURE ||
+                     (window as any).openRouterAPiKeyAzure ||
+                     // Check if it's available in Azure Static Web Apps context
+                     (window as any).swa?.env?.OpenRouterAPiKeyAzure ||
+                     // Azure Static Web Apps - check for environment variables in the global scope
+                     (globalThis as any).OpenRouterAPiKeyAzure ||
+                     // Azure Static Web Apps - check for Azure-specific global object
+                     (window as any).azure?.env?.OpenRouterAPiKeyAzure;
+
+      // Debug: Log available environment variables (without exposing the actual key)
+      console.log('🔍 DEBUG: Environment check:', {
+        hasViteKey: !!import.meta.env.VITE_OPENROUTER_API_KEY,
+        hasWindowEnv: !!(window as any).ENV,
+        hasWindowDirect: !!(window as any).OpenRouterAPiKeyAzure,
+        hasViteAppKey: !!import.meta.env.VITE_APP_OPENROUTER_API_KEY,
+        hasProcessEnv: !!process.env?.OpenRouterAPiKeyAzure,
+        hasAzureStatic: !!(window as any).__AZURE_STATIC_WEB_APPS_ENV__,
+        hasAzureEnv: !!(import.meta as any).env?.AZURE_OPENROUTER_API_KEY,
+        hasAzureToken: !!(window as any).AZURE_STATIC_WEB_APPS_API_TOKEN_OPENROUTERAPIKEYAZURE,
+        hasWindowUppercase: !!(window as any).OPENROUTERAPIKEYAZURE,
+        hasWindowLowercase: !!(window as any).openRouterAPiKeyAzure,
+        hasSwaEnv: !!(window as any).swa?.env?.OpenRouterAPiKeyAzure,
+        hasGlobalThis: !!(globalThis as any).OpenRouterAPiKeyAzure,
+        hasAzureGlobal: !!(window as any).azure?.env?.OpenRouterAPiKeyAzure,
+        isProduction: import.meta.env.PROD,
+        isDev: import.meta.env.DEV
+      });
 
       if (!apiKey) {
+        console.warn('⚠️ No API key found in any environment variable');
         throw new Error('OpenRouter API key not configured. Please set the API key in your deployment environment variables.');
       }
 
