@@ -967,8 +967,13 @@ export const bodyCompositionService = {
   },
 
   // Delete body composition record
-  async deleteBodyComposition(recordId: number): Promise<void> {
-    await api.delete(`/body-composition/${recordId}`);
+  async deleteBodyComposition(recordId: number, athleteId?: number): Promise<void> {
+    // If athleteId is provided, include it in the URL for proper routing
+    if (athleteId) {
+      await api.delete(`/body-composition/${athleteId}/${recordId}`);
+    } else {
+      await api.delete(`/body-composition/${recordId}`);
+    }
   },
 
   // Get all athletes

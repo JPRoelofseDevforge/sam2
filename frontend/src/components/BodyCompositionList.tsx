@@ -71,7 +71,7 @@ export const BodyCompositionList: React.FC<BodyCompositionListProps> = ({
 
     try {
       setLoading(true);
-      await bodyCompositionService.deleteBodyComposition(record.id);
+      await bodyCompositionService.deleteBodyComposition(record.id, record.athleteId);
       // Reload records after deletion
       if (selectedAthleteId) {
         await loadBodyCompositionRecords(selectedAthleteId);
