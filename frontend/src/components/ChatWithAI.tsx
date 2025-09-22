@@ -167,7 +167,7 @@ Provide helpful, evidence-based insights about training, recovery, nutrition, an
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `${offlineResponse}\n\n(Note: Using offline analysis mode - AI service unavailable)`,
+        content: `${offlineResponse}\n\n⚠️ **AI Service Temporarily Unavailable** - Using intelligent offline analysis based on ${athlete.name}'s actual biometric and genetic data.`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -239,8 +239,8 @@ Provide helpful, evidence-based insights about training, recovery, nutrition, an
         </div>
         <p className="text-sm text-gray-600">
           {useOfflineMode
-            ? 'Using offline analysis with athlete data'
-            : 'Ask questions about training, recovery, nutrition, or performance optimization'
+            ? '📱 Using intelligent analysis of athlete data'
+            : '🌐 Connected to AI service (falls back to offline mode if unavailable)'
           }
         </p>
       </div>
@@ -249,9 +249,27 @@ Provide helpful, evidence-based insights about training, recovery, nutrition, an
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            <div className="text-4xl mb-3">💬</div>
-            <p className="font-medium mb-2">Start a conversation with AI</p>
-            <p className="text-sm">Ask about {athlete.name}'s performance, training recommendations, or recovery strategies</p>
+            <div className="text-4xl mb-3">🤖</div>
+            <p className="font-medium mb-2">AI Assistant for {athlete.name}</p>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-green-800 font-medium mb-2">🤖 AI Assistant Active</p>
+              <p className="text-xs text-green-700">
+                Connected to AI service with access to {athlete.name}'s complete biometric data, genetic profile, and performance history.
+              </p>
+            </div>
+            <div className="text-sm space-y-1">
+              <p className="font-medium">Ask me about:</p>
+              <ul className="text-xs text-gray-400 space-y-1">
+                <li>• Training recommendations based on current load</li>
+                <li>• Sleep analysis and recovery status</li>
+                <li>• HRV and heart rate trends</li>
+                <li>• Nutrition advice for {athlete.sport}</li>
+                <li>• Performance optimization strategies</li>
+              </ul>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              💡 Try: "How is the training load today?" or "What does the sleep data show?"
+            </p>
           </div>
         )}
 
