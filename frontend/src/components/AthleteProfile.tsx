@@ -678,6 +678,19 @@ export const AthleteProfile: React.FC = () => {
               {activeTab === 'chatAI' && (
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-6">🤖 Chat With AI</h2>
+                  <div className="mb-4 p-4 bg-gray-100 rounded-lg">
+                    <h3 className="font-semibold text-gray-800 mb-2">Data Status:</h3>
+                    <p className="text-sm text-gray-600">Athlete: {athlete?.name}</p>
+                    <p className="text-sm text-gray-600">Biometric Data Count: {athleteBiometrics.length}</p>
+                    <p className="text-sm text-gray-600">Genetic Profiles Count: {athleteGenetics.length}</p>
+                    <p className="text-sm text-gray-600">Athlete ID: {athlete?.athlete_id}</p>
+                    <p className="text-sm text-gray-600">Latest Biometric Date: {getLatestBiometricRecord(athleteBiometrics)?.date || 'None'}</p>
+                    {athleteBiometrics.length === 0 && (
+                      <p className="text-xs text-yellow-600 mt-2">
+                        ⚠️ No biometric data available. Check Current Metrics tab for data.
+                      </p>
+                    )}
+                  </div>
                   <ChatWithAI
                     athlete={athlete}
                     biometricData={athleteBiometrics}

@@ -44,7 +44,14 @@ const transformAthletesData = (backendAthletes: any[]): Athlete[] => {
 };
 // Transform backend biometric data to frontend format
 const transformBiometricData = (backendData: any[]): BiometricData[] => {
+  console.log('🔍 Raw backend biometric data sample:', backendData.slice(0, 2));
+  if (backendData.length > 0) {
+    console.log('🔍 First backend record keys:', Object.keys(backendData[0]));
+    console.log('🔍 First backend record values:', backendData[0]);
+  }
+
   return backendData.map(item => {
+    console.log('🔍 Transforming item:', item);
 
     // Helper function to safely get numeric values with default 0
     const getNumericValue = (value: any, defaultValue: number = 0): number => {
@@ -414,9 +421,11 @@ const transformBodyCompositionData = (backendData: any[]): BodyComposition[] => 
         athlete: item.Athlete || null
       };
 
-      return transformed;
+      const result = transformed;
+      console.log('🔍 Transformed result:', result);
+      return result;
     });
-};
+  };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5288/api';
 
@@ -1347,8 +1356,37 @@ export const dataService = {
 // =====================================================
 
 export const chatAIService = {
-  // Send message to AI through backend
-  async askAI(athleteId: number, message: string): Promise<{
+  // Send message to AI through backend with context data
+  async askAI(message: string, context: {
+    name: string;
+    sport: string;
+    age: number;
+    team: string;
+    latestBiometrics: {
+      HrvNight?: number | null;
+      RestingHr?: number | null;
+      DeepSleepPct?: number | null;
+      RemSleepPct?: number | null;
+      SleepDurationH?: number | null;
+      Spo2Night?: number | null;
+      TrainingLoadPct?: number | null;
+      Date?: string | null;
+    } | null;
+    biometricHistory: Array<{
+      HrvNight?: number | null;
+      RestingHr?: number | null;
+      DeepSleepPct?: number | null;
+      RemSleepPct?: number | null;
+      SleepDurationH?: number | null;
+      Spo2Night?: number | null;
+      TrainingLoadPct?: number | null;
+      Date?: string | null;
+    }>;
+    geneticProfile: Record<string, string>;
+    totalBiometricRecords: number;
+    totalGeneticMarkers: number;
+  }): Promise<{
+    success: boolean;
     response: string;
     athlete: string;
     context: {
@@ -1359,11 +1397,11 @@ export const chatAIService = {
   }> {
     try {
       const response = await api.post('/chat-ai/ask', {
-        athleteId,
-        message
+        message,
+        context
       });
 
-      return response.data.Data || response.data;
+      return response.data;
     } catch (error) {
       console.error('Error calling ChatAI service:', error);
       throw error;

@@ -26,6 +26,30 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
   const [useOfflineMode, setUseOfflineMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Debug logging
+  console.log('🔍 ChatWithAI Debug:', {
+    athlete,
+    biometricDataCount: biometricData.length,
+    geneticProfilesCount: geneticProfiles.length,
+    biometricDataSample: biometricData.slice(0, 2),
+    geneticProfilesSample: geneticProfiles.slice(0, 2)
+  });
+
+  // Debug: Check if biometric data has the expected fields
+  if (biometricData.length > 0) {
+    const firstRecord = biometricData[0];
+    console.log('🔍 First biometric record fields:', Object.keys(firstRecord));
+    console.log('🔍 First biometric record values:', firstRecord);
+    console.log('🔍 HRV value:', firstRecord.hrv_night, 'Type:', typeof firstRecord.hrv_night);
+    console.log('🔍 Resting HR value:', firstRecord.resting_hr, 'Type:', typeof firstRecord.resting_hr);
+    console.log('🔍 Sleep duration value:', firstRecord.sleep_duration_h, 'Type:', typeof firstRecord.sleep_duration_h);
+  }
+
+  // Check if we have real biometric data
+  const hasRealBiometricData = biometricData.length > 0 && biometricData.some(data =>
+    data.hrv_night && data.hrv_night > 0
+  );
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -34,33 +58,68 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
     scrollToBottom();
   }, [messages]);
 
-  // Prepare athlete context for AI
+  // Prepare athlete context for AI using real data from tabs
   const prepareAthleteContext = () => {
-    const latestBiometrics = biometricData[biometricData.length - 1];
+    // Get last 7 days of biometric data (or all available if less than 7)
+    const last7DaysData = biometricData.slice(-7);
+
     const geneticDict = geneticProfiles.reduce((acc, profile) => {
       acc[profile.gene] = profile.genotype;
       return acc;
     }, {} as Record<string, string>);
 
-    return {
+    // Use only real data from the tabs - no mock data
+    const context = {
       name: athlete.name,
       sport: athlete.sport,
       age: athlete.age,
       team: athlete.team,
-      latestBiometrics: latestBiometrics ? {
-        hrv_night: latestBiometrics.hrv_night,
-        resting_hr: latestBiometrics.resting_hr,
-        deep_sleep_pct: latestBiometrics.deep_sleep_pct,
-        rem_sleep_pct: latestBiometrics.rem_sleep_pct,
-        sleep_duration_h: latestBiometrics.sleep_duration_h,
-        spo2_night: latestBiometrics.spo2_night,
-        training_load_pct: latestBiometrics.training_load_pct,
-        date: latestBiometrics.date
+      biometricHistory: last7DaysData.map(data => ({
+        HrvNight: data.hrv_night,
+        RestingHr: data.resting_hr,
+        DeepSleepPct: data.deep_sleep_pct,
+        RemSleepPct: data.rem_sleep_pct,
+        SleepDurationH: data.sleep_duration_h,
+        Spo2Night: data.spo2_night,
+        TrainingLoadPct: data.training_load_pct,
+        Date: data.date
+      })),
+      latestBiometrics: last7DaysData[last7DaysData.length - 1] ? {
+        HrvNight: last7DaysData[last7DaysData.length - 1].hrv_night,
+        RestingHr: last7DaysData[last7DaysData.length - 1].resting_hr,
+        DeepSleepPct: last7DaysData[last7DaysData.length - 1].deep_sleep_pct,
+        RemSleepPct: last7DaysData[last7DaysData.length - 1].rem_sleep_pct,
+        SleepDurationH: last7DaysData[last7DaysData.length - 1].sleep_duration_h,
+        Spo2Night: last7DaysData[last7DaysData.length - 1].spo2_night,
+        TrainingLoadPct: last7DaysData[last7DaysData.length - 1].training_load_pct,
+        Date: last7DaysData[last7DaysData.length - 1].date
       } : null,
       geneticProfile: geneticDict,
       totalBiometricRecords: biometricData.length,
       totalGeneticMarkers: geneticProfiles.length
     };
+
+    console.log('🔍 ChatWithAI Context Debug:', {
+      context,
+      last7DaysDataCount: last7DaysData.length,
+      latestBiometrics: context.latestBiometrics,
+      biometricHistorySample: context.biometricHistory.slice(0, 2),
+      hasRealData: last7DaysData.length > 0
+    });
+
+    // Debug: Check if context has null values
+    if (context.latestBiometrics) {
+      console.log('🔍 Latest biometrics values:');
+      console.log('  HRV:', context.latestBiometrics.HrvNight);
+      console.log('  Resting HR:', context.latestBiometrics.RestingHr);
+      console.log('  Sleep Duration:', context.latestBiometrics.SleepDurationH);
+      console.log('  Deep Sleep %:', context.latestBiometrics.DeepSleepPct);
+      console.log('  REM Sleep %:', context.latestBiometrics.RemSleepPct);
+      console.log('  SpO2:', context.latestBiometrics.Spo2Night);
+      console.log('  Training Load %:', context.latestBiometrics.TrainingLoadPct);
+    }
+
+    return context;
   };
 
   const sendMessage = async () => {
@@ -96,8 +155,8 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
     try {
       const context = prepareAthleteContext();
 
-      // Call backend API instead of OpenRouter directly
-      const result = await chatAIService.askAI(parseInt(athlete.athlete_id), userMessage.content);
+      // Call backend API with context data
+      const result = await chatAIService.askAI(userMessage.content, context);
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -138,7 +197,7 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
     const input = userInput.toLowerCase();
 
     if (input.includes('training') || input.includes('workout') || input.includes('exercise')) {
-      const trainingLoad = context.latestBiometrics?.training_load_pct || 0;
+      const trainingLoad = context.latestBiometrics?.TrainingLoadPct || 0;
       if (trainingLoad > 85) {
         return `Based on ${athlete.name}'s current training load (${trainingLoad}%), I recommend focusing on recovery today. Consider light technique work or active recovery sessions. High-intensity training might lead to overtraining given the current load.`;
       } else {
@@ -147,14 +206,14 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
     }
 
     if (input.includes('sleep') || input.includes('rest')) {
-      const sleepHours = context.latestBiometrics?.sleep_duration_h || 0;
-      const deepSleep = context.latestBiometrics?.deep_sleep_pct || 0;
+      const sleepHours = context.latestBiometrics?.SleepDurationH || 0;
+      const deepSleep = context.latestBiometrics?.DeepSleepPct || 0;
       return `Sleep analysis for ${athlete.name}: ${sleepHours} hours total with ${deepSleep}% deep sleep. ${sleepHours >= 7 ? 'Good sleep duration - recovery should be optimal.' : 'Sleep duration is below recommended 7+ hours. Consider adjusting bedtime routine.'} Deep sleep percentage is ${deepSleep > 20 ? 'excellent' : 'moderate'}.`;
     }
 
     if (input.includes('recovery') || input.includes('hrv') || input.includes('heart rate')) {
-      const hrv = context.latestBiometrics?.hrv_night || 0;
-      const restingHR = context.latestBiometrics?.resting_hr || 0;
+      const hrv = context.latestBiometrics?.HrvNight || 0;
+      const restingHR = context.latestBiometrics?.RestingHr || 0;
       return `Recovery status for ${athlete.name}: HRV at ${hrv}ms and resting HR at ${restingHR}bpm. ${hrv > 50 ? 'Good recovery capacity detected.' : 'Recovery may need attention.'} ${restingHR < 60 ? 'Resting heart rate is optimal.' : 'Resting heart rate is elevated - monitor stress levels.'}`;
     }
 
@@ -192,6 +251,16 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
             ? '📱 AI Assistant using intelligent analysis of athlete data'
             : '🌐 AI service available in Azure production deployment'
           }
+          {hasRealBiometricData && (
+            <span className="block text-xs text-green-600 mt-1">
+              ✅ Connected to real biometric data from Current Metrics, Sleep Metrics, and other tabs
+            </span>
+          )}
+          {!hasRealBiometricData && (
+            <span className="block text-xs text-yellow-600 mt-1">
+              ⚠️ No biometric data available - check Current Metrics tab for data
+            </span>
+          )}
         </p>
       </div>
 
@@ -204,7 +273,7 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-green-800 font-medium mb-2">🤖 AI Assistant Active</p>
               <p className="text-xs text-green-700">
-                Connected to AI service with access to {athlete.name}'s complete biometric data, genetic profile, and performance history.
+                Connected to AI service with access to {athlete.name}'s biometric data from Current Metrics, Sleep Metrics, and other tabs.
               </p>
             </div>
             <div className="text-sm space-y-1">
