@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { athleteService, biometricDataService } from '../services/dataService';
-import { Athlete, BiometricData } from '../types';
+import { athleteService, biometricDataService, geneticProfileService } from '../services/dataService';
+import { Athlete, BiometricData, GeneticProfile } from '../types';
 import {
   LineChart,
   Line,
@@ -35,6 +35,7 @@ interface PerformanceForecast {
 export const PredictiveAnalytics: React.FC<{ athleteId?: string }> = ({ athleteId }) => {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [biometricData, setBiometricData] = useState<BiometricData[]>([]);
+  const [geneticData, setGeneticData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dataFetched, setDataFetched] = useState(false);
@@ -176,6 +177,67 @@ export const PredictiveAnalytics: React.FC<{ athleteId?: string }> = ({ athleteI
     fetchBiometricData();
   }, [athletes, athleteId, dataFetched]);
 
+  // Fetch genetic data
+  useEffect(() => {
+    const fetchGeneticData = async () => {
+      if (athletes.length === 0) return;
+
+      try {
+        console.log('🧬 PredictiveAnalytics: Fetching genetic data...');
+        const allGeneticData: any[] = [];
+
+        if (athleteId) {
+          const athleteIdNum = parseInt(athleteId, 10);
+          if (!isNaN(athleteIdNum)) {
+            const [summaryData, cellularData, recoveryData] = await Promise.all([
+              geneticProfileService.getGeneticSummaryByAthlete(athleteIdNum),
+              geneticProfileService.getGeneticCellularByAthlete(athleteIdNum),
+              geneticProfileService.getRecoveryGeneticsByAthlete(athleteIdNum)
+            ]);
+
+            allGeneticData.push({
+              athleteId: athleteIdNum,
+              summary: summaryData || [],
+              cellular: cellularData || [],
+              recovery: recoveryData || []
+            });
+          }
+        } else {
+          // Fetch for all athletes
+          for (const athlete of athletes) {
+            const athleteIdNum = parseInt(athlete.athlete_id, 10);
+            if (!isNaN(athleteIdNum)) {
+              try {
+                const [summaryData, cellularData, recoveryData] = await Promise.all([
+                  geneticProfileService.getGeneticSummaryByAthlete(athleteIdNum),
+                  geneticProfileService.getGeneticCellularByAthlete(athleteIdNum),
+                  geneticProfileService.getRecoveryGeneticsByAthlete(athleteIdNum)
+                ]);
+
+                allGeneticData.push({
+                  athleteId: athleteIdNum,
+                  summary: summaryData || [],
+                  cellular: cellularData || [],
+                  recovery: recoveryData || []
+                });
+              } catch (err) {
+                console.error(`❌ PredictiveAnalytics: Failed to fetch genetic data for athlete ${athlete.athlete_id}:`, err);
+              }
+            }
+          }
+        }
+
+        console.log(`🧬 PredictiveAnalytics: Retrieved genetic data for ${allGeneticData.length} athletes`);
+        setGeneticData(allGeneticData);
+      } catch (err) {
+        console.error('❌ PredictiveAnalytics: Failed to fetch genetic data:', err);
+        setGeneticData([]);
+      }
+    };
+
+    fetchGeneticData();
+  }, [athletes, athleteId]);
+
   // Calculate injury risk for all athletes or selected athlete
   const injuryRiskData = useMemo<InjuryRiskData[]>(() => {
     console.log('🔢 PredictiveAnalytics: Calculating injury risk data...');
@@ -202,11 +264,11 @@ export const PredictiveAnalytics: React.FC<{ athleteId?: string }> = ({ athleteI
       const factors: string[] = [];
       
       // Check for decreasing HRV trend
-      if (athleteBiometrics.length >= 7) {
-        const recentHrv = athleteBiometrics.slice(-7).map(d => d.hrv_night);
-        const avgRecent = recentHrv.reduce((a, b) => a + b, 0) / recentHrv.length;
-        const previousHrv = athleteBiometrics.slice(-14, -7).map(d => d.hrv_night);
-        const avgPrevious = previousHrv.reduce((a, b) => a + b, 0) / previousHrv.length;
+       if (athleteBiometrics.length >= 7) {
+         const recentHrv = athleteBiometrics.slice(-7).map(d => d.hrv_night || 0).filter(val => val > 0);
+         const avgRecent = recentHrv.length > 0 ? recentHrv.reduce((a, b) => a + b, 0) / recentHrv.length : 0;
+         const previousHrv = athleteBiometrics.slice(-14, -7).map(d => d.hrv_night || 0).filter(val => val > 0);
+         const avgPrevious = previousHrv.length > 0 ? previousHrv.reduce((a, b) => a + b, 0) / previousHrv.length : 0;
         
         if (avgRecent < avgPrevious * 0.85) {
           riskScore += 30;
@@ -215,27 +277,27 @@ export const PredictiveAnalytics: React.FC<{ athleteId?: string }> = ({ athleteI
       }
       
       // Check for elevated resting heart rate
-      const latestData = athleteBiometrics[athleteBiometrics.length - 1];
-      if (latestData && latestData.resting_hr > 70) {
-        riskScore += 20;
-        factors.push('Elevated resting heart rate');
-      }
-      
-      // Check for low sleep duration
-      if (latestData && latestData.sleep_duration_h < 6) {
-        riskScore += 15;
-        factors.push('Inadequate sleep');
-      }
-      
-      // Check for high training load
-      if (latestData && latestData.training_load_pct > 85) {
-        riskScore += 25;
-        factors.push('High training load');
-      }
-      
-      // Check for consecutive high load days
-      if (athleteBiometrics.length >= 3) {
-        const highLoadDays = athleteBiometrics.slice(-3).filter(d => d.training_load_pct > 80);
+       const latestData = athleteBiometrics[athleteBiometrics.length - 1];
+       if (latestData && (latestData.resting_hr || 0) > 70) {
+         riskScore += 20;
+         factors.push('Elevated resting heart rate');
+       }
+
+       // Check for low sleep duration
+       if (latestData && (latestData.sleep_duration_h || 0) < 6) {
+         riskScore += 15;
+         factors.push('Inadequate sleep');
+       }
+
+       // Check for high training load
+       if (latestData && (latestData.training_load_pct || 0) > 85) {
+         riskScore += 25;
+         factors.push('High training load');
+       }
+
+       // Check for consecutive high load days
+       if (athleteBiometrics.length >= 3) {
+         const highLoadDays = athleteBiometrics.slice(-3).filter(d => (d.training_load_pct || 0) > 80);
         if (highLoadDays.length === 3) {
           riskScore += 20;
           factors.push('Consecutive high load days');
@@ -298,9 +360,9 @@ export const PredictiveAnalytics: React.FC<{ athleteId?: string }> = ({ athleteI
           const recentData = athleteBiometrics.slice(-7);
           const avgReadiness = recentData.reduce((sum, d) => {
             // Simplified readiness calculation
-            const hrvScore = d.hrv_night > 50 ? 1 : d.hrv_night > 30 ? 0.5 : 0;
-            const rhrScore = d.resting_hr < 60 ? 1 : d.resting_hr < 70 ? 0.5 : 0;
-            const sleepScore = d.sleep_duration_h > 7 ? 1 : d.sleep_duration_h > 6 ? 0.5 : 0;
+            const hrvScore = (d.hrv_night || 0) > 50 ? 1 : (d.hrv_night || 0) > 30 ? 0.5 : 0;
+            const rhrScore = (d.resting_hr || 0) < 60 ? 1 : (d.resting_hr || 0) < 70 ? 0.5 : 0;
+            const sleepScore = (d.sleep_duration_h || 0) > 7 ? 1 : (d.sleep_duration_h || 0) > 6 ? 0.5 : 0;
             return sum + (hrvScore + rhrScore + sleepScore) / 3 * 100;
           }, 0) / recentData.length;
           
@@ -332,9 +394,9 @@ export const PredictiveAnalytics: React.FC<{ athleteId?: string }> = ({ athleteI
               const recentData = athleteBiometrics.slice(-7);
               const avgReadiness = recentData.reduce((sum, d) => {
                 // Simplified readiness calculation
-                const hrvScore = d.hrv_night > 50 ? 1 : d.hrv_night > 30 ? 0.5 : 0;
-                const rhrScore = d.resting_hr < 60 ? 1 : d.resting_hr < 70 ? 0.5 : 0;
-                const sleepScore = d.sleep_duration_h > 7 ? 1 : d.sleep_duration_h > 6 ? 0.5 : 0;
+                const hrvScore = (d.hrv_night || 0) > 50 ? 1 : (d.hrv_night || 0) > 30 ? 0.5 : 0;
+                const rhrScore = (d.resting_hr || 0) < 60 ? 1 : (d.resting_hr || 0) < 70 ? 0.5 : 0;
+                const sleepScore = (d.sleep_duration_h || 0) > 7 ? 1 : (d.sleep_duration_h || 0) > 6 ? 0.5 : 0;
                 return sum + (hrvScore + rhrScore + sleepScore) / 3 * 100;
               }, 0) / recentData.length;
 
@@ -374,6 +436,100 @@ export const PredictiveAnalytics: React.FC<{ athleteId?: string }> = ({ athleteI
 
   // Get selected athlete name
   const selectedAthlete = athleteId && Array.isArray(athletes) ? athletes.find(a => a.athlete_id === athleteId) : null;
+
+  // Genetic analysis for injury risk and performance
+  const geneticAnalysis = useMemo(() => {
+    if (geneticData.length === 0) return [];
+
+    return geneticData.map(athleteGenetic => {
+      const athlete = athletes.find(a => a.athlete_id === athleteGenetic.athleteId.toString());
+      if (!athlete) return null;
+
+      const { summary, cellular, recovery } = athleteGenetic;
+      let geneticRiskScore = 0;
+      let performanceModifiers = {
+        power: 0,
+        endurance: 0,
+        recovery: 0,
+        injury: 0
+      };
+      const geneticInsights: string[] = [];
+
+      // Analyze genetic markers for performance and injury risk
+      summary.forEach((marker: any) => {
+        const gene = marker.Gene || marker.gene;
+        const genotype = marker.GeneticCall || marker.genetic_call;
+        const category = marker.Category || marker.category;
+
+        if (!gene || !genotype) return;
+
+        // ACTN3 - Power/Strength performance
+        if (gene === 'ACTN3') {
+          if (genotype.includes('RR')) {
+            performanceModifiers.power += 15;
+            geneticInsights.push('ACTN3 RR: Excellent power and sprint capacity');
+          } else if (genotype.includes('XX')) {
+            performanceModifiers.endurance += 10;
+            geneticInsights.push('ACTN3 XX: Enhanced endurance capacity');
+          }
+        }
+
+        // ACE - Endurance and cardiovascular efficiency
+        if (gene === 'ACE') {
+          if (genotype.includes('II')) {
+            performanceModifiers.endurance += 12;
+            geneticInsights.push('ACE II: Superior cardiovascular efficiency');
+          } else if (genotype.includes('DD')) {
+            performanceModifiers.power += 8;
+            geneticInsights.push('ACE DD: Enhanced power output');
+          }
+        }
+
+        // COL5A1 - Injury risk (soft tissue)
+        if (gene === 'COL5A1') {
+          if (genotype.includes('TT')) {
+            performanceModifiers.injury -= 10;
+            geneticInsights.push('COL5A1 TT: Lower soft tissue injury risk');
+          } else {
+            performanceModifiers.injury += 15;
+            geneticInsights.push('COL5A1 CC: Higher soft tissue injury risk');
+          }
+        }
+
+        // PPARA - Fat metabolism and endurance
+        if (gene === 'PPARA') {
+          if (genotype.includes('GG')) {
+            performanceModifiers.endurance += 10;
+            geneticInsights.push('PPARA GG: Enhanced fat metabolism');
+          }
+        }
+
+        // ADRB2 - Exercise-induced bronchoconstriction risk
+        if (gene === 'ADRB2') {
+          if (genotype.includes('Arg/Arg')) {
+            performanceModifiers.injury += 8;
+            geneticInsights.push('ADRB2 Arg/Arg: Higher EIB risk');
+          }
+        }
+      });
+
+      // Calculate overall genetic risk score
+      geneticRiskScore = Math.max(0, Math.min(100,
+        (performanceModifiers.injury * 2) +
+        (performanceModifiers.power > 0 ? -5 : 0) +
+        (performanceModifiers.endurance > 0 ? -3 : 0)
+      ));
+
+      return {
+        athleteId: athleteGenetic.athleteId,
+        name: athlete.name,
+        geneticRiskScore,
+        performanceModifiers,
+        geneticInsights,
+        hasGeneticData: summary.length > 0
+      };
+    }).filter(Boolean);
+  }, [geneticData, athletes]);
 
   // Show loading state
   if (loading) {
@@ -564,13 +720,13 @@ export const PredictiveAnalytics: React.FC<{ athleteId?: string }> = ({ athleteI
                       .slice(-30)
                       .map((d, i) => ({
                         date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                        risk: Math.min(100, 
-                          (d.resting_hr > 70 ? 20 : 0) + 
-                          (d.sleep_duration_h < 6 ? 15 : 0) + 
-                          (d.training_load_pct > 85 ? 25 : 0)
+                        risk: Math.min(100,
+                          ((d.resting_hr || 0) > 70 ? 20 : 0) +
+                          ((d.sleep_duration_h || 0) < 6 ? 15 : 0) +
+                          ((d.training_load_pct || 0) > 85 ? 25 : 0)
                         ),
-                        hrv: d.hrv_night,
-                        trainingLoad: d.training_load_pct
+                        hrv: d.hrv_night || 0,
+                        trainingLoad: d.training_load_pct || 0
                       }))
                     }
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -707,6 +863,292 @@ export const PredictiveAnalytics: React.FC<{ athleteId?: string }> = ({ athleteI
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Genetic Analysis Section */}
+      <div className="card-enhanced p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {athleteId ? `${selectedAthlete?.name} - Genetic Analysis` : 'Team Genetic Analysis'}
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Performance and injury risk insights based on genetic markers
+        </p>
+
+        {!athleteId ? (
+          // Team genetic overview
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {geneticAnalysis.map((analysis) => {
+              if (!analysis) return null;
+              return (
+                <div
+                  key={analysis.athleteId}
+                  className={`p-5 rounded-lg border-l-4 ${
+                    analysis.geneticRiskScore > 60
+                      ? 'border-orange-500 bg-orange-50'
+                      : analysis.geneticRiskScore > 30
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-green-500 bg-green-50'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900">{analysis.name}</h3>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      analysis.geneticRiskScore > 60
+                        ? 'bg-orange-100 text-orange-800'
+                        : analysis.geneticRiskScore > 30
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'
+                    }`}>
+                      {analysis.geneticRiskScore > 60 ? 'Higher Risk' : analysis.geneticRiskScore > 30 ? 'Moderate' : 'Lower Risk'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600">Genetic Risk Score</span>
+                        <span className="font-medium">{analysis.geneticRiskScore.toFixed(0)}/100</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${
+                            analysis.geneticRiskScore > 60
+                              ? 'bg-orange-500'
+                              : analysis.geneticRiskScore > 30
+                                ? 'bg-blue-500'
+                                : 'bg-green-500'
+                          }`}
+                          style={{ width: `${analysis.geneticRiskScore}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="text-center p-2 bg-gray-50 rounded">
+                        <div className="font-medium text-gray-900">Power</div>
+                        <div className={`font-bold ${analysis.performanceModifiers.power > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                          {analysis.performanceModifiers.power > 0 ? '+' : ''}{analysis.performanceModifiers.power}%
+                        </div>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded">
+                        <div className="font-medium text-gray-900">Endurance</div>
+                        <div className={`font-bold ${analysis.performanceModifiers.endurance > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                          {analysis.performanceModifiers.endurance > 0 ? '+' : ''}{analysis.performanceModifiers.endurance}%
+                        </div>
+                      </div>
+                    </div>
+
+                    {analysis.geneticInsights.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-700 mb-1">Key Genetic Insights:</p>
+                        <div className="space-y-1">
+                          {analysis.geneticInsights.slice(0, 2).map((insight, idx) => (
+                            <div key={idx} className="text-xs text-gray-600 bg-white p-2 rounded border">
+                              {insight}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          // Individual athlete genetic analysis
+          <div>
+            {geneticAnalysis[0] ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Genetic Performance Profile */}
+                <div className="card-enhanced p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <span className="bg-purple-100 p-2 rounded-full text-purple-700 mr-3">🧬</span>
+                    Genetic Performance Profile
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-700 mb-1">
+                          {geneticAnalysis[0].performanceModifiers.power > 0 ? '+' : ''}{geneticAnalysis[0].performanceModifiers.power}%
+                        </div>
+                        <div className="text-sm text-blue-600 font-medium">Power Potential</div>
+                      </div>
+                      <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                        <div className="text-2xl font-bold text-green-700 mb-1">
+                          {geneticAnalysis[0].performanceModifiers.endurance > 0 ? '+' : ''}{geneticAnalysis[0].performanceModifiers.endurance}%
+                        </div>
+                        <div className="text-sm text-green-600 font-medium">Endurance Capacity</div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">Recovery Efficiency</h4>
+                      <div className="flex items-center">
+                        <div className="flex-1 bg-gray-200 rounded-full h-3 mr-3">
+                          <div
+                            className={`h-3 rounded-full ${
+                              geneticAnalysis[0].performanceModifiers.recovery > 10
+                                ? 'bg-green-500'
+                                : geneticAnalysis[0].performanceModifiers.recovery > 5
+                                  ? 'bg-yellow-500'
+                                  : 'bg-red-500'
+                            }`}
+                            style={{ width: `${Math.min(100, geneticAnalysis[0].performanceModifiers.recovery * 10)}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          {geneticAnalysis[0].performanceModifiers.recovery > 10 ? 'Excellent' :
+                           geneticAnalysis[0].performanceModifiers.recovery > 5 ? 'Good' : 'Needs Attention'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Genetic Risk Assessment */}
+                <div className="card-enhanced p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <span className={`p-2 rounded-full mr-3 ${
+                      geneticAnalysis[0].geneticRiskScore > 60 ? 'bg-orange-100 text-orange-700' :
+                      geneticAnalysis[0].geneticRiskScore > 30 ? 'bg-blue-100 text-blue-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {geneticAnalysis[0].geneticRiskScore > 60 ? '⚠️' :
+                       geneticAnalysis[0].geneticRiskScore > 30 ? 'ℹ️' : '✅'}
+                    </span>
+                    Genetic Risk Assessment
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-700">Injury Risk Score</span>
+                        <span className="text-lg font-bold text-gray-900">
+                          {geneticAnalysis[0].geneticRiskScore.toFixed(0)}/100
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className={`h-3 rounded-full transition-all duration-300 ${
+                            geneticAnalysis[0].geneticRiskScore > 60 ? 'bg-orange-500' :
+                            geneticAnalysis[0].geneticRiskScore > 30 ? 'bg-blue-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${geneticAnalysis[0].geneticRiskScore}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className={`p-4 rounded-lg ${
+                      geneticAnalysis[0].geneticRiskScore > 60 ? 'bg-orange-50 border border-orange-200' :
+                      geneticAnalysis[0].geneticRiskScore > 30 ? 'bg-blue-50 border border-blue-200' :
+                      'bg-green-50 border border-green-200'
+                    }`}>
+                      <h4 className="font-medium text-gray-900 mb-2">
+                        {geneticAnalysis[0].geneticRiskScore > 60 ? 'Higher Risk Profile' :
+                         geneticAnalysis[0].geneticRiskScore > 30 ? 'Moderate Risk Profile' :
+                         'Lower Risk Profile'}
+                      </h4>
+                      <p className="text-sm text-gray-700">
+                        {geneticAnalysis[0].geneticRiskScore > 60
+                          ? 'Genetic markers suggest increased injury susceptibility. Consider preventive measures and modified training protocols.'
+                          : geneticAnalysis[0].geneticRiskScore > 30
+                            ? 'Some genetic factors may influence injury risk. Monitor closely and maintain preventive protocols.'
+                            : 'Favorable genetic profile for injury resistance. Continue standard training protocols.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Genetic Insights */}
+                <div className="card-enhanced p-6 lg:col-span-2">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <span className="bg-indigo-100 p-2 rounded-full text-indigo-700 mr-3">🔬</span>
+                    Genetic Insights & Recommendations
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-3">Performance Optimization</h4>
+                      <ul className="space-y-2">
+                        {geneticAnalysis[0].performanceModifiers.power > 0 && (
+                          <li className="flex items-start">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                            <span className="text-sm text-gray-700">
+                              Excellent power genetics - prioritize strength and sprint training
+                            </span>
+                          </li>
+                        )}
+                        {geneticAnalysis[0].performanceModifiers.endurance > 0 && (
+                          <li className="flex items-start">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                            <span className="text-sm text-gray-700">
+                              Strong endurance genetics - suitable for longer duration activities
+                            </span>
+                          </li>
+                        )}
+                        {geneticAnalysis[0].performanceModifiers.recovery > 10 && (
+                          <li className="flex items-start">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                            <span className="text-sm text-gray-700">
+                              Fast recovery genetics - can handle higher training volumes
+                            </span>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-3">Risk Management</h4>
+                      <ul className="space-y-2">
+                        {geneticAnalysis[0].geneticRiskScore > 50 && (
+                          <li className="flex items-start">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                            <span className="text-sm text-gray-700">
+                              Higher injury risk - implement preventive protocols
+                            </span>
+                          </li>
+                        )}
+                        <li className="flex items-start">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                          <span className="text-sm text-gray-700">
+                            Regular genetic monitoring recommended
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                          <span className="text-sm text-gray-700">
+                            Consider sport-specific genetic counseling
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Detailed Genetic Insights</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {geneticAnalysis[0].geneticInsights.map((insight, idx) => (
+                        <div key={idx} className="text-sm text-gray-700 bg-white p-3 rounded border">
+                          <strong>{insight.split(':')[0]}:</strong> {insight.split(':')[1]}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-4xl mb-4">🧬</div>
+                <p className="text-gray-600 font-medium mb-2">No Genetic Data Available</p>
+                <p className="text-sm text-gray-500 max-w-md mx-auto">
+                  Genetic testing data is required to provide personalized performance and injury risk insights.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

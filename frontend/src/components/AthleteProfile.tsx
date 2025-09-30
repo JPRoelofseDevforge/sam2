@@ -8,6 +8,7 @@ import {
 } from '../utils/analytics';
 import { Athlete, BiometricData, GeneticProfile, BodyComposition as BodyCompositionType } from '../types';
 import { useIndividualAthleteData, useTeamData } from '../hooks/useAthleteData';
+import { geneticProfileService } from '../services/dataService';
 import { MetricCard } from './MetricCard';
 import { AlertCard } from './AlertCard';
 import { TrendChart } from './TrendChart';
@@ -33,17 +34,34 @@ import { TrainingLoadChart } from './TrainingLoadChart';
 import { filterValidBiometricData, sortBiometricDataByDate, getLatestBiometricRecord, getSortedBiometricDataForCharts } from '../utils/athleteUtils';
 
 export const AthleteProfile: React.FC = () => {
-  console.log('🔍 DEBUG: AthleteProfile component rendering');
+  
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const athleteId = parseInt(id || '0');
        const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian' | 'chatAI'>('metrics');
      const tabContentRef = useRef<HTMLDivElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
-  
+  const [geneticSummary, setGeneticSummary] = useState<any[]>([]);
+
   // Use custom hooks for data fetching
   const { athlete, biometricData: athleteBiometrics, geneticProfiles: athleteGenetics, loading: dataLoading } = useIndividualAthleteData(athleteId, true);
   const { biometricData: allBiometricData } = useTeamData(true);
+
+  // Fetch genetic summary data
+  useEffect(() => {
+    const fetchGeneticSummary = async () => {
+      try {
+        const summaryData = await geneticProfileService.getGeneticSummaryByAthlete(athleteId);
+        setGeneticSummary(summaryData);
+      } catch (error) {
+        console.error('Failed to fetch genetic summary:', error);
+      }
+    };
+
+    if (athleteId) {
+      fetchGeneticSummary();
+    }
+  }, [athleteId]);
 
   // Show loading state while fetching data
   if (dataLoading) {
@@ -101,17 +119,16 @@ export const AthleteProfile: React.FC = () => {
     { id: 'bloodResults' as const, label: 'Blood Results', icon: '🩸', count: 1 },
     { id: 'circadian' as const, label: 'Circadian Rhythm', icon: '⏰', count: 1 },
     { id: 'trends' as const, label: 'Trends & Analysis', icon: '📈', count: athleteBiometrics.length },
-    { id: 'insights' as const, label: 'Predictive Insights', icon: '🧠', count: geneticInsights.length },
+    { id: 'insights' as const, label: 'Predictive Insights', icon: '🧠', count: geneticSummary.length > 0 ? geneticSummary.length : geneticInsights.length },
     { id: 'scaleReport' as const, label: 'Scale Report', icon: '⚖️', count: 1 },
     { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 },
     { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: athleteBiometrics.length },
     { id: 'recoveryTimeline' as const, label: 'Recovery Timeline', icon: '📅', count: athleteBiometrics.length },
-    { id: 'pharmacogenomics' as const, label: 'Pharmacogenomics', icon: '💊', count: athleteGenetics.length },
-    { id: 'nutrigenomics' as const, label: 'Nutrigenomics', icon: '🥗', count: athleteGenetics.length },
-    { id: 'recoveryGenes' as const, label: 'Recovery Genes', icon: '🧬', count: athleteGenetics.length },
+    { id: 'pharmacogenomics' as const, label: 'Pharmacogenomics', icon: '💊', count: geneticSummary.filter(g => g.category === 'pharmacogenomics').length || athleteGenetics.length },
+    { id: 'nutrigenomics' as const, label: 'Nutrigenomics', icon: '🥗', count: geneticSummary.filter(g => g.category === 'nutrigenomics').length || athleteGenetics.length },
+    { id: 'recoveryGenes' as const, label: 'Recovery Genes', icon: '🧬', count: geneticSummary.filter(g => g.category === 'recovery').length || athleteGenetics.length },
     { id: 'sleep' as const, label: 'Sleep Metrics', icon: '🌙', count: athleteBiometrics.length },
     { id: 'stress' as const, label: 'Stress Management', icon: '🧘', count: athleteBiometrics.length },
-    { id: 'predictive' as const, label: 'Predictive Analytics', icon: '🔮', count: athleteBiometrics.length },
     { id: 'weather' as const, label: 'Weather Impact', icon: '🌤️', count: 1 },
     { id: 'chatAI' as const, label: 'Chat With AI', icon: '🤖', count: 1 }
   ];
@@ -144,12 +161,28 @@ export const AthleteProfile: React.FC = () => {
           
           <div>
             <h3 className="text-lg font-semibold mb-2 text-gray-900">🧬 Genetic Profile</h3>
-            {Object.entries(geneticDict).length > 0 ? (
+            {geneticSummary.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {geneticSummary.slice(0, 10).map((summary, index) => (
+                    <div key={index} className="text-sm text-gray-700">
+                      <strong>{summary.Gene || summary.gene || 'Unknown'}:</strong> {summary.GeneticCall || summary.genetic_call || 'Unknown'}
+                      <div className="text-xs text-gray-500">{summary.Category || summary.category || 'Unknown'}</div>
+                    </div>
+                  ))}
+                </div>
+                {geneticSummary.length > 10 && (
+                  <div className="text-xs text-gray-500 mt-2">
+                    Showing top 10 of {geneticSummary.length} genetic markers
+                  </div>
+                )}
+              </>
+            ) : Object.entries(geneticDict).length > 0 ? (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   {Object.entries(geneticDict).slice(0, 10).map(([gene, genotype], index) => (
                     <div key={gene} className="text-sm text-gray-700">
-                      <strong>{gene}:</strong> {genotype}
+                      <strong>{gene || 'Unknown'}:</strong> {genotype || 'Unknown'}
                     </div>
                   ))}
                 </div>
@@ -444,175 +477,1168 @@ export const AthleteProfile: React.FC = () => {
         )}
 
         {activeTab === 'insights' && (
-          <div className="space-y-8 text-gray-900">
-            <h2 className="text-2xl font-bold mb-2 text-white">🧠 AI-Powered Recovery Insights</h2>
-            <p className="text-white mb-6 text-sm">
-              Personalized analysis based on biometrics, genetics, and performance trends
-            </p>
+          <div className="space-y-8">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-white-900 mb-2">🧠 Advanced Predictive Insights</h2>
+              <p className="text-gray-600 text-lg">
+                AI-powered analysis combining {geneticSummary.length} genetic markers with biometric trends
+              </p>
+            </div>
+
+            {/* Executive Summary Dashboard */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div className="card-enhanced p-6 text-center">
+                <div className="text-3xl font-bold text-blue-600 mb-2">{geneticSummary.length}</div>
+                <div className="text-sm text-gray-600">Genetic Markers</div>
+                <div className="text-xs text-gray-500 mt-1">Analyzed</div>
+              </div>
+              <div className="card-enhanced p-6 text-center">
+                <div className={`text-3xl font-bold mb-2 ${
+                  readinessScore > 75 ? 'text-green-600' :
+                  readinessScore > 50 ? 'text-yellow-600' : 'text-red-600'
+                }`}>
+                  {readinessScore.toFixed(0)}%
+                </div>
+                <div className="text-sm text-gray-600">Current Readiness</div>
+                <div className="text-xs text-gray-500 mt-1">Based on biometrics</div>
+              </div>
+              <div className="card-enhanced p-6 text-center">
+                <div className="text-3xl font-bold text-purple-600 mb-2">
+                  {geneticInsights.length > 0 ? geneticInsights.length : 'N/A'}
+                </div>
+                <div className="text-sm text-gray-600">Key Genetic Insights</div>
+                <div className="text-xs text-gray-500 mt-1">Performance factors</div>
+              </div>
+              <div className="card-enhanced p-6 text-center">
+                <div className="text-3xl font-bold text-indigo-600 mb-2">
+                  {athleteBiometrics.length}
+                </div>
+                <div className="text-sm text-gray-600">Biometric Records</div>
+                <div className="text-xs text-gray-500 mt-1">Historical data</div>
+              </div>
+            </div>
 
             {/* Current Status Analysis */}
             <section className="card-enhanced p-6">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <span className="bg-purple-100 p-1.5 rounded-full text-purple-700 text-lg">🔍</span>
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-3 text-black">
+                <span className="bg-purple-100 p-2 rounded-full text-purple-700">🔍</span>
                 Current Status Analysis
               </h3>
               <AlertCard alert={alert} />
             </section>
 
-            {/* Genetic Insights */}
-            <section>
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <span className="bg-green-100 p-1.5 rounded-full text-green-700 text-lg">🧬</span>
-                <span className="text-white">Genotype-Specific Recommendations</span>
+            {/* Advanced Genetic Analysis */}
+            <section className="card-enhanced p-6">
+              <h3 className="text-xl font-semibold mb-6 flex items-center gap-3 text-black" >
+                <span className="bg-green-100 p-2 rounded-full text-black-700">🧬</span>
+                Advanced Genetic Performance Analysis
               </h3>
 
-              {geneticInsights.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {geneticInsights.map((insight, index) => (
-                    <div
-                      key={index}
-                      className="card-enhanced p-5"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="text-lg font-bold text-blue-700">{insight.gene}</h4>
-                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full font-medium">
-                          Insight
-                        </span>
+              {geneticSummary.length > 0 ? (
+                <div className="space-y-6">
+                  {/* Genetic Performance Profile */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Performance Genetics */}
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-3">Performance Genetics</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Power Performance */}
+                        <div className="card-enhanced p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h5 className="font-semibold text-gray-900 flex items-center gap-2">
+                              <span className="text-xl">💪</span>
+                              Power Performance
+                            </h5>
+                            <span className={`text-sm px-2 py-1 rounded-full ${
+                              geneticSummary.filter(m => ['ACTN3', 'ACE', 'PPARGC1A', 'MSTN', 'IGF1', 'NOS3', 'BDKRB2'].includes(m.Gene || m.gene)).length > 0
+                                ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {geneticSummary.filter(m => ['ACTN3', 'ACE', 'PPARGC1A', 'MSTN', 'IGF1', 'NOS3', 'BDKRB2'].includes(m.Gene || m.gene)).length} markers
+                            </span>
+                          </div>
+
+                          <div className="space-y-4">
+                            {/* ACTN3 - Sprint and Power */}
+                            {geneticSummary.filter(m => m.Gene === 'ACTN3').map((marker, idx) => {
+                              const genotype = marker.GeneticCall || marker.genetic_call;
+                              const isPowerGenotype = genotype?.includes('RR');
+
+                              return (
+                                <div key={idx} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="font-medium text-orange-800">ACTN3 (Sprint/Power)</span>
+                                    <span className={`font-bold ${isPowerGenotype ? 'text-orange-600' : 'text-gray-500'}`}>
+                                      {genotype}
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-orange-200 rounded-full h-2 mb-2">
+                                    <div className={`h-2 rounded-full transition-all duration-300 ${
+                                      isPowerGenotype ? 'bg-orange-500' : 'bg-orange-300'
+                                    }`} style={{ width: isPowerGenotype ? '100%' : '60%' }}></div>
+                                  </div>
+                                  <p className="text-xs text-orange-700">
+                                    {isPowerGenotype
+                                      ? 'Elite power athlete genetics - exceptional sprint and strength capacity'
+                                      : 'Standard power capacity - focus on technique and explosive training'
+                                    }
+                                  </p>
+                                </div>
+                              );
+                            })}
+
+                            {/* ACE - Power vs Endurance */}
+                            {geneticSummary.filter(m => m.Gene === 'ACE').map((marker, idx) => {
+                              const genotype = marker.GeneticCall || marker.genetic_call;
+                              const isPowerGenotype = genotype?.includes('DD');
+
+                              return (
+                                <div key={idx} className="p-3 bg-red-50 rounded-lg border border-red-200">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="font-medium text-red-800">ACE (Power/Endurance)</span>
+                                    <span className={`font-bold ${isPowerGenotype ? 'text-red-600' : 'text-blue-600'}`}>
+                                      {genotype}
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-red-200 rounded-full h-2 mb-2">
+                                    <div className={`h-2 rounded-full transition-all duration-300 ${
+                                      isPowerGenotype ? 'bg-red-500' : 'bg-blue-500'
+                                    }`} style={{ width: isPowerGenotype ? '85%' : '90%' }}></div>
+                                  </div>
+                                  <p className="text-xs text-red-700">
+                                    {isPowerGenotype
+                                      ? 'DD genotype favors power - enhanced strength and anaerobic capacity'
+                                      : 'II genotype favors endurance - superior cardiovascular efficiency'
+                                    }
+                                  </p>
+                                </div>
+                              );
+                            })}
+
+                            {/* PPARGC1A - Mitochondrial biogenesis */}
+                            {geneticSummary.filter(m => m.Gene === 'PPARGC1A').map((marker, idx) => {
+                              const genotype = marker.GeneticCall || marker.genetic_call;
+
+                              return (
+                                <div key={idx} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="font-medium text-green-800">PPARGC1A (Mitochondrial)</span>
+                                    <span className="font-bold text-green-600">{genotype}</span>
+                                  </div>
+                                  <div className="w-full bg-green-200 rounded-full h-2 mb-2">
+                                    <div className="h-2 rounded-full bg-green-500 transition-all duration-300" style={{ width: '88%' }}></div>
+                                  </div>
+                                  <p className="text-xs text-green-700">
+                                    Influences mitochondrial biogenesis and muscle fiber composition
+                                  </p>
+                                </div>
+                              );
+                            })}
+
+                            {/* MSTN - Muscle development */}
+                            {geneticSummary.filter(m => m.Gene === 'MSTN').map((marker, idx) => {
+                              const genotype = marker.GeneticCall || marker.genetic_call;
+
+                              return (
+                                <div key={idx} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="font-medium text-purple-800">MSTN (Muscle Growth)</span>
+                                    <span className="font-bold text-purple-600">{genotype}</span>
+                                  </div>
+                                  <div className="w-full bg-purple-200 rounded-full h-2 mb-2">
+                                    <div className="h-2 rounded-full bg-purple-500 transition-all duration-300" style={{ width: '92%' }}></div>
+                                  </div>
+                                  <p className="text-xs text-purple-700">
+                                    Myostatin regulation affects muscle mass and strength potential
+                                  </p>
+                                </div>
+                              );
+                            })}
+
+                            {/* IGF1 - Growth factor */}
+                            {geneticSummary.filter(m => m.Gene === 'IGF1').map((marker, idx) => {
+                              const genotype = marker.GeneticCall || marker.genetic_call;
+
+                              return (
+                                <div key={idx} className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="font-medium text-indigo-800">IGF1 (Growth Factor)</span>
+                                    <span className="font-bold text-indigo-600">{genotype}</span>
+                                  </div>
+                                  <div className="w-full bg-indigo-200 rounded-full h-2 mb-2">
+                                    <div className="h-2 rounded-full bg-indigo-500 transition-all duration-300" style={{ width: '87%' }}></div>
+                                  </div>
+                                  <p className="text-xs text-indigo-700">
+                                    Insulin-like growth factor influences muscle development and recovery
+                                  </p>
+                                </div>
+                              );
+                            })}
+
+                            {/* NOS3 - Nitric oxide */}
+                            {geneticSummary.filter(m => m.Gene === 'NOS3').map((marker, idx) => {
+                              const genotype = marker.GeneticCall || marker.genetic_call;
+
+                              return (
+                                <div key={idx} className="p-3 bg-pink-50 rounded-lg border border-pink-200">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="font-medium text-pink-800">NOS3 (Nitric Oxide)</span>
+                                    <span className="font-bold text-pink-600">{genotype}</span>
+                                  </div>
+                                  <div className="w-full bg-pink-200 rounded-full h-2 mb-2">
+                                    <div className="h-2 rounded-full bg-pink-500 transition-all duration-300" style={{ width: '85%' }}></div>
+                                  </div>
+                                  <p className="text-xs text-pink-700">
+                                    Endothelial nitric oxide synthase affects blood flow and oxygen delivery
+                                  </p>
+                                </div>
+                              );
+                            })}
+
+                            {/* BDKRB2 - Bradykinin receptor */}
+                            {geneticSummary.filter(m => m.Gene === 'BDKRB2').map((marker, idx) => {
+                              const genotype = marker.GeneticCall || marker.genetic_call;
+
+                              return (
+                                <div key={idx} className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="font-medium text-yellow-800">BDKRB2 (Bradykinin)</span>
+                                    <span className="font-bold text-yellow-600">{genotype}</span>
+                                  </div>
+                                  <div className="w-full bg-yellow-200 rounded-full h-2 mb-2">
+                                    <div className="h-2 rounded-full bg-yellow-500 transition-all duration-300" style={{ width: '83%' }}></div>
+                                  </div>
+                                  <p className="text-xs text-yellow-700">
+                                    Bradykinin receptor affects cardiovascular response to exercise
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Endurance Performance */}
+                        <div className="card-enhanced p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h5 className="font-semibold text-gray-900 flex items-center gap-2">
+                              <span className="text-xl">🏃</span>
+                              Endurance Performance
+                            </h5>
+                            <span className={`text-sm px-2 py-1 rounded-full ${
+                              geneticSummary.some(m => (m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('II')) ||
+                                                     (m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG')))
+                                ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {geneticSummary.filter(m => m.Gene === 'ACE' || m.Gene === 'PPARA').length} markers
+                            </span>
+                          </div>
+
+                          {geneticSummary.filter(m => m.Gene === 'ACE' || m.Gene === 'PPARA').slice(0, 2).map((marker, idx) => {
+                            const gene = marker.Gene || marker.gene;
+                            const genotype = marker.GeneticCall || marker.genetic_call;
+                            const isEnduranceGenotype = (gene === 'ACE' && genotype?.includes('II')) ||
+                                                       (gene === 'PPARA' && genotype?.includes('GG'));
+
+                            return (
+                              <div key={idx} className="mb-3 last:mb-0">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-sm font-medium text-gray-700">{gene} Genotype</span>
+                                  <span className={`text-sm font-bold ${isEnduranceGenotype ? 'text-blue-600' : 'text-gray-500'}`}>
+                                    {genotype}
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                  <div className={`h-2 rounded-full transition-all duration-300 ${
+                                    isEnduranceGenotype ? 'bg-blue-500' : 'bg-gray-400'
+                                  }`} style={{ width: isEnduranceGenotype ? '100%' : '60%' }}></div>
+                                </div>
+                                <p className="text-xs text-gray-600">
+                                  {gene === 'ACE' && genotype?.includes('II')
+                                    ? 'Superior cardiovascular efficiency - ideal for endurance sports'
+                                    : gene === 'PPARA' && genotype?.includes('GG')
+                                      ? 'Enhanced fat metabolism - improved endurance capacity'
+                                      : 'Standard endurance capacity - maintain aerobic training'
+                                  }
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="space-y-2 text-sm">
-                        <p className="text-gray-700">
-                          <strong className="text-blue-600">Trait:</strong> {insight.trait}
-                        </p>
-                        <p className="text-gray-600 leading-relaxed">
-                          <strong className="text-blue-600">Strategy:</strong> {insight.recommendation}
-                        </p>
+
+                      {/* Training Recommendations Based on Genetics */}
+                      <div className="card-enhanced p-4 mt-4">
+                        <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <span className="text-lg">🎯</span>
+                          Genetic-Based Training Recommendations
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          {geneticSummary.some(m => m.Gene === 'ACTN3' && (m.GeneticCall || m.genetic_call)?.includes('RR')) && (
+                            <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                              <div className="font-medium text-orange-800 mb-1">Power Athlete Profile</div>
+                              <div className="text-xs text-orange-600">
+                                ACTN3 RR genotype suggests excellent power capacity. Prioritize:
+                                <br />• High-intensity interval training
+                                <br />• Strength and power development
+                                <br />• Sprint and explosive movements
+                              </div>
+                            </div>
+                          )}
+
+                          {geneticSummary.some(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('II')) && (
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                              <div className="font-medium text-blue-800 mb-1">Endurance Athlete Profile</div>
+                              <div className="text-xs text-blue-600">
+                                ACE II genotype indicates superior cardiovascular efficiency. Focus on:
+                                <br />• Long-duration aerobic training
+                                <br />• Cardiovascular endurance development
+                                <br />• Steady-state cardio protocols
+                              </div>
+                            </div>
+                          )}
+
+                          {geneticSummary.some(m => m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG')) && (
+                            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                              <div className="font-medium text-green-800 mb-1">Metabolic Efficiency Profile</div>
+                              <div className="text-xs text-green-600">
+                                PPARA GG genotype suggests enhanced fat metabolism. Benefits from:
+                                <br />• Longer training sessions
+                                <br />• Carbohydrate-focused nutrition
+                                <br />• Endurance-based activities
+                              </div>
+                            </div>
+                          )}
+
+                          {geneticSummary.some(m => m.Gene === 'COL5A1' && !(m.GeneticCall || m.genetic_call)?.includes('TT')) && (
+                            <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                              <div className="font-medium text-red-800 mb-1">Injury Risk Profile</div>
+                              <div className="text-xs text-red-600">
+                                COL5A1 variant detected - higher soft tissue injury risk. Implement:
+                                <br />• Enhanced flexibility protocols
+                                <br />• Regular mobility work
+                                <br />• Progressive loading strategies
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  ))}
+
+                  </div>
+
+                  {/* Enhanced Genetic Performance Matrix */}
+                  <div className="card-enhanced p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Enhanced Genetic Performance Matrix</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {[
+                        {
+                          trait: 'Sprint/Power',
+                          genes: geneticSummary.filter(m => m.Gene === 'ACTN3'),
+                          icon: '💪',
+                          color: 'orange',
+                          description: 'Explosive power & sprint capacity'
+                        },
+                        {
+                          trait: 'Strength',
+                          genes: geneticSummary.filter(m => m.Gene === 'MSTN' || m.Gene === 'IGF1'),
+                          icon: '🏋️',
+                          color: 'red',
+                          description: 'Muscle strength & development'
+                        },
+                        {
+                          trait: 'Endurance',
+                          genes: geneticSummary.filter(m => m.Gene === 'ACE' || m.Gene === 'PPARA'),
+                          icon: '🏃',
+                          color: 'blue',
+                          description: 'Cardiovascular efficiency'
+                        },
+                        {
+                          trait: 'Mitochondrial',
+                          genes: geneticSummary.filter(m => m.Gene === 'PPARGC1A'),
+                          icon: '⚡',
+                          color: 'green',
+                          description: 'Energy production capacity'
+                        },
+                        {
+                          trait: 'Recovery',
+                          genes: geneticSummary.filter(m => m.Gene === 'PPARA' || m.Gene === 'BDNF'),
+                          icon: '🔄',
+                          color: 'purple',
+                          description: 'Recovery & adaptation rate'
+                        },
+                        {
+                          trait: 'Injury Risk',
+                          genes: geneticSummary.filter(m => m.Gene === 'COL5A1' || m.Gene === 'ADRB2'),
+                          icon: '🛡️',
+                          color: 'gray',
+                          description: 'Injury susceptibility'
+                        }
+                      ].map((category, idx) => (
+                        <div key={idx} className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="text-2xl mb-2">{category.icon}</div>
+                          <div className="font-semibold text-gray-900 text-sm mb-1">{category.trait}</div>
+                          <div className={`text-lg font-bold mb-1 text-${category.color}-600`}>{category.genes.length}</div>
+                          <div className="text-xs text-gray-500 mb-2">markers</div>
+                          <div className="text-xs text-gray-400 leading-tight">{category.description}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Genetic Score Summary */}
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="card-enhanced p-4 text-center">
+                        <div className="text-2xl font-bold text-orange-600 mb-1">
+                          {Math.round(
+                            (geneticSummary.filter(m => m.Gene === 'ACTN3' && (m.GeneticCall || m.genetic_call)?.includes('RR')).length * 25) +
+                            (geneticSummary.filter(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('DD')).length * 20) +
+                            (geneticSummary.filter(m => m.Gene === 'MSTN').length * 15) +
+                            (geneticSummary.filter(m => m.Gene === 'IGF1').length * 15)
+                          )}
+                        </div>
+                        <div className="font-semibold text-gray-900 text-sm">Power Score</div>
+                        <div className="text-xs text-gray-500">/100</div>
+                      </div>
+
+                      <div className="card-enhanced p-4 text-center">
+                        <div className="text-2xl font-bold text-blue-600 mb-1">
+                          {Math.round(
+                            (geneticSummary.filter(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('II')).length * 25) +
+                            (geneticSummary.filter(m => m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG')).length * 20) +
+                            (geneticSummary.filter(m => m.Gene === 'PPARGC1A').length * 18) +
+                            (geneticSummary.filter(m => m.Gene === 'NOS3').length * 15)
+                          )}
+                        </div>
+                        <div className="font-semibold text-gray-900 text-sm">Endurance Score</div>
+                        <div className="text-xs text-gray-500">/100</div>
+                      </div>
+
+                      <div className="card-enhanced p-4 text-center">
+                        <div className="text-2xl font-bold text-green-600 mb-1">
+                          {Math.round(
+                            (geneticSummary.filter(m => m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG')).length * 20) +
+                            (geneticSummary.filter(m => m.Gene === 'BDNF' && (m.GeneticCall || m.genetic_call)?.includes('Val/Val')).length * 15) +
+                            (latest && (latest.sleep_duration_h || 0) >= 7 ? 10 : 0) +
+                            (latest && (latest.hrv_night || 0) > 50 ? 10 : 0)
+                          )}
+                        </div>
+                        <div className="font-semibold text-gray-900 text-sm">Recovery Score</div>
+                        <div className="text-xs text-gray-500">/100</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="card-enhanced rounded-xl p-8 text-center">
-                  <div className="text-4xl mb-3">🧬</div>
-                  <p className="text-gray-700 font-medium">Genetic Insights Unavailable</p>
-                  <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
-                    Genetic testing unlocks personalized training, recovery, and nutrition strategies.
-                    <br />
-                    <button className="text-blue-600 hover:text-blue-700 text-sm mt-1 underline">
-                      Request Test →
-                    </button>
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">🧬</div>
+                  <h4 className="text-xl font-semibold text-gray-900 mb-2">Genetic Analysis Unavailable</h4>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    Comprehensive genetic data is required for advanced performance insights and personalized recommendations.
                   </p>
                 </div>
               )}
             </section>
 
-          
-            {/* Performance Forecast */}
+            {/* Integrated Performance Forecast */}
             {athleteBiometrics.length >= 3 && latest && (
               <section className="card-enhanced p-6">
-                <h3 className="text-xl font-semibold mb-5 flex items-center gap-2">
-                  <span className="bg-indigo-100 p-1.5 rounded-full text-indigo-700 text-lg">🔮</span>
-                  Performance Readiness Forecast
+                <h3 className="text-xl font-semibold mb-6 flex items-center gap-3 text-black">
+                  <span className="bg-indigo-100 p-2 rounded-full text-indigo-700">🔮</span>
+                  AI-Powered Performance Forecast
                 </h3>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Trend Indicators */}
+                <div className="grid lg:grid-cols-3 gap-6">
+                  {/* Biometric Trends */}
                   <div className="card-enhanced p-5">
                     <h4 className="font-semibold text-blue-700 mb-4 flex items-center gap-2">
-                      📈 Recent Trends
+                      <span className="bg-blue-100 p-1.5 rounded-full text-blue-700">📈</span>
+                      Biometric Trends
                     </h4>
                     <div className="space-y-3 text-sm">
                       {[
-                        { label: 'HRV', value: latest.hrv_night, unit: 'ms', ideal: '↑', desc: 'Recovery capacity' },
-                        { label: 'Resting HR', value: latest.resting_hr, unit: 'bpm', ideal: '↓', desc: 'Cardiac stress' },
-                        { label: 'Sleep Duration', value: latest.sleep_duration_h, unit: 'h', ideal: '↑', desc: 'Recovery quality' },
-                      ].map((item) => {
-                        const isGood = item.ideal === '↑'
-                          ? ((item.value || 0) > (item.label === 'HRV' ? 50 : 7))
-                          : ((item.value || 0) < (item.label === 'Resting HR' ? 65 : 0));
-                        return (
-                          <div
-                            key={item.label}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                          >
+                        { label: 'HRV Recovery', value: latest.hrv_night || 0, unit: 'ms', trend: 'up', desc: 'Heart rate variability', icon: '❤️' },
+                        { label: 'Resting HR', value: latest.resting_hr || 0, unit: 'bpm', trend: 'down', desc: 'Cardiac stress level', icon: '💓' },
+                        { label: 'Sleep Duration', value: latest.sleep_duration_h || 0, unit: 'h', trend: 'up', desc: 'Recovery quality', icon: '😴' },
+                        { label: 'SpO₂ Level', value: latest.spo2_night || 0, unit: '%', trend: 'up', desc: 'Oxygen saturation', icon: '🫁' },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">{item.icon}</span>
                             <div>
                               <div className="font-medium text-gray-700">{item.label}</div>
                               <div className="text-xs text-gray-500">{item.desc}</div>
                             </div>
-                            <div className="text-right">
-                              <div className="font-bold text-gray-900">
-                                {(item.value || 0).toFixed(1)} {item.unit}
-                              </div>
-                              <div className={`text-xs font-medium ${isGood ? 'text-green-600' : 'text-red-600'}`}>
-                                {item.ideal} {isGood ? 'Optimal' : 'Needs work'}
-                              </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-gray-900">{item.value.toFixed(1)} {item.unit}</div>
+                            <div className={`text-xs font-medium ${
+                              item.trend === 'up' ?
+                                (item.value > (item.label === 'HRV Recovery' ? 50 : item.label === 'Sleep Duration' ? 7 : 95) ? 'text-green-600' : 'text-red-600') :
+                                (item.value < (item.label === 'Resting HR' ? 65 : 0) ? 'text-green-600' : 'text-red-600')
+                            }`}>
+                              {item.trend === 'up' ? '↗' : '↘'} {item.trend === 'up' ?
+                                (item.value > (item.label === 'HRV Recovery' ? 50 : item.label === 'Sleep Duration' ? 7 : 95) ? 'Good' : 'Low') :
+                                (item.value < (item.label === 'Resting HR' ? 65 : 0) ? 'Optimal' : 'High')
+                              }
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Readiness Score */}
-                  <div className="card-enhanced p-5 text-center">
-                    <h4 className="font-semibold text-blue-700 mb-3">📊 Today's Readiness Score</h4>
-                    <div
-                      className={`text-5xl font-extrabold mb-2 transition-all duration-300 ${
-                        readinessScore > 75
-                          ? 'text-green-600 drop-shadow-sm'
-                          : readinessScore > 50
-                          ? 'text-yellow-600'
-                          : 'text-red-600'
-                      }`}
-                    >
-                      {readinessScore > 75 ? '🟢' : readinessScore > 50 ? '🟡' : '🔴'}{' '}
-                      {readinessScore.toFixed(0)}%
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">Based on HRV, RHR, Sleep & SpO₂</p>
+                  {/* Genetic Performance Integration */}
+                  <div className="card-enhanced p-5">
+                    <h4 className="font-semibold text-purple-700 mb-4 flex items-center gap-2">
+                      <span className="bg-purple-100 p-1.5 rounded-full text-purple-700">🧬⚡</span>
+                      Genetic Performance Integration
+                    </h4>
+                    <div className="space-y-3">
+                      {/* Power Genetic Score */}
+                      <div className="p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-medium text-orange-800">Power Genetic Score</span>
+                          <span className="text-lg font-bold text-orange-600">
+                            {Math.round(
+                              (geneticSummary.filter(m => m.Gene === 'ACTN3' && (m.GeneticCall || m.genetic_call)?.includes('RR')).length * 25) +
+                              (geneticSummary.filter(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('DD')).length * 20) +
+                              (geneticSummary.filter(m => m.Gene === 'MSTN').length * 15) +
+                              (geneticSummary.filter(m => m.Gene === 'IGF1').length * 15) +
+                              (geneticSummary.filter(m => m.Gene === 'NOS3').length * 13) +
+                              (geneticSummary.filter(m => m.Gene === 'BDKRB2').length * 12)
+                            )}/100
+                          </span>
+                        </div>
+                        <div className="w-full bg-orange-200 rounded-full h-2 mb-2">
+                          <div className="h-2 rounded-full bg-orange-500 transition-all duration-300" style={{
+                            width: `${Math.min(100,
+                              (geneticSummary.filter(m => m.Gene === 'ACTN3' && (m.GeneticCall || m.genetic_call)?.includes('RR')).length * 25) +
+                              (geneticSummary.filter(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('DD')).length * 20) +
+                              (geneticSummary.filter(m => m.Gene === 'MSTN').length * 15) +
+                              (geneticSummary.filter(m => m.Gene === 'IGF1').length * 15) +
+                              (geneticSummary.filter(m => m.Gene === 'NOS3').length * 13) +
+                              (geneticSummary.filter(m => m.Gene === 'BDKRB2').length * 12)
+                            )}%`
+                          }}></div>
+                        </div>
+                        <p className="text-xs text-orange-700">
+                          Based on {geneticSummary.filter(m => ['ACTN3', 'ACE', 'MSTN', 'IGF1', 'NOS3', 'BDKRB2'].includes(m.Gene || m.gene)).length} power-related genetic markers
+                        </p>
+                      </div>
 
-                    {/* Micro-Recommendation */}
-                    <div className="bg-gray-100 rounded-lg p-3 text-xs border border-gray-200">
-                      <strong>Suggestion:</strong>{' '}
-                      {readinessScore > 75
-                        ? 'Optimize with high-intensity training'
-                        : readinessScore > 50
-                        ? 'Focus on active recovery & technique'
-                        : 'Prioritize sleep, hydration, and rest'}
+                      {/* Endurance Genetic Score */}
+                      <div className="p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-medium text-blue-800">Endurance Genetic Score</span>
+                          <span className="text-lg font-bold text-blue-600">
+                            {Math.round(
+                              (geneticSummary.filter(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('II')).length * 25) +
+                              (geneticSummary.filter(m => m.Gene === 'PPARGC1A').length * 20) +
+                              (geneticSummary.filter(m => m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG')).length * 18) +
+                              (geneticSummary.filter(m => m.Gene === 'NOS3').length * 15) +
+                              (geneticSummary.filter(m => m.Gene === 'BDKRB2').length * 12) +
+                              (geneticSummary.filter(m => m.Gene === 'IGF1').length * 10)
+                            )}/100
+                          </span>
+                        </div>
+                        <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
+                          <div className="h-2 rounded-full bg-blue-500 transition-all duration-300" style={{
+                            width: `${Math.min(100,
+                              (geneticSummary.filter(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('II')).length * 25) +
+                              (geneticSummary.filter(m => m.Gene === 'PPARGC1A').length * 20) +
+                              (geneticSummary.filter(m => m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG')).length * 18) +
+                              (geneticSummary.filter(m => m.Gene === 'NOS3').length * 15) +
+                              (geneticSummary.filter(m => m.Gene === 'BDKRB2').length * 12) +
+                              (geneticSummary.filter(m => m.Gene === 'IGF1').length * 10)
+                            )}%`
+                          }}></div>
+                        </div>
+                        <p className="text-xs text-blue-700">
+                          Based on {geneticSummary.filter(m => ['ACE', 'PPARGC1A', 'PPARA', 'NOS3', 'BDKRB2', 'IGF1'].includes(m.Gene || m.gene)).length} endurance-related genetic markers
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Training Optimization Forecast */}
+                  <div className="card-enhanced p-5">
+                    <h4 className="font-semibold text-green-700 mb-4 flex items-center gap-2">
+                      <span className="bg-green-100 p-1.5 rounded-full text-green-700">🎯</span>
+                      Training Optimization Forecast
+                    </h4>
+                    <div className="space-y-4">
+                      {/* Next 7 Days Forecast */}
+                      <div>
+                        <h5 className="font-medium text-gray-900 mb-3 text-sm">7-Day Performance Forecast</h5>
+                        <div className="space-y-2">
+                          {Array.from({ length: 7 }, (_, i) => {
+                            const date = new Date();
+                            date.setDate(date.getDate() + i);
+                            const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+
+                            // Calculate forecasted performance based on genetics and biometrics
+                            const powerScore = Math.min(100,
+                              (geneticSummary.filter(m => m.Gene === 'ACTN3' && (m.GeneticCall || m.genetic_call)?.includes('RR')).length * 25) +
+                              (geneticSummary.filter(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('DD')).length * 20) +
+                              ((latest.hrv_night || 0) > 50 ? 15 : 0) +
+                              ((latest.resting_hr || 0) < 65 ? 10 : 0)
+                            );
+
+                            const enduranceScore = Math.min(100,
+                              (geneticSummary.filter(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('II')).length * 25) +
+                              (geneticSummary.filter(m => m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG')).length * 18) +
+                              ((latest.sleep_duration_h || 0) >= 7 ? 15 : 0) +
+                              ((latest.spo2_night || 0) > 96 ? 10 : 0)
+                            );
+
+                            return (
+                              <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                                <span className="font-medium text-gray-700">{dayName}</span>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-center">
+                                    <div className={`font-bold ${powerScore > 70 ? 'text-orange-600' : 'text-gray-500'}`}>
+                                      {powerScore.toFixed(0)}
+                                    </div>
+                                    <div className="text-xs text-gray-500">Power</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className={`font-bold ${enduranceScore > 70 ? 'text-blue-600' : 'text-gray-500'}`}>
+                                      {enduranceScore.toFixed(0)}
+                                    </div>
+                                    <div className="text-xs text-gray-500">Endurance</div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Weekly Training Recommendations */}
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <h5 className="font-medium text-green-800 mb-2 text-sm">Optimal Training This Week</h5>
+                        <div className="space-y-2 text-xs text-green-700">
+                          {geneticSummary.some(m => m.Gene === 'ACTN3' && (m.GeneticCall || m.genetic_call)?.includes('RR')) && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <span>Power-focused sessions: Mon, Wed, Fri</span>
+                            </div>
+                          )}
+                          {geneticSummary.some(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('II')) && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span>Endurance sessions: Tue, Thu, Sat</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span>Recovery focus: Sun</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* AI Coach Recommendation */}
-                <div className="mt-6 card-enhanced p-5">
-                  <h4 className="font-semibold text-amber-700 mb-2 flex items-center gap-2">
-                    🤖 AI Coach Recommendation
-                  </h4>
-                  <p className="text-amber-600 text-sm leading-relaxed">
-                    {readinessScore > 75
-                      ? `Schedule high-load sessions today. ${athlete.name.split(' ')[0]} is in peak recovery.`
-                      : readinessScore > 50
-                      ? `Schedule moderate load or skill work. Monitor biometrics tomorrow.`
-                      : `Prescribe full rest or active recovery. Consider adjusting sleep or nutrition.`}
-                  </p>
+                {/* Enhanced Readiness Assessment */}
+                <div className="mt-6 card-enhanced p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Comprehensive Readiness Assessment</h4>
+                      <p className="text-sm text-gray-600">AI-powered analysis combining biometrics and genetics</p>
+                    </div>
+                    <div className="text-center">
+                      <div className={`text-4xl font-bold mb-1 ${
+                        readinessScore > 75 ? 'text-green-600' :
+                        readinessScore > 50 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {readinessScore.toFixed(0)}%
+                      </div>
+                      <div className={`text-sm font-medium ${
+                        readinessScore > 75 ? 'text-green-600' :
+                        readinessScore > 50 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {readinessScore > 75 ? 'Excellent' : readinessScore > 50 ? 'Good' : 'Needs Attention'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-6">
+                    {/* Biometric Assessment */}
+                    <div className="card-enhanced p-4">
+                      <h5 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <span className="bg-blue-100 p-1 rounded-full text-blue-700">📊</span>
+                        Biometric Assessment
+                      </h5>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-center justify-between p-2 rounded-lg" style={{backgroundColor: 'rgba(59, 130, 246, 0.1)'}}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">❤️</span>
+                            <span className="text-black">HRV Recovery</span>
+                          </div>
+                          <div className="text-right">
+                            <div className={`font-bold ${(latest.hrv_night || 0) > 50 ? 'text-green-600' : 'text-red-600'}`}>
+                              {(latest.hrv_night || 0).toFixed(0)}ms
+                            </div>
+                            <div className={`text-xs ${(latest.hrv_night || 0) > 50 ? 'text-green-600' : 'text-red-600'}`}>
+                              {(latest.hrv_night || 0) > 50 ? 'Optimal' : 'Low'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-2 rounded-lg" style={{backgroundColor: 'rgba(59, 130, 246, 0.1)'}}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">💓</span>
+                            <span  className="text-black">Resting HR</span>
+                          </div>
+                          <div className="text-right">
+                            <div className={`font-bold ${(latest.resting_hr || 0) < 65 ? 'text-green-600' : 'text-red-600'}`}>
+                              {(latest.resting_hr || 0).toFixed(0)}bpm
+                            </div>
+                            <div className={`text-xs ${(latest.resting_hr || 0) < 65 ? 'text-green-600' : 'text-red-600'}`}>
+                              {(latest.resting_hr || 0) < 65 ? 'Normal' : 'Elevated'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-2 rounded-lg" style={{backgroundColor: 'rgba(59, 130, 246, 0.1)'}}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">😴</span>
+                            <span  className="text-black">Sleep Quality</span>
+                          </div>
+                          <div className="text-right">
+                            <div className={`font-bold ${(latest.sleep_duration_h || 0) >= 7 ? 'text-green-600' : 'text-red-600'}`}>
+                              {(latest.sleep_duration_h || 0).toFixed(1)}h
+                            </div>
+                            <div className={`text-xs ${(latest.sleep_duration_h || 0) >= 7 ? 'text-green-600' : 'text-red-600'}`}>
+                              {(latest.sleep_duration_h || 0) >= 7 ? 'Adequate' : 'Insufficient'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Genetic Assessment */}
+                    <div className="card-enhanced p-4">
+                      <h5 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <span className="bg-purple-100 p-1 rounded-full text-purple-700">🧬</span>
+                        Genetic Assessment
+                      </h5>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-center justify-between p-2 rounded-lg" style={{backgroundColor: 'rgba(147, 51, 234, 0.1)'}}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">💪</span>
+                            <span className="text-black">Power Genetics</span>
+                          </div>
+                          <div className="text-right">
+                            <div className={`font-bold ${geneticSummary.some(m => m.Gene === 'ACTN3') ? 'text-purple-600' : 'text-gray-400'}`}>
+                              {geneticSummary.filter(m => m.Gene === 'ACTN3').length}
+                            </div>
+                            <div className={`text-xs ${geneticSummary.some(m => m.Gene === 'ACTN3') ? 'text-purple-600' : 'text-gray-400'}`}>
+                              markers
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-2 rounded-lg" style={{backgroundColor: 'rgba(147, 51, 234, 0.1)'}}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🏃</span>
+                            <span className="text-black">Endurance Genetics</span>
+                          </div>
+                          <div className="text-right">
+                            <div className={`font-bold ${geneticSummary.some(m => m.Gene === 'ACE' || m.Gene === 'PPARA') ? 'text-purple-600' : 'text-gray-400'}`}>
+                              {geneticSummary.filter(m => m.Gene === 'ACE' || m.Gene === 'PPARA').length}
+                            </div>
+                            <div className={`text-xs ${geneticSummary.some(m => m.Gene === 'ACE' || m.Gene === 'PPARA') ? 'text-purple-600' : 'text-gray-400'}`}>
+                              markers
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-2 rounded-lg" style={{backgroundColor: 'rgba(147, 51, 234, 0.1)'}}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🛡️</span>
+                            <span className="text-black">Injury Resistance</span>
+                          </div>
+                          <div className="text-right">
+                            <div className={`font-bold ${geneticSummary.some(m => m.Gene === 'COL5A1') ? 'text-purple-600' : 'text-gray-400'}`}>
+                              {geneticSummary.filter(m => m.Gene === 'COL5A1').length}
+                            </div>
+                            <div className={`text-xs ${geneticSummary.some(m => m.Gene === 'COL5A1') ? 'text-purple-600' : 'text-gray-400'}`}>
+                              markers
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Combined Insights */}
+                    <div className="card-enhanced p-4">
+                      <h5 className="font-medium text-green-700 mb-3 flex items-center gap-2">
+                        <span className="bg-green-100 p-1 rounded-full">🎯</span>
+                        Combined Insights
+                      </h5>
+                      <div className="space-y-3 text-sm">
+                        <div className="p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                          <div className="font-medium text-green-800 mb-1">Training Capacity</div>
+                          <div className="text-xs text-green-600">
+                            {geneticSummary.some(m => m.Gene === 'ACTN3' && (m.GeneticCall || m.genetic_call)?.includes('RR')) &&
+                             (latest.hrv_night || 0) > 50
+                              ? 'High-intensity training optimal'
+                              : geneticSummary.some(m => m.Gene === 'ACE' && (m.GeneticCall || m.genetic_call)?.includes('II'))
+                                ? 'Endurance training recommended'
+                                : 'Monitor recovery before increasing load'}
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                          <div className="font-medium text-blue-800 mb-1">Recovery Strategy</div>
+                          <div className="text-xs text-blue-600">
+                            {geneticSummary.some(m => m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG'))
+                              ? 'Enhanced fat metabolism - carb-focused recovery'
+                              : (latest.sleep_duration_h || 0) >= 7
+                                ? 'Good sleep foundation - maintain current protocols'
+                                : 'Prioritize sleep optimization'}
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                          <div className="font-medium text-orange-800 mb-1">Risk Management</div>
+                          <div className="text-xs text-orange-600">
+                            {geneticSummary.some(m => m.Gene === 'COL5A1' && !(m.GeneticCall || m.genetic_call)?.includes('TT'))
+                              ? 'Soft tissue risk - implement preventive measures'
+                              : (latest.resting_hr || 0) > 70
+                                ? 'Monitor cardiac stress indicators'
+                                : 'Standard protocols appropriate'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
             )}
 
-            {/* Recovery Tip of the Day */}
+            {/* Enhanced Recovery Intelligence */}
+            <section className="card-enhanced p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-3">
+                <span className="bg-rose-100 p-2 rounded-full text-rose-700">💡</span>
+                AI-Powered Recovery Intelligence
+              </h3>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Genetic Recovery Profile */}
+                <div className="card-enhanced p-5">
+                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <span className="bg-purple-100 p-1.5 rounded-full text-purple-700">🧬</span>
+                    Genetic Recovery Profile
+                  </h4>
+                  <div className="space-y-4">
+                    {/* Recovery Capacity Overview */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                        <div className="text-2xl font-bold text-purple-700 mb-1">
+                          {geneticSummary.filter(m =>
+                            (m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG')) ||
+                            (m.Gene === 'BDNF' && (m.GeneticCall || m.genetic_call)?.includes('Val/Val'))
+                          ).length}
+                        </div>
+                        <div className="text-sm text-purple-600 font-medium">Fast Recovery Markers</div>
+                      </div>
+                      <div className="text-center p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-700 mb-1">
+                          {geneticSummary.filter(m =>
+                            (m.Gene === 'ACTN3' && (m.GeneticCall || m.genetic_call)?.includes('XX')) ||
+                            (m.Gene === 'COMT' && (m.GeneticCall || m.genetic_call)?.includes('Met/Met'))
+                          ).length}
+                        </div>
+                        <div className="text-sm text-orange-600 font-medium">Extended Recovery Markers</div>
+                      </div>
+                    </div>
+
+                    {/* Specific Recovery Insights */}
+                    <div className="space-y-3">
+                      {geneticSummary.filter(m =>
+                        m.Gene === 'ACTN3' || m.Gene === 'PPARA' || m.Gene === 'BDNF' || m.Gene === 'COMT'
+                      ).slice(0, 4).map((marker, idx) => {
+                        const gene = marker.Gene || marker.gene;
+                        const genotype = marker.GeneticCall || marker.genetic_call;
+
+                        let recoveryInsight = '';
+                        let icon = '🧬';
+                        let bgColor = 'bg-purple-50';
+                        let borderColor = 'border-purple-200';
+                        let textColor = 'text-purple-800';
+
+                        if (gene === 'ACTN3' && genotype?.includes('XX')) {
+                          recoveryInsight = 'Endurance genotype: May need extended recovery periods between high-intensity sessions';
+                          icon = '🏃';
+                          bgColor = 'bg-blue-50';
+                          borderColor = 'border-blue-200';
+                          textColor = 'text-blue-800';
+                        } else if (gene === 'PPARA' && genotype?.includes('GG')) {
+                          recoveryInsight = 'Enhanced fat metabolism: Omega-3 supplementation may accelerate recovery processes';
+                          icon = '🥗';
+                          bgColor = 'bg-green-50';
+                          borderColor = 'border-green-200';
+                          textColor = 'text-green-800';
+                        } else if (gene === 'BDNF' && genotype?.includes('Met')) {
+                          recoveryInsight = 'Neuroplasticity focus: Cognitive training during recovery may enhance adaptation';
+                          icon = '🧠';
+                          bgColor = 'bg-indigo-50';
+                          borderColor = 'border-indigo-200';
+                          textColor = 'text-indigo-800';
+                        } else if (gene === 'COMT' && genotype?.includes('Met/Met')) {
+                          recoveryInsight = 'Stress-sensitive genotype: Prioritize stress management for optimal recovery';
+                          icon = '🧘';
+                          bgColor = 'bg-amber-50';
+                          borderColor = 'border-amber-200';
+                          textColor = 'text-amber-800';
+                        }
+
+                        return recoveryInsight ? (
+                          <div key={idx} className={`p-3 bg-gradient-to-r from-${bgColor.split('-')[1]}-50 to-${bgColor.split('-')[1]}-100 rounded-lg border ${borderColor}`}>
+                            <div className="flex items-start gap-3">
+                              <span className="text-lg">{icon}</span>
+                              <div>
+                                <div className={`font-medium ${textColor} text-sm`}>{gene}: {genotype}</div>
+                                <div className={`text-xs ${textColor.replace('800', '600')} mt-1`}>{recoveryInsight}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null;
+                      })}
+
+                      {/* Default recovery insights if no specific markers found */}
+                      {geneticSummary.filter(m =>
+                        m.Gene === 'ACTN3' || m.Gene === 'PPARA' || m.Gene === 'BDNF' || m.Gene === 'COMT'
+                      ).length === 0 && (
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-start gap-3">
+                            <span className="text-lg">📋</span>
+                            <div>
+                              <div className="font-medium text-gray-800 text-sm">Standard Recovery Profile</div>
+                              <div className="text-xs text-gray-600 mt-1">
+                                No specific recovery genetics identified. Follow standard recovery protocols based on training load and biometric indicators.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Recovery Protocol Recommendations */}
+                    <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                      <h5 className="font-medium text-purple-800 mb-2">Recovery Protocol Recommendations</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span className="text-purple-700">
+                              {geneticSummary.some(m => m.Gene === 'PPARA' && (m.GeneticCall || m.genetic_call)?.includes('GG'))
+                                ? 'Omega-3 supplementation for enhanced recovery'
+                                : 'Standard protein supplementation protocol'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span className="text-purple-700">
+                              {geneticSummary.some(m => m.Gene === 'COMT' && (m.GeneticCall || m.genetic_call)?.includes('Met/Met'))
+                                ? 'Stress management essential for recovery'
+                                : 'Standard stress management protocols'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span className="text-purple-700">
+                              {geneticSummary.some(m => m.Gene === 'ACTN3' && (m.GeneticCall || m.genetic_call)?.includes('XX'))
+                                ? 'Extended recovery between sessions'
+                                : 'Standard recovery timing'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span className="text-purple-700">
+                              {geneticSummary.some(m => m.Gene === 'BDNF' && (m.GeneticCall || m.genetic_call)?.includes('Met'))
+                                ? 'Include cognitive training in recovery'
+                                : 'Focus on physical recovery modalities'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current Recovery Status */}
+                <div className="card-enhanced p-5">
+                  <h4 className="font-semibold text-blue-700 mb-4 flex items-center gap-2">
+                    <span className="bg-blue-100 p-1.5 rounded-full text-blue-700">📊</span>
+                    Current Recovery Status
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">❤️</span>
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">HRV Recovery</div>
+                            <div className="text-xs text-gray-600">Heart rate variability</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`font-bold text-lg ${latest && (latest.hrv_night || 0) > 50 ? 'text-green-600' : 'text-red-600'}`}>
+                            {latest ? (latest.hrv_night || 0).toFixed(0) : '0'}ms
+                          </div>
+                          <div className={`text-xs ${latest && (latest.hrv_night || 0) > 50 ? 'text-green-600' : 'text-red-600'}`}>
+                            {latest && (latest.hrv_night || 0) > 50 ? 'Good' : 'Needs work'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">😴</span>
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Sleep Quality</div>
+                            <div className="text-xs text-gray-600">Duration & deep sleep</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`font-bold text-lg ${latest && (latest.sleep_duration_h || 0) >= 7 ? 'text-green-600' : 'text-red-600'}`}>
+                            {latest ? (latest.sleep_duration_h || 0).toFixed(1) : '0.0'}h
+                          </div>
+                          <div className={`text-xs ${latest && (latest.sleep_duration_h || 0) >= 7 ? 'text-green-600' : 'text-red-600'}`}>
+                            {latest && (latest.sleep_duration_h || 0) >= 7 ? 'Adequate' : 'Insufficient'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">💪</span>
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Training Stress</div>
+                            <div className="text-xs text-gray-600">Current load vs capacity</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`font-bold text-lg ${latest && (latest.training_load_pct || 0) < 80 ? 'text-green-600' : 'text-orange-600'}`}>
+                            {latest ? (latest.training_load_pct || 0).toFixed(0) : '0'}%
+                          </div>
+                          <div className={`text-xs ${latest && (latest.training_load_pct || 0) < 80 ? 'text-green-600' : 'text-orange-600'}`}>
+                            {latest && (latest.training_load_pct || 0) < 80 ? 'Manageable' : 'High'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Personalized Recovery Plan */}
+                <div className="card-enhanced p-5">
+                  <h4 className="font-semibold text-green-700 mb-4 flex items-center gap-2">
+                    <span className="bg-green-100 p-1.5 rounded-full text-green-700">🎯</span>
+                    Personalized Recovery Plan
+                  </h4>
+                  <div className="space-y-4">
+                    {/* Priority Actions */}
+                    <div>
+                      <h5 className="font-medium text-gray-900 mb-2 text-sm">Priority Actions</h5>
+                      <div className="space-y-2">
+                        {latest && (latest.sleep_duration_h || 0) < 6 && (
+                          <div className="flex items-start gap-3 p-2 bg-red-50 rounded-lg border-l-4 border-red-500">
+                            <span className="text-red-500 mt-0.5">🔴</span>
+                            <div>
+                              <div className="font-medium text-red-800 text-sm">Sleep Priority</div>
+                              <div className="text-xs text-red-600">Extend sleep duration to 7-9 hours</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {latest && (latest.hrv_night || 0) < 40 && (
+                          <div className="flex items-start gap-3 p-2 bg-orange-50 rounded-lg border-l-4 border-orange-500">
+                            <span className="text-orange-500 mt-0.5">🟠</span>
+                            <div>
+                              <div className="font-medium text-orange-800 text-sm">HRV Recovery</div>
+                              <div className="text-xs text-orange-600">Include active recovery and stress reduction</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {geneticSummary.some(m => m.Gene === 'COL5A1' && !(m.GeneticCall || m.genetic_call)?.includes('TT')) && (
+                          <div className="flex items-start gap-3 p-2 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                            <span className="text-blue-500 mt-0.5">🔵</span>
+                            <div>
+                              <div className="font-medium text-blue-800 text-sm">Soft Tissue Care</div>
+                              <div className="text-xs text-blue-600">Genetic risk - focus on flexibility and mobility</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Recovery Timeline */}
+                    <div>
+                      <h5 className="font-medium text-gray-900 mb-2 text-sm">Recovery Timeline</h5>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between items-center p-2 bg-green-50 rounded">
+                          <span className="text-green-800">Today</span>
+                          <span className="font-medium text-green-700">
+                            {readinessScore > 75 ? 'Full training capacity' : 'Modified training load'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
+                          <span className="text-blue-800">Next 48h</span>
+                          <span className="font-medium text-blue-700">
+                            {geneticSummary.some(m => m.Gene === 'PPARA') ? 'Enhanced recovery expected' : 'Standard recovery protocols'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 bg-purple-50 rounded">
+                          <span className="text-purple-800">This Week</span>
+                          <span className="font-medium text-purple-700">
+                            Monitor genetic risk factors
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Daily Recovery Tip */}
             <section className="card-enhanced p-5">
-              <h4 className="font-semibold text-rose-700 mb-2 flex items-center gap-2">
-                💡 Recovery Tip of the Day
-              </h4>
-              <p className="text-rose-600 text-sm leading-relaxed">
-                {[
-                  'Hydration impacts HRV. Aim for 35ml/kg body weight daily.',
-                  'Blue light after 9 PM suppresses melatonin. Use night mode.',
-                  'Cold exposure post-training can delay muscle recovery in ACTN3 XX carriers.',
-                  'Magnesium glycinate may improve deep sleep in PER3 long genotype athletes.',
-                  'Morning sunlight resets circadian rhythm — get 10 mins upon waking.',
-                  'Omega-3s may enhance recovery in BDNF Met carriers.',
-                  'Caffeine clearance is slower in evening types (PER3 long) — avoid after 2 PM.',
-                ][(athlete?.athlete_id || '').charCodeAt((athlete?.athlete_id || '').length - 1) % 7]}
-              </p>
+              <div className="flex items-start gap-4">
+                <span className="text-3xl">💡</span>
+                <div>
+                  <h4 className="font-semibold text-rose-700 mb-2">Daily Recovery Intelligence</h4>
+                  <p className="text-rose-600 text-sm leading-relaxed">
+                    {(() => {
+                      const tips = [
+                        'Hydration impacts HRV. Aim for 35ml/kg body weight daily.',
+                        'Blue light after 9 PM suppresses melatonin. Use night mode.',
+                        'Cold exposure post-training can delay muscle recovery in ACTN3 XX carriers.',
+                        'Magnesium glycinate may improve deep sleep in PER3 long genotype athletes.',
+                        'Morning sunlight resets circadian rhythm — get 10 mins upon waking.',
+                        'Omega-3s may enhance recovery in BDNF Met carriers.',
+                        'Caffeine clearance is slower in evening types (PER3 long) — avoid after 2 PM.',
+                      ];
+
+                      // Select tip based on genetic profile
+                      if (geneticSummary.some(m => m.Gene === 'ACTN3')) {
+                        return 'Power athletes (ACTN3 RR) benefit from protein-rich recovery meals within 30 minutes post-training.';
+                      } else if (geneticSummary.some(m => m.Gene === 'PPARA')) {
+                        return 'Endurance genetics (PPARA GG) respond well to carbohydrate-focused recovery nutrition.';
+                      } else if (geneticSummary.some(m => m.Gene === 'COL5A1')) {
+                        return 'Soft tissue injury risk detected - incorporate regular flexibility and mobility work.';
+                      }
+
+                      return tips[(athlete?.athlete_id || '').charCodeAt((athlete?.athlete_id || '').length - 1) % tips.length];
+                    })()}
+                  </p>
+                </div>
+              </div>
             </section>
           </div>
         )}

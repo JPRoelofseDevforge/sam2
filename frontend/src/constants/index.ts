@@ -1,7 +1,7 @@
 // Weather API configuration
 export const WEATHER_CONFIG = {
-  CITY: import.meta.env.VITE_CITY || 'Pretoria',
-  STATE: import.meta.env.VITE_STATE || 'Gauteng',
+  CITY: import.meta.env.VITE_CITY || 'Stellenbosch',
+  STATE: import.meta.env.VITE_STATE || 'Western Cape',
   COUNTRY: import.meta.env.VITE_COUNTRY || 'South Africa',
   REFRESH_INTERVAL: 300000, // 5 minutes
 };

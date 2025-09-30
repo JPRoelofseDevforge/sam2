@@ -22,8 +22,8 @@ interface UseWeatherDataResult {
 }
 
 // 🔧 CONFIG: Location settings for weather API
-const CITY = import.meta.env.VITE_CITY || 'Pretoria';
-const STATE = import.meta.env.VITE_STATE || 'Gauteng';
+const CITY = import.meta.env.VITE_CITY || 'Stellenbosch';
+const STATE = import.meta.env.VITE_STATE || 'Western Cape';
 const COUNTRY = import.meta.env.VITE_COUNTRY || 'South Africa';
 
 export const useWeatherData = (refreshInterval: number = 300000): UseWeatherDataResult => {

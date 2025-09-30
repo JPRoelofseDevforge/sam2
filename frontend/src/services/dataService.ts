@@ -851,6 +851,113 @@ export const geneticProfileService = {
     const response = await api.get('/genes');
     return response.data.Data; // Extract data from JCRing.Api response
   },
+
+  // Get genetic summary data for athlete
+  async getGeneticSummaryByAthlete(athleteId: number): Promise<any[]> {
+    try {
+      const response = await api.get(`/GeneticsAthletes/summary/${athleteId}`);
+      let data = response.data || [];
+
+      // Handle .NET JSON serialization format with $values
+      if (data && typeof data === 'object' && data.$values && Array.isArray(data.$values)) {
+        data = data.$values;
+      }
+
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      return [];
+    }
+  },
+
+  // Get genetic cellular data for athlete
+  async getGeneticCellularByAthlete(athleteId: number): Promise<any[]> {
+    try {
+      const response = await api.get(`/GeneticsAthletes/cellular/${athleteId}`);
+      let data = response.data || [];
+
+      // Handle .NET JSON serialization format with $values
+      if (data && typeof data === 'object' && data.$values && Array.isArray(data.$values)) {
+        data = data.$values;
+      }
+
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      return [];
+    }
+  },
+
+  // Get pharmacogenomics data for athlete
+  async getPharmacogenomicsByAthlete(athleteId: number): Promise<any[]> {
+    try {
+      const response = await api.get(`/GeneticsAthletes/pharmacogenomics/${athleteId}`);
+      let data = response.data || [];
+
+      // Handle .NET JSON serialization format with $values
+      if (data && typeof data === 'object' && data.$values && Array.isArray(data.$values)) {
+        data = data.$values;
+      }
+
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      return [];
+    }
+  },
+
+  // Get nutrigenomics data for athlete
+  async getNutrigenomicsByAthlete(athleteId: number): Promise<any[]> {
+    try {
+      const response = await api.get(`/GeneticsAthletes/nutrigenomics/${athleteId}`);
+      let data = response.data || [];
+
+      // Handle .NET JSON serialization format with $values
+      if (data && typeof data === 'object' && data.$values && Array.isArray(data.$values)) {
+        data = data.$values;
+      }
+
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      return [];
+    }
+  },
+
+  // Get recovery genetics data for athlete
+  async getRecoveryGeneticsByAthlete(athleteId: number): Promise<any[]> {
+    try {
+      const response = await api.get(`/GeneticsAthletes/recovery/${athleteId}`);
+      let data = response.data || [];
+
+      // Handle .NET JSON serialization format with $values
+      if (data && typeof data === 'object' && data.$values && Array.isArray(data.$values)) {
+        data = data.$values;
+      }
+
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      return [];
+    }
+  },
+
+  // Get all genetic data for athlete
+  async getAllGeneticDataByAthlete(athleteId: number): Promise<{ geneticSummary: any[], geneticCellular: any[] }> {
+    try {
+      const response = await api.get(`/GeneticsAthletes/all/${athleteId}`);
+      let data = response.data || { geneticSummary: [], geneticCellular: [] };
+
+      // Handle .NET JSON serialization format with $values for nested objects
+      if (data && typeof data === 'object') {
+        if (data.geneticSummary && data.geneticSummary.$values && Array.isArray(data.geneticSummary.$values)) {
+          data.geneticSummary = data.geneticSummary.$values;
+        }
+        if (data.geneticCellular && data.geneticCellular.$values && Array.isArray(data.geneticCellular.$values)) {
+          data.geneticCellular = data.geneticCellular.$values;
+        }
+      }
+
+      return data;
+    } catch (error) {
+      return { geneticSummary: [], geneticCellular: [] };
+    }
+  },
 };
 
 // =====================================================

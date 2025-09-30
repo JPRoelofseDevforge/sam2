@@ -1,365 +1,264 @@
-import { WeatherData, WeatherServiceResponse, ApiResponse } from '../types';
+/**
+ * Weather API Service - WeatherAPI.com Integration
+ * Fetches current weather data from WeatherAPI.com
+ */
 
-export interface WeatherApiConfig {
-  baseUrl: string;
-  timeout: number;
-  retryAttempts: number;
-  retryDelay: number;
+import { WeatherData } from '../types';
+
+export interface WeatherApiResponse {
+  success: boolean;
+  data?: WeatherData;
+  error?: string;
+  message?: string;
+  timestamp?: string;
 }
 
-export interface WeatherApiResponse extends ApiResponse<WeatherData> {
-  cached?: boolean;
-  timestamp?: string;
+export interface WeatherApiConfig {
+  apiKey: string;
+  baseUrl: string;
+  timeout: number;
 }
 
 export class WeatherApiService {
   private config: WeatherApiConfig;
-  private testMode: boolean = false;
-  private testScenario: string = 'normal';
 
-  constructor(config?: Partial<WeatherApiConfig>) {
+  constructor() {
+    const apiKey = import.meta.env.VITE_WEATHER_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('Weather API key not configured in environment variables');
+    }
+
     this.config = {
-      baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5288/api',
-      timeout: 10000, // 10 seconds
-      retryAttempts: 3,
-      retryDelay: 1000, // 1 second
-      ...config,
+      apiKey,
+      baseUrl: 'https://api.weatherapi.com/v1',
+      timeout: 15000, // 15 seconds
     };
   }
 
   /**
-   * Enable test mode for simulating API failures
-   */
-  setTestMode(enabled: boolean, scenario: string = 'normal'): void {
-    this.testMode = enabled;
-    this.testScenario = scenario;
-    // console.log(`Weather API Test Mode: ${enabled ? 'ENABLED' : 'DISABLED'} - Scenario: ${scenario}`);
-  }
-
-  /**
-   * Simulate different test scenarios for debugging
-   */
-  private simulateTestScenario(scenario: string): WeatherApiResponse {
-    // console.log(`Simulating test scenario: ${scenario}`);
-
-    switch (scenario) {
-      case 'network-error':
-        // Simulate network connectivity failure
-        return {
-          success: false,
-          error: 'Network Error: Unable to connect to weather service',
-          message: 'Weather data retrieval failed',
-          timestamp: new Date().toISOString(),
-        };
-
-      case 'timeout':
-        // Simulate API timeout
-        return {
-          success: false,
-          error: 'Request timeout: Weather service took too long to respond',
-          message: 'Weather data retrieval failed',
-          timestamp: new Date().toISOString(),
-        };
-
-      case 'invalid-response':
-        // Simulate invalid/malformed response
-        return {
-          success: false,
-          error: 'Invalid response format from weather service',
-          message: 'Weather data retrieval failed',
-          timestamp: new Date().toISOString(),
-        };
-
-      case 'server-error':
-        // Simulate server error (5xx)
-        return {
-          success: false,
-          error: 'Server Error: Weather service is temporarily unavailable (500)',
-          message: 'Weather data retrieval failed',
-          timestamp: new Date().toISOString(),
-        };
-
-      default:
-        // Normal operation - should not reach here in test mode
-        return {
-          success: false,
-          error: 'Test mode enabled but no valid scenario selected',
-          message: 'Weather data retrieval failed',
-          timestamp: new Date().toISOString(),
-        };
-    }
-  }
-
-  /**
-   * Get current weather data by city
+   * Get current weather by city name
    */
   async getCurrentWeather(city: string, state?: string, country?: string): Promise<WeatherApiResponse> {
-    // Handle test scenarios for debugging
-    if (this.testMode) {
-      return this.simulateTestScenario(this.testScenario);
-    }
-
     try {
-      const params = new URLSearchParams({
-        city,
-        ...(state && { state }),
-        ...(country && { country }),
+      // Build location string
+      let location = city;
+      if (state && country) {
+        location = `${city},${state},${country}`;
+      } else if (country && country !== 'South Africa') {
+        location = `${city},${country}`;
+      }
+
+      const url = this.buildApiUrl('current', {
+        q: location,
+        aqi: 'yes'
       });
 
-      const response = await this.makeRequestWithRetry(
-        `${this.config.baseUrl}/weather/current?${params.toString()}`
-      );
+      const response = await this.makeRequest(url);
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
       }
 
-      // Get response text first for validation and debugging
-      const responseText = await response.text();
+      const data = await response.json();
 
-      // Validate Content-Type header
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        // console.error(`Weather API returned non-JSON content. Content-Type: ${contentType}`);
-        // console.error(`Raw response: ${responseText.substring(0, 500)}...`);
-        throw new Error(`Weather API returned non-JSON content. Content-Type: ${contentType}, Status: ${response.status}`);
+      // Handle API error responses
+      if (data.error) {
+        throw new Error(`Weather API error: ${data.error.message}`);
       }
 
-      // Check if response body is empty
-      if (!responseText || responseText.trim().length === 0) {
-        // console.error('Weather API returned empty response body');
-        throw new Error(`Weather API returned empty response body. Status: ${response.status}`);
-      }
-
-      // Log raw response for debugging (first 200 chars)
-      // console.log(`Weather API raw response: ${responseText.substring(0, 200)}${responseText.length > 200 ? '...' : ''}`);
-
-      let data: WeatherServiceResponse;
-      try {
-        data = JSON.parse(responseText) as WeatherServiceResponse;
-      } catch (parseError) {
-        // console.error(`JSON parsing failed. Raw response: ${responseText}`);
-        throw new Error(`Invalid JSON response from weather API. Parse error: ${parseError instanceof Error ? parseError.message : 'Unknown error'}, Status: ${response.status}`);
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || data.message || 'Failed to fetch weather data');
-      }
+      // Transform response to our format
+      const weatherData = this.transformWeatherResponse(data);
 
       return {
         success: true,
-        data: data.data,
-        message: data.message,
-        cached: data.cached,
-        timestamp: data.timestamp,
+        data: weatherData,
+        message: 'Weather data retrieved successfully',
+        timestamp: new Date().toISOString(),
       };
-    } catch (error: unknown) {
-      return this.handleError(error, 'Failed to retrieve current weather data');
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        message: 'Failed to retrieve weather data',
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 
   /**
-   * Get current weather data by coordinates
+   * Get current weather by coordinates
    */
   async getWeatherByCoordinates(latitude: number, longitude: number): Promise<WeatherApiResponse> {
     try {
-      const params = new URLSearchParams({
-        lat: latitude.toString(),
-        lon: longitude.toString(),
+      const url = this.buildApiUrl('current', {
+        q: `${latitude},${longitude}`,
+        aqi: 'yes'
       });
 
-      const response = await this.makeRequestWithRetry(
-        `${this.config.baseUrl}/weather/coordinates?${params.toString()}`
-      );
+      const response = await this.makeRequest(url);
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
       }
 
-      // Get response text first for validation and debugging
-      const responseText = await response.text();
+      const data = await response.json();
 
-      // Validate Content-Type header
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        // console.error(`Weather API returned non-JSON content. Content-Type: ${contentType}`);
-        // console.error(`Raw response: ${responseText.substring(0, 500)}...`);
-        throw new Error(`Weather API returned non-JSON content. Content-Type: ${contentType}, Status: ${response.status}`);
+      if (data.error) {
+        throw new Error(`Weather API error: ${data.error.message}`);
       }
 
-      // Check if response body is empty
-      if (!responseText || responseText.trim().length === 0) {
-        // console.error('Weather API returned empty response body');
-        throw new Error(`Weather API returned empty response body. Status: ${response.status}`);
-      }
-
-      // Log raw response for debugging (first 200 chars)
-      // console.log(`Weather API raw response: ${responseText.substring(0, 200)}${responseText.length > 200 ? '...' : ''}`);
-
-      let data: WeatherServiceResponse;
-      try {
-        data = JSON.parse(responseText) as WeatherServiceResponse;
-      } catch (parseError) {
-        // console.error(`JSON parsing failed. Raw response: ${responseText}`);
-        throw new Error(`Invalid JSON response from weather API. Parse error: ${parseError instanceof Error ? parseError.message : 'Unknown error'}, Status: ${response.status}`);
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || data.message || 'Failed to fetch weather data');
-      }
+      const weatherData = this.transformWeatherResponse(data);
 
       return {
         success: true,
-        data: data.data,
-        message: data.message,
-        cached: data.cached,
-        timestamp: data.timestamp,
+        data: weatherData,
+        message: 'Weather data retrieved successfully',
+        timestamp: new Date().toISOString(),
       };
-    } catch (error: unknown) {
-      return this.handleError(error, 'Failed to retrieve weather data by coordinates');
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        message: 'Failed to retrieve weather data',
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 
   /**
-   * Get current weather data by IP address
+   * Get current weather by IP address
    */
   async getWeatherByIP(): Promise<WeatherApiResponse> {
     try {
-      const response = await this.makeRequestWithRetry(
-        `${this.config.baseUrl}/weather/ip`
-      );
+      const url = this.buildApiUrl('current', {
+        q: 'auto:ip',
+        aqi: 'yes'
+      });
+
+      const response = await this.makeRequest(url);
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
       }
 
-      // Get response text first for validation and debugging
-      const responseText = await response.text();
+      const data = await response.json();
 
-      // Validate Content-Type header
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        // console.error(`Weather API returned non-JSON content. Content-Type: ${contentType}`);
-        // console.error(`Raw response: ${responseText.substring(0, 500)}...`);
-        throw new Error(`Weather API returned non-JSON content. Content-Type: ${contentType}, Status: ${response.status}`);
+      if (data.error) {
+        throw new Error(`Weather API error: ${data.error.message}`);
       }
 
-      // Check if response body is empty
-      if (!responseText || responseText.trim().length === 0) {
-        // console.error('Weather API returned empty response body');
-        throw new Error(`Weather API returned empty response body. Status: ${response.status}`);
-      }
-
-      // Log raw response for debugging (first 200 chars)
-      // console.log(`Weather API raw response: ${responseText.substring(0, 200)}${responseText.length > 200 ? '...' : ''}`);
-
-      let data: WeatherServiceResponse;
-      try {
-        data = JSON.parse(responseText) as WeatherServiceResponse;
-      } catch (parseError) {
-        // console.error(`JSON parsing failed. Raw response: ${responseText}`);
-        throw new Error(`Invalid JSON response from weather API. Parse error: ${parseError instanceof Error ? parseError.message : 'Unknown error'}, Status: ${response.status}`);
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || data.message || 'Failed to fetch weather data');
-      }
+      const weatherData = this.transformWeatherResponse(data);
 
       return {
         success: true,
-        data: data.data,
-        message: data.message,
-        cached: data.cached,
-        timestamp: data.timestamp,
+        data: weatherData,
+        message: 'Weather data retrieved successfully',
+        timestamp: new Date().toISOString(),
       };
-    } catch (error: unknown) {
-      return this.handleError(error, 'Failed to retrieve weather data by IP');
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        message: 'Failed to retrieve weather data',
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 
   /**
-   * Make HTTP request with retry logic
+   * Build API URL with parameters
    */
-  private async makeRequestWithRetry(url: string, attempt: number = 1): Promise<Response> {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+  private buildApiUrl(endpoint: string, params: Record<string, string>): string {
+    const url = new URL(`${this.config.baseUrl}/${endpoint}.json`);
+    url.searchParams.set('key', this.config.apiKey);
 
+    // Add all other parameters
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
+
+    return url.toString();
+  }
+
+  /**
+   * Make HTTP request with timeout
+   */
+  private async makeRequest(url: string): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+    try {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
       return response;
-    } catch (error: unknown) {
-      const err = error as Error;
-      if (attempt < this.config.retryAttempts && err.name !== 'AbortError') {
-        // console.warn(`Weather API request failed (attempt ${attempt}), retrying in ${this.config.retryDelay}ms...`);
-        await this.delay(this.config.retryDelay * attempt); // Exponential backoff
-        return this.makeRequestWithRetry(url, attempt + 1);
-      }
+    } catch (error) {
+      clearTimeout(timeoutId);
       throw error;
     }
   }
 
   /**
-   * Handle and standardize error responses
+   * Transform WeatherAPI.com response to our WeatherData format
    */
-  private handleError(error: unknown, defaultMessage: string): WeatherApiResponse {
-    let errorMessage = defaultMessage;
-
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        errorMessage = 'Request timeout';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-    }
-
-    // console.error(`Weather API Error:`, errorMessage);
-
-    const errorResponse: WeatherApiResponse = {
-      success: false,
-      error: errorMessage,
-      message: 'Weather data retrieval failed',
-      timestamp: new Date().toISOString(),
-    };
-
-    return errorResponse;
-  }
-
-  /**
-   * Utility method for delays
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Validate service configuration
-   */
-  validateConfiguration(): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (!this.config.baseUrl) {
-      errors.push('Base URL not configured');
-    }
-
-    if (this.config.timeout <= 0) {
-      errors.push('Timeout must be greater than 0');
-    }
-
+  private transformWeatherResponse(apiResponse: any): WeatherData {
     return {
-      valid: errors.length === 0,
-      errors,
+      location: {
+        city: apiResponse.location.name,
+        state: apiResponse.location.region,
+        country: apiResponse.location.country,
+        coordinates: {
+          latitude: apiResponse.location.lat,
+          longitude: apiResponse.location.lon,
+        },
+      },
+      current: {
+        temperature: apiResponse.current.temp_c,
+        humidity: apiResponse.current.humidity,
+        pressure: apiResponse.current.pressure_mb,
+        wind_speed: apiResponse.current.wind_kph,
+        wind_direction: apiResponse.current.wind_degree,
+        weather_condition: apiResponse.current.condition.code.toString(),
+        weather_description: apiResponse.current.condition.text,
+        uv_index: apiResponse.current.uv,
+        visibility: apiResponse.current.vis_km,
+        cloud_cover: apiResponse.current.cloud,
+        feels_like: apiResponse.current.feelslike_c,
+        dew_point: apiResponse.current.dewpoint_c,
+        precipitation_probability: Math.round(apiResponse.current.precip_mm * 100),
+        air_quality_index: apiResponse.current.air_quality?.['us-epa-index'] || 0,
+        air_quality_category: this.getAirQualityCategory(apiResponse.current.air_quality?.['us-epa-index'] || 0),
+        timestamp: apiResponse.current.last_updated,
+      },
     };
+  }
+
+  /**
+   * Get air quality category from AQI index
+   */
+  private getAirQualityCategory(aqi: number): string {
+    if (aqi <= 50) return 'Good';
+    if (aqi <= 100) return 'Moderate';
+    if (aqi <= 150) return 'Unhealthy for Sensitive Groups';
+    if (aqi <= 200) return 'Unhealthy';
+    if (aqi <= 300) return 'Very Unhealthy';
+    return 'Hazardous';
   }
 }
 
-// Export singleton instance
+// Create and export singleton instance
 export const weatherApiService = new WeatherApiService();
 export default weatherApiService;
