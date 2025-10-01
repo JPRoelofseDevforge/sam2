@@ -858,6 +858,7 @@ export const geneticProfileService = {
       const response = await api.get(`/GeneticsAthletes/summary/${athleteId}`);
       let data = response.data || [];
 
+      console.log('Raw genetic summary data:', data);
       // Handle .NET JSON serialization format with $values
       if (data && typeof data === 'object' && data.$values && Array.isArray(data.$values)) {
         data = data.$values;

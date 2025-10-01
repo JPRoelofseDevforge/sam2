@@ -33,15 +33,626 @@ import { SleepMetricsChart } from './SleepMetricsChart';
 import { TrainingLoadChart } from './TrainingLoadChart';
 import { filterValidBiometricData, sortBiometricDataByDate, getLatestBiometricRecord, getSortedBiometricDataForCharts } from '../utils/athleteUtils';
 
+// Helper function to get field values with multiple possible names
+const getFieldValue = (marker: any, fieldName: string): string => {
+  const possibleNames = [
+    fieldName,
+    fieldName.toLowerCase(),
+    fieldName.toUpperCase(),
+    fieldName.charAt(0).toUpperCase() + fieldName.slice(1).toLowerCase(),
+    fieldName.charAt(0).toLowerCase() + fieldName.slice(1).toUpperCase()
+  ];
+
+  for (const name of possibleNames) {
+    if (marker[name]) return marker[name];
+  }
+  return '';
+};
+
+// Genetic Search and Filter Component
+const GeneticSearchAndFilter: React.FC<{
+  geneticSummary: any[];
+  onFilteredResults: (results: any[]) => void;
+}> = ({ geneticSummary, onFilteredResults }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedImpact, setSelectedImpact] = useState('all');
+  const [sortBy, setSortBy] = useState('gene');
+
+  const categories = Array.from(new Set(geneticSummary.map((g: any) => getFieldValue(g, 'category'))));
+
+  useEffect(() => {
+    // First, deduplicate the genetic summary data
+    const uniqueMarkers = geneticSummary.reduce((acc, marker: any) => {
+      // Use the correct DbsnpRsId field as primary key
+      const dbsnpField = marker.DbsnpRsId || '';
+      const rsidField = marker.RSID || marker.rsid || marker.RSID || '';
+      const geneField = marker.Gene || marker.gene || marker.GENE || '';
+      const genotypeField = marker.GeneticCall || marker.genetic_call || marker.GENETIC_CALL || marker.Genotype || marker.genotype || '';
+
+      // Prioritize DbsnpRsId as the unique key
+      const key = dbsnpField || rsidField || `${geneField}_${genotypeField || 'unknown'}`;
+      if (!acc.has(key)) {
+        acc.set(key, marker);
+      }
+      return acc;
+    }, new Map());
+
+    let filtered = Array.from(uniqueMarkers.values());
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter((marker: any) =>
+        getFieldValue(marker, 'gene').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getFieldValue(marker, 'dbsnp_rs_id').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getFieldValue(marker, 'rsid').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getFieldValue(marker, 'genetic_call').toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply category filter
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter((marker: any) => getFieldValue(marker, 'category') === selectedCategory);
+    }
+
+    // Apply impact filter
+    if (selectedImpact !== 'all') {
+      if (selectedImpact === 'high') {
+        filtered = filtered.filter((marker: any) => {
+          const genotype = getFieldValue(marker, 'genetic_call');
+          return genotype.includes('AA') || genotype.includes('GG') || genotype.includes('TT') || genotype.includes('CC');
+        });
+      } else if (selectedImpact === 'medium') {
+        filtered = filtered.filter((marker: any) => {
+          const genotype = getFieldValue(marker, 'genetic_call');
+          return genotype.includes('AG') || genotype.includes('CT') || genotype.includes('AC');
+        });
+      }
+    }
+
+    // Apply sorting
+    filtered.sort((a: any, b: any) => {
+      switch (sortBy) {
+        case 'gene':
+          return getFieldValue(a, 'gene').localeCompare(getFieldValue(b, 'gene'));
+        case 'dbsnp':
+          return getFieldValue(a, 'dbsnp_rs_id').localeCompare(getFieldValue(b, 'dbsnp_rs_id'));
+        case 'category':
+          return getFieldValue(a, 'category').localeCompare(getFieldValue(b, 'category'));
+        case 'rsid':
+          return getFieldValue(a, 'rsid').localeCompare(getFieldValue(b, 'rsid'));
+        default:
+          return 0;
+      }
+    });
+
+    onFilteredResults(filtered);
+  }, [searchTerm, selectedCategory, selectedImpact, sortBy, geneticSummary, onFilteredResults]);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Search */}
+      <div className="lg:col-span-2">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search genes, dbSNP RSID, or RSID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+          />
+          <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      <select
+        value={selectedCategory}
+        onChange={(e) => setSelectedCategory(e.target.value)}
+        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+      >
+        <option value="all">All Categories</option>
+        {categories.map(category => (
+          <option key={category} value={category}>{category.replace('_', ' ')}</option>
+        ))}
+      </select>
+
+      {/* Impact Filter */}
+      <select
+        value={selectedImpact}
+        onChange={(e) => setSelectedImpact(e.target.value)}
+        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+      >
+        <option value="all">All Impact Levels</option>
+        <option value="high">High Impact</option>
+        <option value="medium">Medium Impact</option>
+      </select>
+
+      {/* Sort By */}
+      <select
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+      >
+        <option value="gene">Sort by Gene</option>
+        <option value="dbsnp">Sort by dbSNP RSID</option>
+        <option value="category">Sort by Category</option>
+        <option value="rsid">Sort by RSID</option>
+      </select>
+    </div>
+  );
+};
+
+// Genetic Analysis Tabs Component
+const GeneticAnalysisTabs: React.FC<{
+  geneticSummary: any[];
+  athlete: any;
+  athleteBiometrics: any[];
+}> = ({ geneticSummary, athlete, athleteBiometrics }) => {
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'detailed' | 'insights' | 'performance'>('overview');
+
+  const subTabs = [
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'detailed', label: 'Detailed Analysis', icon: '🔬' },
+    { id: 'insights', label: 'Smart Insights', icon: '💡' },
+    { id: 'performance', label: 'Performance Matrix', icon: '🎯' }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
+          {subTabs.map((tab) => {
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id as any)}
+                className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                  isActive
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Sub-tab Content */}
+      {activeSubTab === 'overview' && <GeneticOverviewTab geneticSummary={geneticSummary} />}
+      {activeSubTab === 'detailed' && <GeneticDetailedTab geneticSummary={geneticSummary} />}
+      {activeSubTab === 'insights' && <GeneticInsightsTab geneticSummary={geneticSummary} athlete={athlete} />}
+      {activeSubTab === 'performance' && <GeneticPerformanceTab geneticSummary={geneticSummary} athleteBiometrics={athleteBiometrics} />}
+    </div>
+  );
+};
+
+// Overview Tab Component
+const GeneticOverviewTab: React.FC<{ geneticSummary: any[] }> = ({ geneticSummary }) => {
+  const categories = Array.from(new Set(geneticSummary.map((g: any) => g.Category || g.category || g.CATEGORY)));
+
+  return (
+    <div className="space-y-6">
+      {/* Category Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {categories.map((category) => {
+          const categoryMarkers = geneticSummary.filter((g: any) => (g.Category || g.category || g.CATEGORY) === category);
+          const categoryColors: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+            'performance': { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', icon: '💪' },
+            'recovery': { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800', icon: '🔄' },
+            'pharmacogenomics': { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800', icon: '💊' },
+            'nutrigenomics': { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', icon: '🥗' },
+            'injury': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', icon: '🛡️' },
+            'metabolism': { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800', icon: '⚡' },
+            'cognition': { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-800', icon: '🧠' },
+            'sleep': { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-800', icon: '😴' }
+          };
+
+          const colors = categoryColors[category.toLowerCase()] || { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', icon: '🧬' };
+
+          return (
+            <div key={category} className={`card-enhanced p-6 ${colors.bg} ${colors.border} border`}>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">{colors.icon}</span>
+                <div>
+                  <h3 className={`text-lg font-semibold capitalize ${colors.text}`}>
+                    {category.replace('_', ' ')}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {categoryMarkers.length} marker{categoryMarkers.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {categoryMarkers.slice(0, 3).map((marker, index) => {
+                  const gene = marker.Gene || marker.gene || marker.GENE || 'Unknown';
+                  const dbsnpId = marker.DbsnpRsId || 'N/A';
+                  const rsid = marker.RSID || marker.rsid || marker.RSID || null;
+
+                  return (
+                    <div key={index} className="flex items-center justify-between p-2 bg-white rounded-lg">
+                      <div>
+                        <div className={`font-semibold ${colors.text} text-sm`}>{gene}</div>
+                        <div className="text-xs text-gray-500 font-mono">{dbsnpId}</div>
+                      </div>
+                      {rsid && (
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                          {rsid}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+                {categoryMarkers.length > 3 && (
+                  <div className="text-center text-xs text-gray-500 py-2">
+                    +{categoryMarkers.length - 3} more markers
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Detailed Analysis Tab Component
+const GeneticDetailedTab: React.FC<{ geneticSummary: any[] }> = ({ geneticSummary }) => {
+  return (
+    <div className="card-enhanced p-6">
+      <h3 className="text-xl font-semibold mb-6 flex items-center gap-3 text-gray-900">
+        <span className="bg-gradient-to-r from-green-100 to-blue-100 p-2 rounded-full text-green-700">📋</span>
+        Detailed Genetic Analysis
+      </h3>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-3 px-4 font-semibold text-gray-900">Gene</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-900">dbSNP RSID</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-900">Category</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-900">RSID</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-900">Impact</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-900">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {geneticSummary.map((marker, index) => {
+              const gene = marker.Gene || marker.gene || marker.GENE || 'Unknown';
+              const dbsnpId = marker.DbsnpRsId || 'N/A';
+              const category = marker.Category || marker.category || marker.CATEGORY || 'Unknown';
+              const rsid = marker.RSID || marker.rsid || marker.RSID || 'N/A';
+
+              const getImpactLevel = (dbsnpId: string) => {
+                // For now, we'll use a simple heuristic based on the RSID format
+                if (dbsnpId.startsWith('rs') && dbsnpId.length > 5) {
+                  return { level: 'Standard', color: 'text-blue-600', bg: 'bg-blue-100' };
+                }
+                return { level: 'Standard', color: 'text-blue-600', bg: 'bg-blue-100' };
+              };
+
+              const impact = getImpactLevel(dbsnpId);
+
+              return (
+                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">
+                    <div className="font-medium text-gray-900">{gene}</div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`font-mono font-bold ${impact.color}`}>{dbsnpId}</span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${impact.bg} ${impact.color}`}>
+                      {category.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="font-mono text-gray-600 text-xs">{rsid}</span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${impact.bg} ${impact.color}`}>
+                      {impact.level} Impact
+                    </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    {marker.Description && (
+                      <div className="text-xs text-gray-600 max-w-xs truncate" title={marker.Description}>
+                        {marker.Description}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// Smart Insights Tab Component
+const GeneticInsightsTab: React.FC<{ geneticSummary: any[]; athlete: any }> = ({ geneticSummary, athlete }) => {
+  // Helper function to get field values with multiple possible names
+  const getFieldValue = (marker: any, fieldName: string): string => {
+    // Special handling for DbsnpRsId field
+    if (fieldName === 'dbsnp_rs_id') {
+      return marker.DbsnpRsId || marker.dbsnp_rs_id || marker.DBSNP_RS_ID || marker.dbsnpRsId || marker.dbSNPRSID || '';
+    }
+  
+    // For other fields, try multiple variations
+    const possibleNames = [
+      fieldName,
+      fieldName.toLowerCase(),
+      fieldName.toUpperCase(),
+      fieldName.charAt(0).toUpperCase() + fieldName.slice(1).toLowerCase(),
+      fieldName.charAt(0).toLowerCase() + fieldName.slice(1).toUpperCase()
+    ];
+  
+    for (const name of possibleNames) {
+      if (marker[name]) return marker[name];
+    }
+    return '';
+  };
+
+  // Analyze genetic data for insights
+   const geneticInsights = geneticSummary.map((marker: any) => {
+     const gene = getFieldValue(marker, 'gene') || 'Unknown';
+     const genotype = getFieldValue(marker, 'genetic_call') || '';
+     const dbsnpId = marker.DbsnpRsId || '';
+
+     return {
+       gene,
+       genotype,
+       dbsnpId,
+       marker
+     };
+   }).filter(insight => insight.gene !== 'Unknown');
+
+  // Categorize insights
+  const powerGenes = geneticInsights.filter(insight =>
+    ['ACTN3', 'MSTN', 'IGF1'].includes(insight.gene) &&
+    insight.genotype.includes('RR')
+  );
+
+  const enduranceGenes = geneticInsights.filter(insight =>
+    insight.gene === 'ACE' && insight.genotype.includes('II')
+  );
+
+  const injuryRiskGenes = geneticInsights.filter(insight =>
+    insight.gene === 'COL5A1' && !insight.genotype.includes('TT')
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Key Insights */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="card-enhanced p-6">
+          <h4 className="font-semibold text-green-700 mb-4 flex items-center gap-2">
+            <span className="bg-green-100 p-1.5 rounded-full text-green-700">✅</span>
+            Genetic Strengths ({powerGenes.length + enduranceGenes.length} found)
+          </h4>
+          <div className="space-y-3">
+            {powerGenes.map((insight, idx) => (
+              <div key={idx} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                <span className="text-green-600 mt-0.5">💪</span>
+                <div>
+                  <div className="font-medium text-green-800">Elite Power Genetics</div>
+                  <div className="text-sm text-green-600">
+                    {insight.gene} {insight.genotype} genotype suggests exceptional sprint and strength capacity
+                    {insight.dbsnpId && ` (${insight.dbsnpId})`}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {enduranceGenes.map((insight, idx) => (
+              <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <span className="text-blue-600 mt-0.5">🏃</span>
+                <div>
+                  <div className="font-medium text-blue-800">Superior Endurance Capacity</div>
+                  <div className="text-sm text-blue-600">
+                    {insight.gene} {insight.genotype} genotype indicates excellent cardiovascular efficiency
+                    {insight.dbsnpId && ` (${insight.dbsnpId})`}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {geneticInsights.length === 0 && (
+              <div className="text-center py-4 text-gray-500">
+                No genetic data available for analysis
+              </div>
+            )}
+
+            {geneticInsights.length > 0 && powerGenes.length === 0 && enduranceGenes.length === 0 && (
+              <div className="text-center py-4 text-gray-500">
+                No specific genetic advantages identified in current markers
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="card-enhanced p-6">
+          <h4 className="font-semibold text-orange-700 mb-4 flex items-center gap-2">
+            <span className="bg-orange-100 p-1.5 rounded-full text-orange-700">⚠️</span>
+            Optimization Areas ({injuryRiskGenes.length} found)
+          </h4>
+          <div className="space-y-3">
+            {injuryRiskGenes.map((insight, idx) => (
+              <div key={idx} className="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                <span className="text-red-600 mt-0.5">🛡️</span>
+                <div>
+                  <div className="font-medium text-red-800">Injury Risk Consideration</div>
+                  <div className="text-sm text-red-600">
+                    {insight.gene} {insight.genotype} variant suggests higher soft tissue injury risk
+                    {insight.dbsnpId && ` (${insight.dbsnpId})`}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {geneticInsights.length > 0 && injuryRiskGenes.length === 0 && (
+              <div className="text-center py-4 text-gray-500">
+                No specific injury risk markers identified
+              </div>
+            )}
+
+            {geneticInsights.length === 0 && (
+              <div className="text-center py-4 text-gray-500">
+                No genetic data available for analysis
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Genetic Markers Summary */}
+      {geneticInsights.length > 0 && (
+        <div className="card-enhanced p-6">
+          <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="bg-blue-100 p-1.5 rounded-full text-blue-700">📋</span>
+            Genetic Markers Summary ({geneticInsights.length} markers)
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {geneticInsights.slice(0, 6).map((insight, idx) => (
+              <div key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-gray-800">{insight.gene}</span>
+                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
+                    {insight.dbsnpId || 'No RSID'}
+                  </span>
+                </div>
+                <div className="text-sm font-mono text-gray-700">{insight.genotype}</div>
+              </div>
+            ))}
+            {geneticInsights.length > 6 && (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                +{geneticInsights.length - 6} more markers
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Performance Matrix Tab Component
+const GeneticPerformanceTab: React.FC<{ geneticSummary: any[]; athleteBiometrics: any[] }> = ({ geneticSummary, athleteBiometrics }) => {
+  const performanceCategories = [
+    {
+      trait: 'Power & Strength',
+      genes: geneticSummary.filter((m: any) => ['ACTN3', 'MSTN', 'IGF1'].includes(m.Gene || m.gene || m.GENE)),
+      icon: '💪',
+      color: 'orange',
+      description: 'Explosive power & muscle strength'
+    },
+    {
+      trait: 'Endurance',
+      genes: geneticSummary.filter((m: any) => ['ACE', 'PPARA', 'PPARGC1A'].includes(m.Gene || m.gene || m.GENE)),
+      icon: '🏃',
+      color: 'blue',
+      description: 'Cardiovascular efficiency'
+    },
+    {
+      trait: 'Recovery',
+      genes: geneticSummary.filter((m: any) => ['PPARA', 'BDNF', 'COMT'].includes(m.Gene || m.gene || m.GENE)),
+      icon: '🔄',
+      color: 'green',
+      description: 'Recovery & adaptation rate'
+    },
+    {
+      trait: 'Injury Risk',
+      genes: geneticSummary.filter((m: any) => ['COL5A1', 'ADRB2'].includes(m.Gene || m.gene || m.GENE)),
+      icon: '🛡️',
+      color: 'red',
+      description: 'Injury susceptibility'
+    },
+    {
+      trait: 'Metabolism',
+      genes: geneticSummary.filter((m: any) => ['PPARGC1A', 'PPARA', 'FTO'].includes(m.Gene || m.gene || m.GENE)),
+      icon: '⚡',
+      color: 'yellow',
+      description: 'Energy & nutrient metabolism'
+    },
+    {
+      trait: 'Cognition',
+      genes: geneticSummary.filter((m: any) => ['BDNF', 'COMT'].includes(m.Gene || m.gene || m.GENE)),
+      icon: '🧠',
+      color: 'indigo',
+      description: 'Mental performance & stress'
+    }
+  ];
+
+  return (
+    <div className="card-enhanced p-6">
+      <h3 className="text-xl font-semibold mb-6 flex items-center gap-3 text-gray-900">
+        <span className="bg-gradient-to-r from-purple-100 to-blue-100 p-2 rounded-full text-purple-700">🎯</span>
+        Genetic Performance Matrix
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {performanceCategories.map((category, idx) => (
+          <div key={idx} className="card-enhanced p-4 hover:shadow-lg transition-shadow">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">{category.icon}</span>
+              <div>
+                <h4 className="font-semibold text-gray-900">{category.trait}</h4>
+                <p className="text-xs text-gray-500">{category.description}</p>
+              </div>
+            </div>
+
+            <div className="text-center mb-4">
+              <div className={`text-3xl font-bold text-${category.color}-600`}>
+                {category.genes.length}
+              </div>
+              <div className="text-sm text-gray-600">Genetic Markers</div>
+            </div>
+
+            {category.genes.length > 0 && (
+              <div className="space-y-2">
+                {category.genes.map((gene, geneIdx) => (
+                  <div key={geneIdx} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                    <span className="font-medium text-gray-700">{gene.Gene || gene.gene || gene.GENE}</span>
+                    <span className={`font-bold text-${category.color}-600 font-mono`}>
+                      {gene.DbsnpRsId || 'N/A'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {category.genes.length === 0 && (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                No markers in this category
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const AthleteProfile: React.FC = () => {
   
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const athleteId = parseInt(id || '0');
-       const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian' | 'chatAI'>('metrics');
+       const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian' | 'chatAI' | 'geneticSummary'>('metrics');
      const tabContentRef = useRef<HTMLDivElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
-  const [geneticSummary, setGeneticSummary] = useState<any[]>([]);
+   const [geneticSummary, setGeneticSummary] = useState<any[]>([]);
+   const [filteredGeneticSummary, setFilteredGeneticSummary] = useState<any[]>([]);
 
   // Use custom hooks for data fetching
   const { athlete, biometricData: athleteBiometrics, geneticProfiles: athleteGenetics, loading: dataLoading } = useIndividualAthleteData(athleteId, true);
@@ -52,7 +663,38 @@ export const AthleteProfile: React.FC = () => {
     const fetchGeneticSummary = async () => {
       try {
         const summaryData = await geneticProfileService.getGeneticSummaryByAthlete(athleteId);
+
+        // Debug: Log the actual field names in the data
+         if (summaryData.length > 0) {
+           console.log('🔍 DEBUG: Genetic summary data sample:', summaryData[0]);
+           console.log('🔍 DEBUG: Available fields:', Object.keys(summaryData[0]));
+           console.log('🔍 DEBUG: All data samples:', summaryData.slice(0, 3));
+           console.log('🔍 DEBUG: Data length:', summaryData.length);
+
+           // Try to find dbSNP-like fields
+           const firstItem = summaryData[0];
+           const possibleDbsnpFields = Object.keys(firstItem).filter(key =>
+             key.toLowerCase().includes('dbsnp') ||
+             key.toLowerCase().includes('rsid') ||
+             key.toLowerCase().includes('snp') ||
+             key.toLowerCase().includes('reference')
+           );
+           console.log('🔍 DEBUG: Possible dbSNP fields found:', possibleDbsnpFields);
+
+           // Specifically check for DbsnpRsId field
+           console.log('🔍 DEBUG: DbsnpRsId field exists:', firstItem.hasOwnProperty('DbsnpRsId'));
+           if (firstItem.DbsnpRsId) {
+             console.log('🔍 DEBUG: DbsnpRsId sample values:', summaryData.slice(0, 3).map(item => item.DbsnpRsId));
+           }
+
+           // Show sample values for potential fields
+           possibleDbsnpFields.forEach(field => {
+             console.log(`🔍 DEBUG: ${field} sample values:`, summaryData.slice(0, 3).map(item => item[field]));
+           });
+         }
+
         setGeneticSummary(summaryData);
+        setFilteredGeneticSummary(summaryData); // Initialize filtered results
       } catch (error) {
         console.error('Failed to fetch genetic summary:', error);
       }
@@ -120,6 +762,7 @@ export const AthleteProfile: React.FC = () => {
     { id: 'circadian' as const, label: 'Circadian Rhythm', icon: '⏰', count: 1 },
     { id: 'trends' as const, label: 'Trends & Analysis', icon: '📈', count: athleteBiometrics.length },
     { id: 'insights' as const, label: 'Predictive Insights', icon: '🧠', count: geneticSummary.length > 0 ? geneticSummary.length : geneticInsights.length },
+    { id: 'geneticSummary' as const, label: 'Genetic Summary', icon: '🧬', count: filteredGeneticSummary.length },
     { id: 'scaleReport' as const, label: 'Scale Report', icon: '⚖️', count: 1 },
     { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 },
     { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: athleteBiometrics.length },
@@ -1657,6 +2300,63 @@ export const AthleteProfile: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'geneticSummary' && (
+          <div className="space-y-6">
+            {/* Header with Search and Filters */}
+            <div className="card-enhanced p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-3xl font-bold text-black mb-2">🧬 Advanced Genetic Analysis</h2>
+                  <p className="text-gray-600 text-lg">
+                    Interactive genetic profile for {athlete.name} • {filteredGeneticSummary.length} markers analyzed
+                  </p>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="flex gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{geneticSummary.length}</div>
+                    <div className="text-xs text-gray-500">Total Markers</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {new Set(geneticSummary.map(g => g.Category || g.category)).size}
+                    </div>
+                    <div className="text-xs text-gray-500">Categories</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {geneticSummary.filter(g => (g.Category || g.category) === 'performance').length}
+                    </div>
+                    <div className="text-xs text-gray-500">Performance</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search and Filter Controls */}
+              <GeneticSearchAndFilter
+                geneticSummary={geneticSummary}
+                onFilteredResults={setFilteredGeneticSummary}
+              />
+            </div>
+
+            {filteredGeneticSummary.length > 0 ? (
+              <GeneticAnalysisTabs
+                geneticSummary={filteredGeneticSummary}
+                athlete={athlete}
+                athleteBiometrics={athleteBiometrics}
+              />
+            ) : (
+              <div className="text-center py-12 card-enhanced">
+                <div className="text-6xl mb-4">🧬</div>
+                <h4 className="text-xl font-semibold text-gray-900 mb-2">No Genetic Data Available</h4>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  Genetic summary data is not available for this athlete. Please ensure genetic testing has been completed and data has been uploaded to the system.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {activeTab === 'scaleReport' && (
           <div>
