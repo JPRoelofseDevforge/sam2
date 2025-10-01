@@ -100,24 +100,45 @@ const dotColor =
             <XAxis hide dataKey="name" />
             <YAxis hide domain={[minValue, maxValue]} />
             <Tooltip
-              contentStyle={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '8px' }}
-              itemStyle={{ color: '#1a202c' }}
-              formatter={(val: number, name: string) => {
-                const unitMap: Record<string, string> = {
-                  'HRV (Night)': 'ms',
-                  'Resting HR': 'bpm',
-                  'SpO₂ (Night)': '%',
-                  'Sleep Duration': 'h',
-                  'Deep Sleep': '%',
-                  'REM Sleep': '%',
-                  'Respiratory Rate': '/min',
-                  'Body Temp': '°C',
-                  'Training Load': '%',
-                };
-                const u = unitMap[name] || '';
-                return [`${val.toFixed(1)} ${u}`, name];
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  const date = new Date(data.date);
+                  const formattedDate = date.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  });
+
+                  const unitMap: Record<string, string> = {
+                    'HRV (Night)': 'ms',
+                    'Resting HR': 'bpm',
+                    'Avg Heart Rate': 'bpm',
+                    'SpO₂ (Night)': '%',
+                    'Sleep Duration': 'h',
+                    'Deep Sleep': '%',
+                    'REM Sleep': '%',
+                    'Respiratory Rate': '/min',
+                    'Body Temp': '°C',
+                    'Training Load': '%',
+                  };
+
+                  const metricName = payload[0].name || 'Metric';
+                  const unit = unitMap[metricName] || '';
+                  const value = payload[0].value;
+
+                  return (
+                    <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                      <p className="font-medium text-gray-900 mb-1">{formattedDate}</p>
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">{metricName}:</span> {value?.toFixed(1)} {unit}
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
               }}
-              labelFormatter={(label) => `Date: ${label}`}
             />
 
             {/* Goal Line */}

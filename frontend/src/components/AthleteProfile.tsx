@@ -304,7 +304,7 @@ export const AthleteProfile: React.FC = () => {
 
                   {/* Resting HR */}
                   <MetricCard
-                    title="Resting HR"
+                    title="Resting HR (Sleeping HR)"
                     value={latest.resting_hr || 0}
                     unit="bpm"
                     icon="❤️"
@@ -314,6 +314,20 @@ export const AthleteProfile: React.FC = () => {
                     teamAverage={getTeamAverage('resting_hr', athlete?.athlete_id || '', allBiometricData)}
                     goalValue={60}
                     goalLabel="Ideal"
+                  />
+
+                  {/* Average Heart Rate */}
+                  <MetricCard
+                    title="Avg Heart Rate"
+                    value={latest.avg_heart_rate || 0}
+                    unit="bpm"
+                    icon="❤️"
+                    subtitle={(latest.avg_heart_rate || 0) < 60 ? "Optimal" : (latest.avg_heart_rate || 0) < 65 ? "Good" : "Elevated"}
+                    trend={(latest.avg_heart_rate || 0) < 60 ? "up" : "down"}
+                    data={sortedBiometricData.slice(-7).map(d => ({ date: d.date, value: d.avg_heart_rate || 0 }))}
+                    teamAverage={getTeamAverage('avg_heart_rate', athlete?.athlete_id || '', allBiometricData)}
+                    goalValue={60}
+                    goalLabel="Target"
                   />
 
                   {/* Deep Sleep */}

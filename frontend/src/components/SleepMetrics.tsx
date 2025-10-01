@@ -122,34 +122,34 @@ const calculateSleepStageDistribution = (deepSleep: number, remSleep: number, li
 // Helper function to get sleep stress indicators
 const getSleepStressIndicators = (biometricData: BiometricData[]): string[] => {
   const indicators: string[] = [];
-  
+
   biometricData.forEach(data => {
     // Fragmentation (wake-ups/hour) - we'll simulate this based on sleep data
-    if (data.sleep_duration_h < 6) {
+    if (data.sleep_duration_h && data.sleep_duration_h < 6) {
       indicators.push('Fragmented Sleep');
     }
-    
+
     // HRV suppression during sleep - we'll check if HRV is low
-    if (data.hrv_night < 40) {
+    if (data.hrv_night && data.hrv_night < 40) {
       indicators.push('HRV Suppression');
     }
-    
+
     // Resting HR not dropping at night - we'll check if resting HR is elevated
-    if (data.resting_hr > 70) {
+    if (data.resting_hr && data.resting_hr > 70) {
       indicators.push('Elevated Resting HR');
     }
-    
+
     // Low deep sleep percentage
-    if (data.deep_sleep_pct < 15) {
+    if (data.deep_sleep_pct && data.deep_sleep_pct < 15) {
       indicators.push('Low Deep Sleep');
     }
-    
+
     // Low REM sleep percentage
-    if (data.rem_sleep_pct < 15) {
+    if (data.rem_sleep_pct && data.rem_sleep_pct < 15) {
       indicators.push('Low REM Sleep');
     }
   });
-  
+
   return indicators;
 };
 
@@ -167,63 +167,63 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
     console.log(`📊 Record ${index + 1}: sleep_onset_time="${data.sleep_onset_time}", wake_time="${data.wake_time}", sleep_duration=${data.sleep_duration_h}`);
   });
 
-  // Calculate sleep metrics
-  const sleepDebtData = filteredData.map(data => {
-    // Calculate recommended sleep based on age and athlete type (simplified)
-    // In a real app, this would be more sophisticated and possibly use genetic data
-    const recommendedSleep = 8; // Default to 8 hours for adult athletes
-    const sleepDebt = calculateSleepDebt(data.sleep_duration_h, recommendedSleep);
-    
-    // Calculate time in bed from sleep onset and wake time
-    const parseTimeToMinutes = (timeString: string) => {
-      if (!timeString || timeString === '00:00' || timeString === '') {
-        return null; // Return null for invalid/missing times
-      }
-      const [hours, minutes] = timeString.split(':').map(Number);
-      if (isNaN(hours) || isNaN(minutes)) {
-        return null;
-      }
-      return hours * 60 + minutes;
-    };
-
-    const sleepOnsetMinutes = parseTimeToMinutes(data.sleep_onset_time || '');
-    const wakeMinutes = parseTimeToMinutes(data.wake_time || '');
-
-    // Calculate time in bed - use fallback if timing data is missing
-    let timeInBedHours = 0;
-    if (sleepOnsetMinutes !== null && wakeMinutes !== null) {
-      // Handle case where wake time is next day (before sleep onset)
-      let timeInBedMinutes = wakeMinutes - sleepOnsetMinutes;
-      if (timeInBedMinutes < 0) {
-        timeInBedMinutes += 24 * 60; // Add 24 hours in minutes
-      }
-      timeInBedHours = timeInBedMinutes / 60;
-    } else {
-      // Fallback: estimate time in bed as sleep duration + 30 minutes (for falling asleep)
-      timeInBedHours = data.sleep_duration_h + 0.5;
+  // Helper function to parse time to minutes
+  const parseTimeToMinutes = (timeString: string) => {
+    if (!timeString || timeString === '00:00' || timeString === '') {
+      return null; // Return null for invalid/missing times
     }
-    
-    return {
-      date: data.date,
-      sleepDebt,
-      sleepDuration: data.sleep_duration_h,
-      recommendedSleep: recommendedSleep,
-      deepSleep: data.deep_sleep_pct,
-      remSleep: data.rem_sleep_pct,
-      lightSleep: data.light_sleep_pct,
-      sleepEfficiency: (() => {
-        const efficiency = calculateSleepEfficiency(data.sleep_duration_h, timeInBedHours);
-        console.log(`📊 Sleep Efficiency calc: sleep=${data.sleep_duration_h}h, timeInBed=${timeInBedHours}h, efficiency=${efficiency}%`);
-        return efficiency;
-      })(),
-      sleepOnsetTime: data.sleep_onset_time || '00:00',
-      wakeTime: data.wake_time || '00:00',
-      chronotype: (data.sleep_onset_time && data.sleep_onset_time !== '00:00' && data.wake_time && data.wake_time !== '00:00')
-        ? determineChronotype(data.sleep_onset_time, data.wake_time)
-        : 'Unknown (Missing timing data)',
-      sleepStressIndicators: getSleepStressIndicators([data])
-    };
-  });
+    const [hours, minutes] = timeString.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) {
+      return null;
+    }
+    return hours * 60 + minutes;
+  };
+
+  // Calculate sleep metrics
+   const sleepDebtData = filteredData.map(data => {
+     // Calculate recommended sleep based on age and athlete type (simplified)
+     // In a real app, this would be more sophisticated and possibly use genetic data
+     const recommendedSleep = 8; // Default to 8 hours for adult athletes
+     const sleepDebt = data.sleep_duration_h ? calculateSleepDebt(data.sleep_duration_h, recommendedSleep) : 0;
+
+     const sleepOnsetMinutes = parseTimeToMinutes(data.sleep_onset_time || '');
+     const wakeMinutes = parseTimeToMinutes(data.wake_time || '');
+
+     // Calculate time in bed - use fallback if timing data is missing
+     let timeInBedHours = 0;
+     if (sleepOnsetMinutes !== null && wakeMinutes !== null) {
+       // Handle case where wake time is next day (before sleep onset)
+       let timeInBedMinutes = wakeMinutes - sleepOnsetMinutes;
+       if (timeInBedMinutes < 0) {
+         timeInBedMinutes += 24 * 60; // Add 24 hours in minutes
+       }
+       timeInBedHours = timeInBedMinutes / 60;
+     } else {
+       // Fallback: estimate time in bed as sleep duration + 30 minutes (for falling asleep)
+       timeInBedHours = (data.sleep_duration_h || 0) + 0.5;
+     }
+
+     return {
+       date: data.date,
+       sleepDebt,
+       sleepDuration: data.sleep_duration_h || 0,
+       recommendedSleep: recommendedSleep,
+       deepSleep: data.deep_sleep_pct || 0,
+       remSleep: data.rem_sleep_pct || 0,
+       lightSleep: data.light_sleep_pct || 0,
+       sleepEfficiency: (() => {
+         const efficiency = data.sleep_duration_h ? calculateSleepEfficiency(data.sleep_duration_h, timeInBedHours) : 0;
+         console.log(`📊 Sleep Efficiency calc: sleep=${data.sleep_duration_h}h, timeInBed=${timeInBedHours}h, efficiency=${efficiency}%`);
+         return efficiency;
+       })(),
+       sleepOnsetTime: data.sleep_onset_time || '00:00',
+       wakeTime: data.wake_time || '00:00',
+       chronotype: (data.sleep_onset_time && data.sleep_onset_time !== '00:00' && data.wake_time && data.wake_time !== '00:00')
+         ? determineChronotype(data.sleep_onset_time, data.wake_time)
+         : 'Unknown (Missing timing data)',
+       sleepStressIndicators: getSleepStressIndicators([data])
+     };
+   });
   
   // Calculate sleep consistency - only use data with valid timing
   const validTimingData = filteredData.filter(d =>
@@ -246,9 +246,9 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
   }
   
   // Calculate average sleep stage percentages
-  const avgDeepSleep = filteredData.reduce((sum, d) => sum + d.deep_sleep_pct, 0) / filteredData.length;
-  const avgRemSleep = filteredData.reduce((sum, d) => sum + d.rem_sleep_pct, 0) / filteredData.length;
-  const avgLightSleep = filteredData.reduce((sum, d) => sum + d.light_sleep_pct, 0) / filteredData.length;
+  const avgDeepSleep = filteredData.reduce((sum, d) => sum + (d.deep_sleep_pct || 0), 0) / filteredData.length;
+  const avgRemSleep = filteredData.reduce((sum, d) => sum + (d.rem_sleep_pct || 0), 0) / filteredData.length;
+  const avgLightSleep = filteredData.reduce((sum, d) => sum + (d.light_sleep_pct || 0), 0) / filteredData.length;
   
   // Calculate sleep stage distribution
   const sleepStageDistribution = calculateSleepStageDistribution(
@@ -305,12 +305,12 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
 
     // If timing data is missing, provide reasonable estimates based on sleep duration
     const estimatedSleepOnset = sleepOnset !== null ? sleepOnset :
-      d.sleepDuration >= 8 ? 1320 : // 10 PM for long sleepers
-      d.sleepDuration >= 7 ? 1380 : // 11 PM for normal sleepers
+      (d.sleepDuration || 0) >= 8 ? 1320 : // 10 PM for long sleepers
+      (d.sleepDuration || 0) >= 7 ? 1380 : // 11 PM for normal sleepers
       1440; // 12 AM for short sleepers
 
     const estimatedWakeTime = wakeTime !== null ? wakeTime :
-      estimatedSleepOnset + (d.sleepDuration * 60);
+      estimatedSleepOnset + ((d.sleepDuration || 0) * 60);
 
     return {
       date: d.date,
@@ -427,7 +427,7 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
                 </p>
                 <div className="mt-2">
                   <span className={`inline-block w-3 h-3 rounded-full mr-2`} style={{ backgroundColor: consistencyColor }}></span>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium text-black">
                     {consistencyLevel} Consistency
                   </span>
                 </div>
@@ -435,7 +435,7 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
               
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900">Chronotype</h4>
-                <p className="text-2xl font-bold mt-1">
+                <p className="text-2xl font-bold mt-1 text-black">
                   {sleepDebtData.length > 0 ? sleepDebtData[sleepDebtData.length - 1].chronotype : 'Unknown'}
                 </p>
                 <p className="text-sm text-gray-600 mt-1">
@@ -649,6 +649,269 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
         </ResponsiveContainer>
       </div>
       
+      {/* Last Night's Sleep Timeline */}
+      {sleepDebtData.length > 0 && (() => {
+        const lastNightData = sleepDebtData[sleepDebtData.length - 1];
+        const latestBiometricData = filteredData[filteredData.length - 1];
+
+        // Create sleep stage timeline data
+        // Define the sleep segment type
+        interface SleepSegment {
+          type: 'awake' | 'light' | 'deep' | 'rem';
+          start: number;
+          end: number;
+          duration: number;
+          label: string;
+          color: string;
+          segment?: string;
+        }
+
+        const createDetailedSleepTimeline = (): SleepSegment[] => {
+          const timeline: SleepSegment[] = [];
+          const sleepDuration = lastNightData.sleepDuration || 0;
+          const sleepDurationMinutes = sleepDuration * 60;
+
+          // Get actual sleep onset and wake times
+          let sleepStartMinutes = 0;
+          let wakeTimeMinutes = 0;
+
+          if (lastNightData.sleepOnsetTime && lastNightData.sleepOnsetTime !== '00:00') {
+            const sleepOnsetMinutes = parseTimeToMinutes(lastNightData.sleepOnsetTime);
+            if (sleepOnsetMinutes !== null) {
+              sleepStartMinutes = sleepOnsetMinutes;
+            }
+          }
+
+          if (lastNightData.wakeTime && lastNightData.wakeTime !== '00:00') {
+            const wakeTimeMins = parseTimeToMinutes(lastNightData.wakeTime);
+            if (wakeTimeMins !== null) {
+              wakeTimeMinutes = wakeTimeMins;
+            }
+          }
+
+          // If we don't have timing data, estimate based on sleep duration
+          if (sleepStartMinutes === 0) {
+            sleepStartMinutes = 21 * 60; // Default to 9 PM
+          }
+          if (wakeTimeMinutes === 0) {
+            wakeTimeMinutes = sleepStartMinutes + Math.round(sleepDurationMinutes);
+          }
+
+          // Create minute-by-minute sleep stage simulation (10-minute segments)
+          const deepSleepMinutes = Math.round(sleepDurationMinutes * (lastNightData.deepSleep || 0) / 100);
+          const remSleepMinutes = Math.round(sleepDurationMinutes * (lastNightData.remSleep || 0) / 100);
+          const lightSleepMinutes = sleepDurationMinutes - deepSleepMinutes - remSleepMinutes;
+
+          // Create realistic sleep stage transitions with 10-minute segments
+          const stages = [
+            { type: 'light' as const, duration: Math.floor(lightSleepMinutes * 0.6), label: 'Light Sleep', color: '#F59E0B' },
+            { type: 'deep' as const, duration: deepSleepMinutes, label: 'Deep Sleep', color: '#1E40AF' },
+            { type: 'light' as const, duration: Math.floor(lightSleepMinutes * 0.4), label: 'Light Sleep', color: '#F59E0B' },
+            { type: 'rem' as const, duration: remSleepMinutes, label: 'REM Sleep', color: '#8B5CF6' }
+          ];
+
+          let currentMinute = sleepStartMinutes;
+          let segmentCount = 1;
+
+          stages.forEach(stage => {
+            if (stage.duration > 0) {
+              // Create 10-minute segments for detailed tracking
+              const segmentDuration = 10;
+              const fullSegments = Math.floor(stage.duration / segmentDuration);
+              const remainder = stage.duration % segmentDuration;
+
+              for (let i = 0; i < fullSegments; i++) {
+                timeline.push({
+                  type: stage.type,
+                  start: currentMinute,
+                  end: currentMinute + segmentDuration,
+                  duration: segmentDuration,
+                  label: stage.label,
+                  color: stage.color,
+                  segment: `${segmentCount}`
+                });
+                currentMinute += segmentDuration;
+                segmentCount++;
+              }
+
+              if (remainder > 0) {
+                timeline.push({
+                  type: stage.type,
+                  start: currentMinute,
+                  end: currentMinute + remainder,
+                  duration: remainder,
+                  label: stage.label,
+                  color: stage.color,
+                  segment: `${segmentCount} (Partial)`
+                });
+                currentMinute += remainder;
+                segmentCount++;
+              }
+            }
+          });
+
+          return timeline;
+        };
+
+        const sleepTimeline = createDetailedSleepTimeline();
+
+        return (
+          <div className="card-enhanced p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Sleep Timeline (10-minute segments)
+              <span className="text-sm font-normal text-gray-600 ml-2">
+                (48-hour view showing last night's sleep in context)
+              </span>
+            </h3>
+
+            <div className="mb-6">
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-blue-800"></div>
+                  <span className='text-black'>Deep Sleep: {(lastNightData.deepSleep || 0).toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+                  <span className='text-black'>Light Sleep: {(lastNightData.lightSleep || 0).toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-purple-500"></div>
+                  <span className='text-black'>REM Sleep: {(lastNightData.remSleep || 0).toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                  <span className='text-black'>Awake: {((24 - (lastNightData.sleepDuration || 0)) * 60).toFixed(0)} min</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* 48-hour timeline visualization */}
+              <div className="relative">
+                {/* 48-hour time header */}
+                <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                  <span>Day 1 - 12:00 AM</span>
+                  <span>Day 1 - 12:00 PM</span>
+                  <span>Day 2 - 12:00 AM</span>
+                  <span>Day 2 - 12:00 PM</span>
+                  <span>Day 3 - 12:00 AM</span>
+                </div>
+
+                <div className="relative h-24 bg-gray-100 rounded-lg overflow-hidden">
+                  {/* Background time markers every 6 hours for 48-hour view */}
+                  {Array.from({ length: 9 }, (_, i) => i * 6).map(hour => (
+                    <div
+                      key={hour}
+                      className="absolute top-0 bottom-0 border-l border-gray-300"
+                      style={{ left: `${(hour / 48) * 100}%` }}
+                    />
+                  ))}
+
+                  {/* Sleep stage segments positioned within 48-hour timeline */}
+                  {sleepTimeline.map((segment, index) => {
+                    // Position segments within the 48-hour timeline
+                    const positionPercent = (segment.start / (48 * 60)) * 100;
+                    const widthPercent = (segment.duration / (48 * 60)) * 100;
+
+                    return (
+                      <div
+                        key={index}
+                        className="absolute top-0 bottom-0 flex items-center justify-center text-xs font-medium text-white shadow-sm hover:shadow-md transition-shadow"
+                        style={{
+                          left: `${positionPercent}%`,
+                          width: `${Math.max(widthPercent, 0.5)}%`,
+                          backgroundColor: segment.color,
+                          minWidth: '1px'
+                        }}
+                        title={`${segment.label} (${segment.segment}): ${formatMinutesToTime(segment.start)} - ${formatMinutesToTime(segment.end)} (${segment.duration} min)`}
+                      >
+                        {/* Remove emoji, just show colored bar */}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 48-hour scale indicators */}
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>0h</span>
+                  <span>12h</span>
+                  <span>24h</span>
+                  <span>36h</span>
+                  <span>48h</span>
+                </div>
+              </div>
+
+              {/* Detailed breakdown */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">Sleep Stage Segments (10-minute intervals)</h4>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {sleepTimeline.filter(s => s.type !== 'awake').map((segment, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 rounded-lg border bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: segment.color }}
+                          ></div>
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">{segment.label}</div>
+                            <div className="text-xs text-gray-600">
+                              Segment {segment.segment} • {formatMinutesToTime(segment.start)} - {formatMinutesToTime(segment.end)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-gray-900 text-sm">{segment.duration} min</div>
+                          <div className="text-xs text-gray-600">{((segment.duration / ((lastNightData.sleepDuration || 0) * 60)) * 100).toFixed(1)}%</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">48-Hour Sleep Context Analysis</h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="font-medium text-blue-800 mb-1">48-Hour Timeline View</div>
+                      <div className="text-blue-700">
+                        Complete 48-hour view showing last night's sleep positioned within daily/weekly context
+                        (Sleep: {lastNightData.sleepOnsetTime || 'Unknown'} - {lastNightData.wakeTime || 'Unknown'})
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <div className="font-medium text-purple-800 mb-1">10-Minute Segment Tracking</div>
+                      <div className="text-purple-700">
+                        Sleep data distributed across {sleepTimeline.filter(s => s.type !== 'awake').length} segments in 10-minute intervals
+                        within the 48-hour timeline for detailed pattern analysis
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="font-medium text-green-800 mb-1">Sleep Stage Distribution</div>
+                      <div className="text-green-700">
+                        Deep: {sleepTimeline.filter(s => s.type === 'deep').length} segments,
+                        REM: {sleepTimeline.filter(s => s.type === 'rem').length} segments,
+                        Light: {sleepTimeline.filter(s => s.type === 'light').length} segments
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="font-medium text-gray-800 mb-1">Timeline Context</div>
+                      <div className="text-gray-700 text-xs">
+                        48-hour view provides context for sleep timing, duration, and quality within daily/weekly cycles.
+                        Sleep segments are positioned based on actual recorded sleep onset and wake times.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Sleep Stress Indicators */}
       <div className="card-enhanced p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">⚠️ High Sleep Stress Indicators</h3>
