@@ -15,6 +15,7 @@ import { TrendChart } from './TrendChart';
 import ScaleReport from './ScaleReport';
 import { ArrowLeft } from 'lucide-react';
 import { DigitalTwin3D } from './DigitalTwin';
+import DigitalTwinV2 from './DigitalTwinV2';
 import { TrainingLoadHeatmap } from './TrainingLoadHeatmap';
 import { RecoveryTimeline } from './RecoveryTimeline';
 import { Pharmacogenomics } from './Pharmacogenomics';
@@ -648,7 +649,7 @@ export const AthleteProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const athleteId = parseInt(id || '0');
-       const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian' | 'chatAI' | 'geneticSummary'>('metrics');
+       const [activeTab, setActiveTab] = useState<'metrics' | 'trends' | 'insights' | 'digitalTwin' | 'digitalTwinV2' | 'trainingLoad' | 'recoveryTimeline' | 'pharmacogenomics' | 'nutrigenomics' | 'recoveryGenes' | 'predictive' | 'sleep' | 'stress' | 'weather' | 'scaleReport' | 'bloodResults' | 'circadian' | 'chatAI' | 'geneticSummary'>('metrics');
      const tabContentRef = useRef<HTMLDivElement>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null); // For dynamic labels
    const [geneticSummary, setGeneticSummary] = useState<any[]>([]);
@@ -664,39 +665,12 @@ export const AthleteProfile: React.FC = () => {
       try {
         const summaryData = await geneticProfileService.getGeneticSummaryByAthlete(athleteId);
 
-        // Debug: Log the actual field names in the data
-         if (summaryData.length > 0) {
-           console.log('🔍 DEBUG: Genetic summary data sample:', summaryData[0]);
-           console.log('🔍 DEBUG: Available fields:', Object.keys(summaryData[0]));
-           console.log('🔍 DEBUG: All data samples:', summaryData.slice(0, 3));
-           console.log('🔍 DEBUG: Data length:', summaryData.length);
-
-           // Try to find dbSNP-like fields
-           const firstItem = summaryData[0];
-           const possibleDbsnpFields = Object.keys(firstItem).filter(key =>
-             key.toLowerCase().includes('dbsnp') ||
-             key.toLowerCase().includes('rsid') ||
-             key.toLowerCase().includes('snp') ||
-             key.toLowerCase().includes('reference')
-           );
-           console.log('🔍 DEBUG: Possible dbSNP fields found:', possibleDbsnpFields);
-
-           // Specifically check for DbsnpRsId field
-           console.log('🔍 DEBUG: DbsnpRsId field exists:', firstItem.hasOwnProperty('DbsnpRsId'));
-           if (firstItem.DbsnpRsId) {
-             console.log('🔍 DEBUG: DbsnpRsId sample values:', summaryData.slice(0, 3).map(item => item.DbsnpRsId));
-           }
-
-           // Show sample values for potential fields
-           possibleDbsnpFields.forEach(field => {
-             console.log(`🔍 DEBUG: ${field} sample values:`, summaryData.slice(0, 3).map(item => item[field]));
-           });
-         }
+        // Handle genetic summary data
 
         setGeneticSummary(summaryData);
         setFilteredGeneticSummary(summaryData); // Initialize filtered results
       } catch (error) {
-        console.error('Failed to fetch genetic summary:', error);
+        // Handle error silently
       }
     };
 
@@ -731,12 +705,9 @@ export const AthleteProfile: React.FC = () => {
   const alert = generateAlert(athlete?.athlete_id || athleteId.toString(), athleteBiometrics, athleteGenetics);
 
   // Process biometric data using utility functions
-  console.log(`🔍 DEBUG: Processing ${athleteBiometrics.length} biometric records for athlete ${athleteId}`);
   const validBiometricData = filterValidBiometricData(athleteBiometrics);
-  console.log(`🔍 DEBUG: Filtered to ${validBiometricData.length} valid biometric records`);
 
   const latest = getLatestBiometricRecord(validBiometricData);
-  console.log('🔍 DEBUG: Latest Biometric Record date:', latest?.date);
 
   const sortedBiometricData = getSortedBiometricDataForCharts(athleteBiometrics);
   const readinessScore = latest ? calculateReadinessScore(latest) : 0;
@@ -765,6 +736,7 @@ export const AthleteProfile: React.FC = () => {
     { id: 'geneticSummary' as const, label: 'Genetic Summary', icon: '🧬', count: filteredGeneticSummary.length },
     { id: 'scaleReport' as const, label: 'Scale Report', icon: '⚖️', count: 1 },
     { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 },
+    { id: 'digitalTwinV2' as const, label: 'Digital Twin v2', icon: '🚀', count: 1 },
     { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: athleteBiometrics.length },
     { id: 'recoveryTimeline' as const, label: 'Recovery Timeline', icon: '📅', count: athleteBiometrics.length },
     { id: 'pharmacogenomics' as const, label: 'Pharmacogenomics', icon: '💊', count: geneticSummary.filter(g => g.category === 'pharmacogenomics').length || athleteGenetics.length },
@@ -2369,6 +2341,9 @@ export const AthleteProfile: React.FC = () => {
           <DigitalTwin3D athleteId={athleteId.toString()} />
         )}
 
+        {activeTab === 'digitalTwinV2' && (
+          <DigitalTwinV2 athleteId={athleteId.toString()} athlete={athlete} biometricData={athleteBiometrics} />
+        )}
 
         {activeTab === 'trainingLoad' && (
           <TrainingLoadHeatmap />

@@ -17,8 +17,11 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "^9.3.0",
     "@types/three": "^0.179.0",
     "axios": "^1.11.0",
+    "framer-motion": "^12.23.22",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.344.0",
     "postcss-scss": "^4.0.9",

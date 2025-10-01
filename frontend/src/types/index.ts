@@ -37,6 +37,8 @@ export interface BiometricData {
   distanceKm?: number | null;
   exerciseTimeSeconds?: number | null;
   avg_heart_rate? : number | null;
+  blood_pressure_systolic?: number | null;
+  blood_pressure_diastolic?: number | null;
 }
 
 export interface GeneticProfile {

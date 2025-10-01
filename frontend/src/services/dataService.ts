@@ -44,14 +44,7 @@ const transformAthletesData = (backendAthletes: any[]): Athlete[] => {
 };
 // Transform backend biometric data to frontend format
 const transformBiometricData = (backendData: any[]): BiometricData[] => {
-  console.log('🔍 Raw backend biometric data sample:', backendData.slice(0, 2));
-  if (backendData.length > 0) {
-    console.log('🔍 First backend record keys:', Object.keys(backendData[0]));
-    console.log('🔍 First backend record values:', backendData[0]);
-  }
-
   return backendData.map(item => {
-    console.log('🔍 Transforming item:', item);
 
     // Helper function to safely get numeric values with default 0
     const getNumericValue = (value: any, defaultValue: number = 0): number => {
@@ -160,6 +153,21 @@ const transformBiometricData = (backendData: any[]): BiometricData[] => {
                       item.Athlete?.Id?.toString() ||
                       '';
 
+    // Debug: Log raw BP data from API
+    console.log('=== RAW BP DATA FROM API ===');
+    console.log('Processing item for date:', item.Date || item.date);
+    console.log('Available BP fields in raw item:', {
+      SystolicBP: item.SystolicBP,
+      BloodPressureSystolic: item.BloodPressureSystolic,
+      BPSystolic: item.BPSystolic,
+      systolic_bp: item.systolic_bp,
+      DiastolicBP: item.DiastolicBP,
+      BloodPressureDiastolic: item.BloodPressureDiastolic,
+      BPDiastolic: item.BPDiastolic,
+      diastolic_bp: item.diastolic_bp,
+    });
+    console.log('All available fields in item:', Object.keys(item));
+
     const transformed = {
       athlete_id: athleteId,
       date: item.Date || item.date || '',
@@ -176,7 +184,15 @@ const transformBiometricData = (backendData: any[]): BiometricData[] => {
       sleep_onset_time: item.SleepOnsetTime ?? item.SleepOnset,
       wake_time: item.WakeTime ?? item.WakeUpTime,
       avg_heart_rate: getNumericValue(item.avg_heart_rate ?? item.avg_heart_rate ?? item.AvgHeartRate, 0),
+      blood_pressure_systolic: getNumericValue(item.SystolicBP ?? item.BloodPressureSystolic ?? item.BPSystolic ?? item.systolic_bp, 0),
+      blood_pressure_diastolic: getNumericValue(item.DiastolicBP ?? item.BloodPressureDiastolic ?? item.BPDiastolic ?? item.diastolic_bp, 0),
     };
+
+    console.log('Transformed BP values:', {
+      systolic: transformed.blood_pressure_systolic,
+      diastolic: transformed.blood_pressure_diastolic,
+      date: transformed.date
+    });
 
 
 
@@ -347,21 +363,15 @@ const transformBloodResultsData = (backendData: any[]): BloodResults[] => {
 };
 // Transform backend body composition data to frontend format
 const transformBodyCompositionData = (backendData: any[]): BodyComposition[] => {
-  console.log('Raw backend data:', backendData);
-
   return backendData
     .filter(item => {
       // Filter out $ref objects (JSON serialization optimization)
       if (item.$ref) {
-        console.log('Filtering out $ref object:', item);
         return false;
       }
 
       // Filter out records with missing essential data
       const hasEssentialData = item.Id && item.AthleteId && item.MeasurementDate;
-      if (!hasEssentialData) {
-        console.log('Filtering out record due to missing essential data:', item);
-      }
       return hasEssentialData;
     })
     .map(item => {
@@ -421,9 +431,7 @@ const transformBodyCompositionData = (backendData: any[]): BodyComposition[] => 
         athlete: item.Athlete || null
       };
 
-      const result = transformed;
-      console.log('🔍 Transformed result:', result);
-      return result;
+      return transformed;
     });
   };
 
@@ -588,10 +596,8 @@ export const biometricDataService = {
         rawData = rawData.$values;
       }
 
-      console.log('Raw biometric data response:', rawData);
       // Transform to BiometricData (assume aggregated data with fields like date, steps, heartRate, temperature, spo2, etc.)
       let transformedData = Array.isArray(rawData) ? transformBiometricData(rawData) : [];
-      console.log('Transformed biometric data:', transformedData);
       // Client-side filter by dates if provided (backend may not filter fully)
       if (startDate || endDate) {
         transformedData = transformedData.filter(item => {
@@ -858,7 +864,6 @@ export const geneticProfileService = {
       const response = await api.get(`/GeneticsAthletes/summary/${athleteId}`);
       let data = response.data || [];
 
-      console.log('Raw genetic summary data:', data);
       // Handle .NET JSON serialization format with $values
       if (data && typeof data === 'object' && data.$values && Array.isArray(data.$values)) {
         data = data.$values;
@@ -1000,14 +1005,11 @@ export const bodyCompositionService = {
   ): Promise<BodyComposition[]> {
     // First try the general endpoint to get all data, then filter
     try {
-      console.log('Trying general body-composition endpoint for athlete', athleteId);
-
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
 
       const response = await api.get(`/body-composition?${params.toString()}`);
-      console.log('General API Response:', response.data);
 
       const data = response.data.Data;
 
@@ -1022,19 +1024,14 @@ export const bodyCompositionService = {
         }
       }
 
-      console.log('All body composition data:', allData);
-
       // Filter by athleteId
       const athleteData = allData.filter(item => item && item.AthleteId === athleteId);
-      console.log('Filtered data for athlete', athleteId, ':', athleteData);
 
       // Transform data to match frontend expectations
       const transformedData = transformBodyCompositionData(athleteData);
-      console.log('Final transformed data for athlete', athleteId, ':', transformedData);
 
       return transformedData;
     } catch (error) {
-      console.error('Error fetching body composition data:', error);
       return [];
     }
   },
@@ -1516,7 +1513,6 @@ export const chatAIService = {
 
       return response.data;
     } catch (error) {
-      console.error('Error calling ChatAI service:', error);
       throw error;
     }
   },
