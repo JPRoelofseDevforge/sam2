@@ -45,7 +45,6 @@ api.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     } else if (error.response?.status && error.response.status >= 500) {
-      console.error('ApiError: Server error', error.response?.data || 'Unknown server error');
       return Promise.reject(new ApiError('Server error occurred'));
     }
     return Promise.reject(error);
@@ -64,7 +63,6 @@ const refreshToken = async (): Promise<void> => {
     if (unionId) localStorage.setItem('unionId', unionId);
     api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
   } catch (error) {
-    console.error('AuthError: Failed to refresh token', error);
     authService.logout();
     throw new AuthError('Token refresh failed');
   }
@@ -80,7 +78,6 @@ export const authService = {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       return { token, unionId };
     } catch (error) {
-      console.error('AuthError: Failed to login', error);
       authService.logout();
       return null;
     }
@@ -91,7 +88,6 @@ export const authService = {
       const response = await api.get('/userv3/userInfo/queryAll');
       return response.data; // Assume array of users for mapping athlete_id to unionId
     } catch (error) {
-      console.error('AuthError: Failed to get user info', error);
       return null;
     }
   },
@@ -108,7 +104,6 @@ export const authService = {
       if (unionId) localStorage.setItem('unionId', unionId);
       api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     } catch (error) {
-      console.error('AuthError: Failed to refresh token', error);
       authService.logout();
       throw new AuthError('Token refresh failed');
     }

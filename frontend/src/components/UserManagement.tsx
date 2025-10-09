@@ -64,9 +64,6 @@ export const UserManagement: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      console.log('🔍 UserManagement: Fetching users from API...');
-      console.log('🔗 API URL:', `${API_BASE_URL}/users`);
-      console.log('🔑 Token available:', !!token);
 
       if (!token) {
         console.warn('⚠️ UserManagement: No authentication token available');

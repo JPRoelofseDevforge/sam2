@@ -6,6 +6,7 @@ interface ChatWithAIProps {
   athlete: Athlete;
   biometricData: BiometricData[];
   geneticProfiles: GeneticProfile[];
+  geneticSummary?: any[];
 }
 
 interface Message {
@@ -18,12 +19,14 @@ interface Message {
 export const ChatWithAI: React.FC<ChatWithAIProps> = ({
   athlete,
   biometricData,
-  geneticProfiles
+  geneticProfiles,
+  geneticSummary = []
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [useOfflineMode, setUseOfflineMode] = useState(false);
+  const [showContextData, setShowContextData] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Debug logging
@@ -31,8 +34,10 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
     athlete,
     biometricDataCount: biometricData.length,
     geneticProfilesCount: geneticProfiles.length,
+    geneticSummaryCount: geneticSummary.length,
     biometricDataSample: biometricData.slice(0, 2),
-    geneticProfilesSample: geneticProfiles.slice(0, 2)
+    geneticProfilesSample: geneticProfiles.slice(0, 2),
+    geneticSummarySample: geneticSummary.slice(0, 2)
   });
 
   // Debug: Check if biometric data has the expected fields
@@ -68,6 +73,26 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
       return acc;
     }, {} as Record<string, string>);
 
+    // Include genetic summary data from athletegeneticsummary table
+    const geneticSummaryDict = geneticSummary.reduce((acc, summary) => {
+      const genesData = summary.Genes || summary.genes || {};
+      if (typeof genesData === 'string') {
+        try {
+          const parsed = JSON.parse(genesData);
+          Object.assign(acc, parsed);
+        } catch {
+          // Ignore parsing errors
+        }
+      } else if (typeof genesData === 'object' && genesData !== null) {
+        Object.entries(genesData).forEach(([gene, genotype]) => {
+          if (!gene.startsWith('$') && gene !== 'id' && gene !== 'Id' && gene !== 'ID') {
+            acc[gene] = genotype as string;
+          }
+        });
+      }
+      return acc;
+    }, {} as Record<string, string>);
+
     // Use only real data from the tabs - no mock data
     const context = {
       name: athlete.name,
@@ -94,9 +119,10 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
         TrainingLoadPct: last7DaysData[last7DaysData.length - 1].training_load_pct,
         Date: last7DaysData[last7DaysData.length - 1].date
       } : null,
-      geneticProfile: geneticDict,
+      geneticProfile: { ...geneticDict, ...geneticSummaryDict },
       totalBiometricRecords: biometricData.length,
-      totalGeneticMarkers: geneticProfiles.length
+      totalGeneticMarkers: geneticProfiles.length + Object.keys(geneticSummaryDict).length,
+      geneticSummaryData: geneticSummary
     };
 
     console.log('🔍 ChatWithAI Context Debug:', {
@@ -167,7 +193,7 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error('Error calling OpenRouter API:', error);
+      console.error('Error calling OpenAI API:', error);
 
       // Use offline mode if API fails
       const context = prepareAthleteContext();
@@ -235,6 +261,16 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
           </h3>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowContextData(!showContextData)}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                showContextData
+                  ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                  : 'bg-gray-100 text-gray-700 border border-gray-300'
+              }`}
+            >
+              {showContextData ? '📊 Hide Context' : '📊 Show Context'}
+            </button>
+            <button
               onClick={() => setUseOfflineMode(!useOfflineMode)}
               className={`px-3 py-1 text-xs rounded-full transition-colors ${
                 useOfflineMode
@@ -263,6 +299,24 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
           )}
         </p>
       </div>
+
+      {/* Context Data Display */}
+      {showContextData && (
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <span className="text-lg">📊</span>
+            Context Data Sent to AI
+          </h4>
+          <div className="bg-white rounded-lg p-3 border text-xs font-mono text-gray-800 max-h-60 overflow-y-auto">
+            <pre className="whitespace-pre-wrap">
+              {JSON.stringify(prepareAthleteContext(), null, 2)}
+            </pre>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            This data includes athlete info, 7-day biometric history, and genetic profiles from both tables.
+          </p>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">

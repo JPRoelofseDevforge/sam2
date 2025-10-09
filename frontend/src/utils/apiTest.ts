@@ -5,17 +5,10 @@ import { dataService } from '../services/dataService';
  */
 export const testApiIntegrations = {
   async testDigitalTwinApi(athleteId: string | number) {
-    console.log('🧬 Testing DigitalTwin API integration...');
     try {
       const data = await dataService.getAthleteData(typeof athleteId === 'string' ? parseInt(athleteId, 10) : athleteId);
-      console.log('✅ DigitalTwin API test passed:', {
-        athlete: data.athlete?.name,
-        biometricRecords: data.biometricData.length,
-        bodyCompositionRecords: data.bodyComposition.length
-      });
       return true;
     } catch (error) {
-      console.error('❌ DigitalTwin API test failed:', error);
       return false;
     }
   },

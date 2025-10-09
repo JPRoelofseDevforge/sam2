@@ -26,7 +26,6 @@ export const useAuth = () => {
       setLoading(true);
       const response = await authService.login(username, password);
       if (!response) {
-        console.error('Login failed: No response');
         return false;
       }
       localStorage.setItem('token', response.token);
@@ -34,7 +33,6 @@ export const useAuth = () => {
       setIsAuthenticated(true);
       return true;
     } catch (error) {
-      console.error('Login failed:', error);
       return false;
     } finally {
       setLoading(false);

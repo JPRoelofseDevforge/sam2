@@ -153,20 +153,6 @@ const transformBiometricData = (backendData: any[]): BiometricData[] => {
                       item.Athlete?.Id?.toString() ||
                       '';
 
-    // Debug: Log raw BP data from API
-    console.log('=== RAW BP DATA FROM API ===');
-    console.log('Processing item for date:', item.Date || item.date);
-    console.log('Available BP fields in raw item:', {
-      SystolicBP: item.SystolicBP,
-      BloodPressureSystolic: item.BloodPressureSystolic,
-      BPSystolic: item.BPSystolic,
-      systolic_bp: item.systolic_bp,
-      DiastolicBP: item.DiastolicBP,
-      BloodPressureDiastolic: item.BloodPressureDiastolic,
-      BPDiastolic: item.BPDiastolic,
-      diastolic_bp: item.diastolic_bp,
-    });
-    console.log('All available fields in item:', Object.keys(item));
 
     const transformed = {
       athlete_id: athleteId,
@@ -188,11 +174,6 @@ const transformBiometricData = (backendData: any[]): BiometricData[] => {
       blood_pressure_diastolic: getNumericValue(item.DiastolicBP ?? item.BloodPressureDiastolic ?? item.BPDiastolic ?? item.diastolic_bp, 0),
     };
 
-    console.log('Transformed BP values:', {
-      systolic: transformed.blood_pressure_systolic,
-      diastolic: transformed.blood_pressure_diastolic,
-      date: transformed.date
-    });
 
 
 
@@ -858,7 +839,7 @@ export const geneticProfileService = {
     return response.data.Data; // Extract data from JCRing.Api response
   },
 
-  // Get genetic summary data for athlete
+  // Get genetic summary data for athlete from AthleteGeneticSummary table
   async getGeneticSummaryByAthlete(athleteId: number): Promise<any[]> {
     try {
       const response = await api.get(`/GeneticsAthletes/summary/${athleteId}`);
@@ -875,7 +856,7 @@ export const geneticProfileService = {
     }
   },
 
-  // Get genetic cellular data for athlete
+  // Get genetic cellular data for athlete from AthleteGeneticSummary table
   async getGeneticCellularByAthlete(athleteId: number): Promise<any[]> {
     try {
       const response = await api.get(`/GeneticsAthletes/cellular/${athleteId}`);
@@ -892,7 +873,7 @@ export const geneticProfileService = {
     }
   },
 
-  // Get pharmacogenomics data for athlete
+  // Get pharmacogenomics data for athlete from AthleteGeneticSummary table
   async getPharmacogenomicsByAthlete(athleteId: number): Promise<any[]> {
     try {
       const response = await api.get(`/GeneticsAthletes/pharmacogenomics/${athleteId}`);
@@ -909,7 +890,7 @@ export const geneticProfileService = {
     }
   },
 
-  // Get nutrigenomics data for athlete
+  // Get nutrigenomics data for athlete from AthleteGeneticSummary table
   async getNutrigenomicsByAthlete(athleteId: number): Promise<any[]> {
     try {
       const response = await api.get(`/GeneticsAthletes/nutrigenomics/${athleteId}`);
@@ -926,7 +907,7 @@ export const geneticProfileService = {
     }
   },
 
-  // Get recovery genetics data for athlete
+  // Get recovery genetics data for athlete from AthleteGeneticSummary table
   async getRecoveryGeneticsByAthlete(athleteId: number): Promise<any[]> {
     try {
       const response = await api.get(`/GeneticsAthletes/recovery/${athleteId}`);

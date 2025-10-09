@@ -77,17 +77,44 @@ const calculateStandardDeviation = (values: number[]): number => {
   return Math.sqrt(variance);
 };
 
-// Helper function to determine chronotype based on genetics and sleep patterns
+// Helper function to determine chronotype based on comprehensive genetics and sleep patterns
 const determineChronotype = (geneticData: GeneticProfile[], biometricData: BiometricData[]): string => {
   const per3Gene = geneticData.find(g => g.gene === 'PER3');
   const clockGene = geneticData.find(g => g.gene === 'CLOCK');
+  const per2Gene = geneticData.find(g => g.gene === 'PER2');
+  const arntlGene = geneticData.find(g => g.gene === 'ARNTL');
 
-  // Genetic influence
+  // Genetic influence with comprehensive circadian genes
   let geneticChronotype = 'Intermediate';
+  let chronotypeScore = 0; // -1 = evening, 0 = intermediate, 1 = morning
+
+  // CLOCK gene - AA = morning preference
+  if (clockGene) {
+    chronotypeScore += clockGene.genotype === 'AA' ? 1 : -0.5;
+  }
+
+  // PER3 gene - long allele = evening preference
   if (per3Gene) {
-    geneticChronotype = per3Gene.genotype === 'long' ? 'Evening Type' : 'Morning Type';
-  } else if (clockGene) {
-    geneticChronotype = clockGene.genotype === 'AA' ? 'Morning Type' : 'Evening Type';
+    chronotypeScore += per3Gene.genotype === 'long' ? -1 : 0.5;
+  }
+
+  // PER2 gene - certain variants affect morningness
+  if (per2Gene) {
+    chronotypeScore += per2Gene.genotype.includes('C') ? 0.3 : -0.3;
+  }
+
+  // ARNTL/BMAL1 gene - affects circadian rhythm strength
+  if (arntlGene) {
+    chronotypeScore += arntlGene.genotype.includes('G') ? 0.2 : -0.2;
+  }
+
+  // Determine genetic chronotype based on score
+  if (chronotypeScore > 0.5) {
+    geneticChronotype = 'Morning Type';
+  } else if (chronotypeScore < -0.5) {
+    geneticChronotype = 'Evening Type';
+  } else {
+    geneticChronotype = 'Intermediate';
   }
 
   // Behavioral influence from sleep patterns
@@ -97,12 +124,22 @@ const determineChronotype = (geneticData: GeneticProfile[], biometricData: Biome
       return sum + hours;
     }, 0) / biometricData.length;
 
-    if (avgSleepOnset >= 23 || avgSleepOnset <= 5) {
+    const avgWakeTime = biometricData.reduce((sum, d) => {
+      const [hours] = (d.wake_time || '00:00').split(':').map(Number);
+      return sum + hours;
+    }, 0) / biometricData.length;
+
+    // Very late sleep onset = evening type
+    if (avgSleepOnset >= 23 || avgSleepOnset <= 3) {
       return 'Evening Type';
-    } else if (avgSleepOnset <= 22 && avgSleepOnset >= 21) {
-      return 'Intermediate';
-    } else {
+    }
+    // Early sleep onset = morning type
+    else if (avgSleepOnset <= 21 && avgWakeTime <= 7) {
       return 'Morning Type';
+    }
+    // Moderate timing = intermediate
+    else if (avgSleepOnset >= 22 && avgSleepOnset <= 23) {
+      return 'Intermediate';
     }
   }
 
@@ -153,7 +190,7 @@ const calculateCircadianDisruptions = (data: BiometricData[]): string[] => {
   return disruptions;
 };
 
-// Helper function to generate circadian recommendations
+// Helper function to generate comprehensive circadian recommendations
 const generateCircadianRecommendations = (
   chronotype: string,
   disruptions: string[],
@@ -197,6 +234,97 @@ const generateCircadianRecommendations = (
     recommendations.push('Reduce screen time and blue light exposure 1 hour before bed');
   }
 
+  // Comprehensive genetic-specific recommendations
+  // Core Sleep markers
+  const clockGene = geneticData.find(g => g.gene === 'CLOCK');
+  if (clockGene) {
+    if (clockGene.genotype === 'AA') {
+      recommendations.push('Strong circadian drive (CLOCK AA) - maintain strict sleep consistency');
+    } else {
+      recommendations.push('Flexible circadian rhythm - use time-restricted eating (10-hour window)');
+    }
+  }
+
+  const per3Gene = geneticData.find(g => g.gene === 'PER3');
+  if (per3Gene) {
+    if (per3Gene.genotype === 'long') {
+      recommendations.push('Evening chronotype (PER3 long) - consider magnesium glycinate for better sleep onset');
+      recommendations.push('Evening types: Stop caffeine by 3 PM to avoid sleep disruption');
+    } else {
+      recommendations.push('Morning chronotype (PER3 short) - optimize with morning sunlight exposure');
+      recommendations.push('Morning types: Can consume caffeine until 2 PM without major sleep impact');
+    }
+  }
+
+  const per2Gene = geneticData.find(g => g.gene === 'PER2');
+  if (per2Gene) {
+    recommendations.push('PER2 variant detected - monitor light exposure timing for optimal circadian regulation');
+  }
+
+  const arntlGene = geneticData.find(g => g.gene === 'ARNTL');
+  if (arntlGene) {
+    recommendations.push('BMAL1 (ARNTL) gene influences circadian strength - maintain consistent light/dark cycles');
+  }
+
+  const comtGene = geneticData.find(g => g.gene === 'COMT');
+  if (comtGene) {
+    if (comtGene.genotype === 'GG') {
+      recommendations.push('Efficient dopamine metabolism (COMT GG) - better stress response during sleep deprivation');
+    } else {
+      recommendations.push('Slower dopamine clearance - prioritize sleep quality over quantity');
+    }
+  }
+
+  const bdnfGene = geneticData.find(g => g.gene === 'BDNF');
+  if (bdnfGene) {
+    if (bdnfGene.genotype === 'Val/Val') {
+      recommendations.push('Enhanced neuroplasticity (BDNF Val/Val) - better sleep-dependent memory consolidation');
+    } else {
+      recommendations.push('Reduced neuroplasticity - ensure adequate deep sleep for cognitive recovery');
+    }
+  }
+
+  const ppargc1aGene = geneticData.find(g => g.gene === 'PPARGC1A');
+  if (ppargc1aGene) {
+    recommendations.push('Mitochondrial biogenesis gene (PPARGC1A) - cold exposure may enhance sleep quality');
+  }
+
+  // Mental Health genes affecting circadian rhythm
+  const slc6a4Gene = geneticData.find(g => g.gene === 'SLC6A4');
+  if (slc6a4Gene) {
+    if (slc6a4Gene.genotype === 'LL') {
+      recommendations.push('Efficient serotonin transport (SLC6A4 LL) - better mood stability with light exposure');
+    } else {
+      recommendations.push('Reduced serotonin transport - monitor seasonal mood changes');
+    }
+  }
+
+  const tph2Gene = geneticData.find(g => g.gene === 'TPH2');
+  if (tph2Gene) {
+    recommendations.push('Serotonin synthesis gene (TPH2) - light therapy may help regulate mood and sleep');
+  }
+
+  const maoaGene = geneticData.find(g => g.gene === 'MAOA');
+  if (maoaGene) {
+    recommendations.push('Monoamine oxidase gene (MAOA) - stress management crucial for sleep quality');
+  }
+
+  // Vitamin D metabolism genes
+  const gcGene = geneticData.find(g => g.gene === 'GC');
+  if (gcGene) {
+    recommendations.push('Vitamin D binding protein gene (GC) - monitor vitamin D levels, consider supplementation');
+  }
+
+  const cyp2r1Gene = geneticData.find(g => g.gene === 'CYP2R1');
+  if (cyp2r1Gene) {
+    recommendations.push('Vitamin D activation gene (CYP2R1) - may need higher UV exposure for vitamin D production');
+  }
+
+  const vdrGene = geneticData.find(g => g.gene === 'VDR');
+  if (vdrGene) {
+    recommendations.push('Vitamin D receptor gene (VDR) - optimize vitamin D utilization through diet and sunlight');
+  }
+
   // Caffeine consumption recommendations based on chronotype
   if (chronotype === 'Morning Type') {
     recommendations.push('Stop caffeine consumption by 2 PM to avoid sleep interference');
@@ -220,27 +348,6 @@ const generateCircadianRecommendations = (
       recommendations.push('Early sleep onset detected - stop caffeine 6-8 hours before bedtime');
     } else {
       recommendations.push('Later sleep onset - stop caffeine 4-6 hours before bedtime');
-    }
-  }
-
-  // Genetic-specific recommendations
-  const clockGene = geneticData.find(g => g.gene === 'CLOCK');
-  if (clockGene) {
-    if (clockGene.genotype === 'AA') {
-      recommendations.push('Strong circadian drive - maintain strict sleep consistency');
-    } else {
-      recommendations.push('Flexible circadian rhythm - use time-restricted eating (10-hour window)');
-    }
-  }
-
-  const per3Gene = geneticData.find(g => g.gene === 'PER3');
-  if (per3Gene) {
-    if (per3Gene.genotype === 'long') {
-      recommendations.push('Evening chronotype - consider magnesium glycinate for better sleep onset');
-      recommendations.push('Evening types: Stop caffeine by 3 PM to avoid sleep disruption');
-    } else {
-      recommendations.push('Morning chronotype - optimize with morning sunlight exposure');
-      recommendations.push('Morning types: Can consume caffeine until 2 PM without major sleep impact');
     }
   }
 
@@ -589,12 +696,18 @@ export const CircadianRhythm: React.FC<CircadianRhythmProps> = ({
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900">Genetic Influence</h4>
                 <div className="space-y-2 mt-2">
-                  {geneticData.filter(g => ['CLOCK', 'PER3', 'ARNTL'].includes(g.gene)).map((gene, index) => (
+                  {geneticData.filter(g => [
+                    'CLOCK', 'PER2', 'PER3', 'ARNTL', 'COMT', 'BDNF', 'PPARGC1A',
+                    'SLC6A4', 'TPH2', 'MAOA', 'GC', 'CYP2R1', 'VDR'
+                  ].includes(g.gene)).map((gene, index) => (
                     <div key={index} className="text-sm text-gray-900">
                       <span className="font-medium text-gray-900">{gene.gene}:</span> <span className="text-gray-700">{gene.genotype}</span>
                     </div>
                   ))}
-                  {geneticData.filter(g => ['CLOCK', 'PER3', 'ARNTL'].includes(g.gene)).length === 0 && (
+                  {geneticData.filter(g => [
+                    'CLOCK', 'PER2', 'PER3', 'ARNTL', 'COMT', 'BDNF', 'PPARGC1A',
+                    'SLC6A4', 'TPH2', 'MAOA', 'GC', 'CYP2R1', 'VDR'
+                  ].includes(g.gene)).length === 0 && (
                     <p className="text-sm text-gray-700">No circadian-related genetic data available</p>
                   )}
                 </div>

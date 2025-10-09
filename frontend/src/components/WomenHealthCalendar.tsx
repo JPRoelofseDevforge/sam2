@@ -38,7 +38,6 @@ const WomenHealthCalendar: React.FC = () => {
           setError('Authentication failed. Please log in again.');
         }
       } else {
-        console.error('Failed to fetch women health records:', error);
         toast.error('Failed to load women health records. Please try again.');
         setError('Failed to load women health records. Please try again.');
       }

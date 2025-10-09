@@ -65,7 +65,7 @@ export const useCrud = <T>(resource: string) => {
     try {
       const result = await operation();
       if (successMessage) {
-        console.log(successMessage);
+        // Success message logged
       }
       return result;
     } catch (error) {
@@ -150,7 +150,7 @@ export const useForm = <T extends Record<string, any>>(
       // Reset touched state on successful submit
       setTouched({});
     } catch (error) {
-      console.error('Form submission error:', error);
+      // Form submission error handled
     } finally {
       setIsSubmitting(false);
     }
@@ -197,7 +197,6 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
       const item = localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
       return initialValue;
     }
   });
@@ -208,7 +207,7 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
       setStoredValue(valueToStore);
       localStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
+      // Error setting localStorage
     }
   }, [key, storedValue]);
 
@@ -217,7 +216,7 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
       localStorage.removeItem(key);
       setStoredValue(initialValue);
     } catch (error) {
-      console.error(`Error removing localStorage key "${key}":`, error);
+      // Error removing localStorage
     }
   }, [key, initialValue]);
 

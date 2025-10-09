@@ -84,7 +84,6 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
         });
         setLastRefresh(new Date());
       } catch (err: any) {
-        console.error('Weather API Error:', err);
         setWeatherData(null); // Set to null on error to handle gracefully
       } finally {
         setLoading(false);
@@ -147,56 +146,55 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
     }
   };
 
-  // Enhanced genetic analysis with comprehensive factors
+  // Enhanced genetic analysis with comprehensive weather-responsive genes
   const analyzeGeneticImpacts = useMemo((): GeneticImpact[] => {
     if (!geneticData || !weatherData) return [];
 
     const impacts: GeneticImpact[] = [];
     const { temperature, humidity, windSpeed, aqi, uvIndex } = weatherData;
 
-    // ACTN3 - Power and sprint performance in heat
-    const actn3Genotype = geneticData.find(g => g.gene === 'ACTN3')?.genotype;
-    if (actn3Genotype && temperature && temperature > 28) {
-      if (actn3Genotype === 'XX') {
-        impacts.push({
-          gene: 'ACTN3',
-          genotype: actn3Genotype,
-          impact: 'Reduced power output in heat',
-          severity: 'high',
-          recommendation: 'Focus on endurance work, avoid high-intensity efforts',
-          icon: <Zap className="w-5 h-5" />,
-          category: 'power'
-        });
-      } else if (actn3Genotype === 'RR') {
-        impacts.push({
-          gene: 'ACTN3',
-          genotype: actn3Genotype,
-          impact: 'Better heat tolerance for power activities',
-          severity: 'low',
-          recommendation: 'Can maintain power training in moderate heat',
-          icon: <Zap className="w-5 h-5" />,
-          category: 'power'
-        });
-      }
+    // 🌡️ Temperature Sensitivity Genes
+    // UCP1, UCP2, ADRB3 - Cold tolerance and thermogenesis
+    const ucp1Genotype = geneticData.find(g => g.gene === 'UCP1')?.genotype;
+    if (ucp1Genotype && temperature && temperature < 10) {
+      impacts.push({
+        gene: 'UCP1',
+        genotype: ucp1Genotype,
+        impact: 'Cold tolerance and brown fat thermogenesis',
+        severity: ucp1Genotype.includes('A') ? 'low' : 'medium',
+        recommendation: 'Better cold adaptation, maintain training in cold weather',
+        icon: <Thermometer className="w-5 h-5" />,
+        category: 'recovery'
+      });
     }
 
-    // ADRB2 - Sweat response and thermoregulation
-    const adrb2Genotype = geneticData.find(g => g.gene === 'ADRB2')?.genotype;
-    if (adrb2Genotype && humidity && humidity > 70) {
-      if (adrb2Genotype === 'Gly16Gly') {
-        impacts.push({
-          gene: 'ADRB2',
-          genotype: adrb2Genotype,
-          impact: 'Reduced sweat efficiency in high humidity',
-          severity: 'medium',
-          recommendation: 'Monitor hydration closely, use cooling strategies',
-          icon: <Droplets className="w-5 h-5" />,
-          category: 'recovery'
-        });
-      }
+    const adrb3Genotype = geneticData.find(g => g.gene === 'ADRB3')?.genotype;
+    if (adrb3Genotype && temperature && temperature < 15) {
+      impacts.push({
+        gene: 'ADRB3',
+        genotype: adrb3Genotype,
+        impact: 'Cold-induced thermogenesis regulation',
+        severity: 'medium',
+        recommendation: 'Monitor cold exposure, ensure proper warm-up',
+        icon: <Thermometer className="w-5 h-5" />,
+        category: 'recovery'
+      });
     }
 
-    // CFTR - Dehydration and electrolyte balance
+    // AQP5, CFTR, ENaC/SCNN1A - Heat tolerance and sweating
+    const aqp5Genotype = geneticData.find(g => g.gene === 'AQP5')?.genotype;
+    if (aqp5Genotype && temperature && temperature > 28) {
+      impacts.push({
+        gene: 'AQP5',
+        genotype: aqp5Genotype,
+        impact: 'Sweat gland water channel function',
+        severity: 'medium',
+        recommendation: 'Monitor hydration, optimize electrolyte balance',
+        icon: <Droplets className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+
     const cftrGenotype = geneticData.find(g => g.gene === 'CFTR')?.genotype;
     if (cftrGenotype && temperature && temperature > 25) {
       if (cftrGenotype.includes('del')) {
@@ -212,84 +210,361 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
       }
     }
 
-    // PPARGC1A - Mitochondrial efficiency and cold adaptation
-    const ppargc1aGenotype = geneticData.find(g => g.gene === 'PPARGC1A')?.genotype;
-    if (ppargc1aGenotype && temperature && temperature < 10) {
-      if (ppargc1aGenotype.includes('Ser')) {
-        impacts.push({
-          gene: 'PPARGC1A',
-          genotype: ppargc1aGenotype,
-          impact: 'Better cold adaptation and fat metabolism',
-          severity: 'low',
-          recommendation: 'Can train effectively in cold conditions',
-          icon: <Heart className="w-5 h-5" />,
-          category: 'metabolism'
-        });
-      }
+    const scnn1aGenotype = geneticData.find(g => g.gene === 'SCNN1A')?.genotype;
+    if (scnn1aGenotype && temperature && temperature > 30) {
+      impacts.push({
+        gene: 'SCNN1A',
+        genotype: scnn1aGenotype,
+        impact: 'Salt retention and sweat electrolyte balance',
+        severity: 'medium',
+        recommendation: 'Monitor sodium levels, adjust electrolyte supplementation',
+        icon: <Droplets className="w-5 h-5" />,
+        category: 'recovery'
+      });
     }
 
-    // ACE - Cardiovascular response to heat
-    const aceGenotype = geneticData.find(g => g.gene === 'ACE')?.genotype;
-    if (aceGenotype && temperature && temperature > 30) {
-      if (aceGenotype === 'DD') {
-        impacts.push({
-          gene: 'ACE',
-          genotype: aceGenotype,
-          impact: 'Higher heat stress risk due to vascular response',
-          severity: 'medium',
-          recommendation: 'Monitor blood pressure, avoid extreme heat exposure',
-          icon: <Activity className="w-5 h-5" />,
-          category: 'stress'
-        });
-      }
-    }
-
-    // NOS3 - Nitric oxide production and blood flow
+    // NOS3, ADRB2 - Vasoconstriction in cold
     const nos3Genotype = geneticData.find(g => g.gene === 'NOS3')?.genotype;
-    if (nos3Genotype && aqi && aqi > 100) {
+    if (nos3Genotype && temperature && temperature < 10) {
       if (nos3Genotype === 'TT') {
         impacts.push({
           gene: 'NOS3',
           genotype: nos3Genotype,
-          impact: 'Reduced blood vessel dilation in poor air quality',
-          severity: 'medium',
-          recommendation: 'Consider indoor training during high pollution',
-          icon: <Brain className="w-5 h-5" />,
+          impact: 'Optimal nitric oxide production for circulation',
+          severity: 'low',
+          recommendation: 'Better blood flow in cold conditions',
+          icon: <Activity className="w-5 h-5" />,
           category: 'endurance'
         });
       }
     }
 
-    // COL5A1 - Injury risk in high winds
-    const col5a1Genotype = geneticData.find(g => g.gene === 'COL5A1')?.genotype;
-    if (col5a1Genotype && windSpeed && windSpeed > 15) {
-      if (col5a1Genotype === 'CC') {
+    const adrb2Genotype = geneticData.find(g => g.gene === 'ADRB2')?.genotype;
+    if (adrb2Genotype && temperature && temperature < 15) {
+      if (adrb2Genotype === 'Gly16Gly') {
         impacts.push({
-          gene: 'COL5A1',
-          genotype: col5a1Genotype,
-          impact: 'Increased soft tissue injury risk in windy conditions',
+          gene: 'ADRB2',
+          genotype: adrb2Genotype,
+          impact: 'Reduced vasoconstriction efficiency in cold',
           severity: 'medium',
-          recommendation: 'Focus on stability work, use wind protection',
-          icon: <Shield className="w-5 h-5" />,
+          recommendation: 'Extra warm-up needed, monitor for cold stress',
+          icon: <Thermometer className="w-5 h-5" />,
           category: 'recovery'
         });
       }
     }
 
-    // HFE - Iron metabolism in UV exposure
-    const hfeGenotype = geneticData.find(g => g.gene === 'HFE')?.genotype;
-    if (hfeGenotype && uvIndex && uvIndex > 7) {
-      if (hfeGenotype.includes('C282Y')) {
-        impacts.push({
-          gene: 'HFE',
-          genotype: hfeGenotype,
-          impact: 'Iron absorption affected by UV exposure',
-          severity: 'low',
-          recommendation: 'Monitor iron levels, consider sun protection',
-          icon: <EyeIcon className="w-5 h-5" />,
-          category: 'metabolism'
-        });
-      }
+    // ☀️ Light, Circadian, and Seasonal Response Genes
+    // CLOCK, PER2, PER3, ARNTL/BMAL1 - Circadian rhythm
+    const clockGenotype = geneticData.find(g => g.gene === 'CLOCK')?.genotype;
+    if (clockGenotype && uvIndex && uvIndex > 6) {
+      impacts.push({
+        gene: 'CLOCK',
+        genotype: clockGenotype,
+        impact: 'Circadian rhythm regulation affected by light exposure',
+        severity: clockGenotype === 'AA' ? 'low' : 'medium',
+        recommendation: clockGenotype === 'AA' ? 'Strong circadian drive, maintain light consistency' : 'Flexible rhythm, use light therapy if needed',
+        icon: <Clock className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+
+    const per2Genotype = geneticData.find(g => g.gene === 'PER2')?.genotype;
+    if (per2Genotype && uvIndex && uvIndex > 8) {
+      impacts.push({
+        gene: 'PER2',
+        genotype: per2Genotype,
+        impact: 'Light-sensitive circadian regulation',
+        severity: 'medium',
+        recommendation: 'Monitor sleep quality with high UV exposure',
+        icon: <Clock className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+
+    const per3Genotype = geneticData.find(g => g.gene === 'PER3')?.genotype;
+    if (per3Genotype && uvIndex && uvIndex > 7) {
+      impacts.push({
+        gene: 'PER3',
+        genotype: per3Genotype,
+        impact: 'Morning/evening preference influenced by light',
+        severity: per3Genotype === 'long' ? 'medium' : 'low',
+        recommendation: per3Genotype === 'long' ? 'Evening type, avoid bright light before bed' : 'Morning type, use morning light exposure',
+        icon: <Clock className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+
+    const arntlGenotype = geneticData.find(g => g.gene === 'ARNTL')?.genotype;
+    if (arntlGenotype && uvIndex && uvIndex > 5) {
+      impacts.push({
+        gene: 'ARNTL',
+        genotype: arntlGenotype,
+        impact: 'BMAL1 protein affects light-dependent gene expression',
+        severity: 'medium',
+        recommendation: 'Optimize light exposure timing for circadian health',
+        icon: <Clock className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+
+    // SLC6A4, TPH2, MAOA - Seasonal mood response
+    const slc6a4Genotype = geneticData.find(g => g.gene === 'SLC6A4')?.genotype;
+    if (slc6a4Genotype && uvIndex && uvIndex < 3) {
+      impacts.push({
+        gene: 'SLC6A4',
+        genotype: slc6a4Genotype,
+        impact: 'Serotonin transporter affected by seasonal light changes',
+        severity: slc6a4Genotype === 'LL' ? 'low' : 'high',
+        recommendation: slc6a4Genotype === 'LL' ? 'Good serotonin regulation' : 'Monitor mood in low light seasons',
+        icon: <Brain className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+
+    const tph2Genotype = geneticData.find(g => g.gene === 'TPH2')?.genotype;
+    if (tph2Genotype && uvIndex && uvIndex < 4) {
+      impacts.push({
+        gene: 'TPH2',
+        genotype: tph2Genotype,
+        impact: 'Serotonin synthesis affected by light availability',
+        severity: 'medium',
+        recommendation: 'Consider light therapy in low-sunlight periods',
+        icon: <Brain className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+
+    // GC/DBP, CYP2R1, VDR - Vitamin D metabolism
+    const gcGenotype = geneticData.find(g => g.gene === 'GC')?.genotype;
+    if (gcGenotype && uvIndex && uvIndex < 5) {
+      impacts.push({
+        gene: 'GC',
+        genotype: gcGenotype,
+        impact: 'Vitamin D binding protein affects UV utilization',
+        severity: 'medium',
+        recommendation: 'Monitor vitamin D levels, consider supplementation',
+        icon: <EyeIcon className="w-5 h-5" />,
+        category: 'metabolism'
+      });
+    }
+
+    const cyp2r1Genotype = geneticData.find(g => g.gene === 'CYP2R1')?.genotype;
+    if (cyp2r1Genotype && uvIndex && uvIndex < 6) {
+      impacts.push({
+        gene: 'CYP2R1',
+        genotype: cyp2r1Genotype,
+        impact: 'Vitamin D 25-hydroxylase enzyme efficiency',
+        severity: 'medium',
+        recommendation: 'May need higher UV exposure for vitamin D production',
+        icon: <EyeIcon className="w-5 h-5" />,
+        category: 'metabolism'
+      });
+    }
+
+    const vdrGenotype = geneticData.find(g => g.gene === 'VDR')?.genotype;
+    if (vdrGenotype && uvIndex && uvIndex > 8) {
+      impacts.push({
+        gene: 'VDR',
+        genotype: vdrGenotype,
+        impact: 'Vitamin D receptor sensitivity to sunlight',
+        severity: 'low',
+        recommendation: 'Good vitamin D utilization from UV exposure',
+        icon: <EyeIcon className="w-5 h-5" />,
+        category: 'metabolism'
+      });
+    }
+
+    // 💨 Air Pressure, Humidity, and Weather-Triggered Symptoms
+    // TRPV1, CACNA1A, HCRTR1 - Migraine weather sensitivity
+    const trpv1Genotype = geneticData.find(g => g.gene === 'TRPV1')?.genotype;
+    if (trpv1Genotype && windSpeed && windSpeed > 20) {
+      impacts.push({
+        gene: 'TRPV1',
+        genotype: trpv1Genotype,
+        impact: 'Sensory nerve sensitivity to barometric pressure',
+        severity: 'high',
+        recommendation: 'Monitor for migraine triggers in windy conditions',
+        icon: <Brain className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+
+    const cacna1aGenotype = geneticData.find(g => g.gene === 'CACNA1A')?.genotype;
+    if (cacna1aGenotype && windSpeed && windSpeed > 15) {
+      impacts.push({
+        gene: 'CACNA1A',
+        genotype: cacna1aGenotype,
+        impact: 'Calcium channel affects nerve excitability',
+        severity: 'medium',
+        recommendation: 'Wind may trigger neurological symptoms',
+        icon: <Brain className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+
+    // IL6, TNF, COL1A1 - Joint pain and inflammation
+    const il6Genotype = geneticData.find(g => g.gene === 'IL6')?.genotype;
+    if (il6Genotype && humidity && humidity > 80) {
+      impacts.push({
+        gene: 'IL6',
+        genotype: il6Genotype,
+        impact: 'Inflammation response to humidity changes',
+        severity: 'medium',
+        recommendation: 'Monitor joint pain in high humidity',
+        icon: <Shield className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+
+    const tnfGenotype = geneticData.find(g => g.gene === 'TNF')?.genotype;
+    if (tnfGenotype && temperature && temperature < 10) {
+      impacts.push({
+        gene: 'TNF',
+        genotype: tnfGenotype,
+        impact: 'Cold-triggered inflammation response',
+        severity: 'medium',
+        recommendation: 'Cold weather may increase joint inflammation',
+        icon: <Shield className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+
+    const col1a1Genotype = geneticData.find(g => g.gene === 'COL1A1')?.genotype;
+    if (col1a1Genotype && windSpeed && windSpeed > 15) {
+      impacts.push({
+        gene: 'COL1A1',
+        genotype: col1a1Genotype,
+        impact: 'Collagen structure affects joint stability',
+        severity: 'medium',
+        recommendation: 'Wind may affect joint stability and pain',
+        icon: <Shield className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+
+    // IL13, ADRB2, ORMDL3 - Asthma and humidity sensitivity
+    const il13Genotype = geneticData.find(g => g.gene === 'IL13')?.genotype;
+    if (il13Genotype && humidity && humidity > 75) {
+      impacts.push({
+        gene: 'IL13',
+        genotype: il13Genotype,
+        impact: 'Airway inflammation response to humidity',
+        severity: 'high',
+        recommendation: 'Monitor respiratory symptoms in humid conditions',
+        icon: <Wind className="w-5 h-5" />,
+        category: 'endurance'
+      });
+    }
+
+    const ormdl3Genotype = geneticData.find(g => g.gene === 'ORMDL3')?.genotype;
+    if (ormdl3Genotype && humidity && humidity > 70) {
+      impacts.push({
+        gene: 'ORMDL3',
+        genotype: ormdl3Genotype,
+        impact: 'Bronchial hyperresponsiveness to humidity',
+        severity: 'medium',
+        recommendation: 'Humidity may trigger asthma symptoms',
+        icon: <Wind className="w-5 h-5" />,
+        category: 'endurance'
+      });
+    }
+
+    // 🌤️ UV and Sun Exposure Adaptation
+    // MC1R, SLC24A5, TYR, OCA2 - Skin pigmentation
+    const mc1rGenotype = geneticData.find(g => g.gene === 'MC1R')?.genotype;
+    if (mc1rGenotype && uvIndex && uvIndex > 7) {
+      impacts.push({
+        gene: 'MC1R',
+        genotype: mc1rGenotype,
+        impact: 'Melanin production and UV protection',
+        severity: mc1rGenotype.includes('R') ? 'high' : 'low',
+        recommendation: mc1rGenotype.includes('R') ? 'Higher UV sensitivity, use sun protection' : 'Better natural UV protection',
+        icon: <EyeIcon className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+
+    const slc24a5Genotype = geneticData.find(g => g.gene === 'SLC24A5')?.genotype;
+    if (slc24a5Genotype && uvIndex && uvIndex > 6) {
+      impacts.push({
+        gene: 'SLC24A5',
+        genotype: slc24a5Genotype,
+        impact: 'Skin pigmentation and UV tolerance',
+        severity: 'medium',
+        recommendation: 'Monitor skin response to UV exposure',
+        icon: <EyeIcon className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+
+    // XPC, ERCC2, TP53 - DNA repair
+    const xpcGenotype = geneticData.find(g => g.gene === 'XPC')?.genotype;
+    if (xpcGenotype && uvIndex && uvIndex > 8) {
+      impacts.push({
+        gene: 'XPC',
+        genotype: xpcGenotype,
+        impact: 'DNA repair efficiency after UV damage',
+        severity: 'medium',
+        recommendation: 'Monitor for UV-induced skin damage',
+        icon: <Shield className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+
+    const ercc2Genotype = geneticData.find(g => g.gene === 'ERCC2')?.genotype;
+    if (ercc2Genotype && uvIndex && uvIndex > 7) {
+      impacts.push({
+        gene: 'ERCC2',
+        genotype: ercc2Genotype,
+        impact: 'Nucleotide excision repair capacity',
+        severity: 'medium',
+        recommendation: 'UV exposure may affect DNA repair processes',
+        icon: <Shield className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+
+    // OPN1LW, OPN1MW, GRK1 - Eye light sensitivity
+    const opn1lwGenotype = geneticData.find(g => g.gene === 'OPN1LW')?.genotype;
+    if (opn1lwGenotype && uvIndex && uvIndex > 9) {
+      impacts.push({
+        gene: 'OPN1LW',
+        genotype: opn1lwGenotype,
+        impact: 'Long-wavelength cone sensitivity to bright light',
+        severity: 'medium',
+        recommendation: 'Use UV-protective eyewear in bright sunlight',
+        icon: <EyeIcon className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+
+    // 🧠 Mood and Cognitive Weather Response
+    // BDNF Val66Met, SLC6A4, COMT - Weather-linked mood shifts
+    const bdnfGenotype = geneticData.find(g => g.gene === 'BDNF')?.genotype;
+    if (bdnfGenotype && uvIndex && uvIndex < 4) {
+      impacts.push({
+        gene: 'BDNF',
+        genotype: bdnfGenotype,
+        impact: 'Brain-derived neurotrophic factor and mood regulation',
+        severity: bdnfGenotype === 'Val/Val' ? 'low' : 'high',
+        recommendation: bdnfGenotype === 'Val/Val' ? 'Better mood stability' : 'Monitor mood in low-light conditions',
+        icon: <Brain className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+
+    const comtGenotype = geneticData.find(g => g.gene === 'COMT')?.genotype;
+    if (comtGenotype && temperature && temperature < 5) {
+      impacts.push({
+        gene: 'COMT',
+        genotype: comtGenotype,
+        impact: 'Dopamine metabolism affected by cold stress',
+        severity: comtGenotype === 'GG' ? 'low' : 'high',
+        recommendation: comtGenotype === 'GG' ? 'Better cold stress response' : 'Cold may affect cognitive function',
+        icon: <Brain className="w-5 h-5" />,
+        category: 'stress'
+      });
     }
 
     return impacts;
