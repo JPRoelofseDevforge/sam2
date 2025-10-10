@@ -414,15 +414,15 @@ export const PharmaCoWatchlist: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Interactions</div>
+                  <div className="text-[14px] uppercase tracking-wide text-indigo-100/80 font-bold">Interactions</div>
                   <ul className="mt-1 text-xs text-indigo-100/90 list-disc pl-4 space-y-1">
                     <li>Dehydration: risk of kidney strain.</li>
                     <li>Alcohol: increases stomach irritation and bleed risk.</li>
                   </ul>
                 </div>
                 <div className="mt-3">
-                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Guidance</div>
-                  <p className="mt-1 text-sm text-white/95">
+                  <div className="text-[14px] uppercase tracking-wide text-indigo-100/80 font-bold">Guidance</div>
+                  <p className="mt-1 text-xs text-white/95">
                     Use for the shortest effective duration; avoid chronic use with alcohol. Take with food and fluids.
                   </p>
                 </div>
@@ -446,15 +446,15 @@ export const PharmaCoWatchlist: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Interactions</div>
+                  <div className="text-[14px] uppercase tracking-wide text-indigo-100/80 font-bold">Interactions</div>
                   <ul className="mt-1 text-xs text-indigo-100/90 list-disc pl-4 space-y-1">
                     <li>Alcohol: additive drowsiness and slowed reaction time.</li>
                     <li>CYP2D6 ultra-rapid metaboliser: risk of severe side-effects.</li>
                   </ul>
                 </div>
                 <div className="mt-3">
-                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Guidance</div>
-                  <p className="mt-1 text-sm text-white/95">
+                  <div className="text-[14px] uppercase tracking-wide text-indigo-100/80 font-bold">Guidance</div>
+                  <p className="mt-1 text-xs text-white/95">
                     Avoid long-term use, especially with alcohol or during training.
                   </p>
                 </div>
@@ -476,14 +476,14 @@ export const PharmaCoWatchlist: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Interactions</div>
+                  <div className="text-[14px] uppercase tracking-wide text-indigo-100/80 font-bold">Interactions</div>
                   <ul className="mt-1 text-xs text-indigo-100/90 list-disc pl-4 space-y-1">
                     <li>Alcohol: risk of liver strain.</li>
                   </ul>
                 </div>
                 <div className="mt-3">
-                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Guidance</div>
-                  <div className="mt-1 text-sm text-white/95 space-y-1">
+                  <div className="text-[14px] uppercase tracking-wide text-indigo-100/80 font-bold">Guidance</div>
+                  <div className="mt-1 text-xs text-white/95 space-y-1">
                     <p>Standard doses can become harmful with chronic intake.</p>
                     <p>Avoid long-term use with alcohol; keep total dose ≤ 4 g/24hrs.</p>
                   </div>
@@ -506,15 +506,15 @@ export const PharmaCoWatchlist: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Interactions</div>
+                  <div className="text-[14px] uppercase tracking-wide text-indigo-100/80 font-bold">Interactions</div>
                   <ul className="mt-1 text-xs text-indigo-100/90 list-disc pl-4 space-y-1">
                     <li>Interacts with many painkillers, amplifying side-effects.</li>
                     <li>Delays recovery and impairs hydration and sleep quality.</li>
                   </ul>
                 </div>
                 <div className="mt-3">
-                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Guidance</div>
-                  <p className="mt-1 text-sm text-white/95">Avoid during active injury or recovery.</p>
+                  <div className="text-[14px] uppercase tracking-wide text-indigo-100/80 font-bold">Guidance</div>
+                  <p className="mt-1 text-xs text-white/95">Avoid during active injury or recovery.</p>
                 </div>
               </motion.div>
             </div>
