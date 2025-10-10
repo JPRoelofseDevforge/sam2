@@ -1147,15 +1147,15 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
           <div className="overview-tab">
             {/* Weather Conditions Cards */}
             <div className="conditions-grid">
-              <div className="condition-card primary">
+              <div className="condition-card ">
                 <div className="condition-icon">
                   {weatherData ? getWeatherIcon(weatherData.weatherCondition) : '❓'}
                 </div>
-                <div className="condition-info">
-                  <div className="condition-name">
+                <div className="condition-info text-white">
+                  <div className="condition-name text-white">
                     {weatherData ? getWeatherDescription(weatherData.weatherCondition) : 'Weather Unavailable'}
                   </div>
-                  <div className="condition-label">Current Conditions</div>
+                  <div className="condition-label text-white">Current Conditions</div>
                 </div>
               </div>
 
@@ -1331,11 +1331,7 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
 
         {activeTab === 'genetics' && (
           <div className="genetics-tab">
-            <div className="genetics-header">
-              <Dna className="w-8 h-8 text-purple-500" />
-              <h3 className="genetics-title text-white">Genetic Impact Analysis</h3>
-              <p className="genetics-subtitle">Weather-responsive genetic factors</p>
-            </div>
+            
 
             {geneticImpacts.length > 0 ? (
               <div className="genetic-impacts-grid">

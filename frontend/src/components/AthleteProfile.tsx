@@ -338,7 +338,7 @@ export const AthleteProfile: React.FC = () => {
                   }
                 }}
                 className={`flex items-center justify-start sm:justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium transition-all duration-200 relative group ${
-                  isActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                  isActive ? 'text-white bg-purple-900' : 'text-gray-600 hover:text-purple-700 hover:bg-purple-700'
                 }`}
               >
                 <span className="flex items-center gap-2">
@@ -350,14 +350,14 @@ export const AthleteProfile: React.FC = () => {
                 {tab.count > 0 && (
                   <span
                     className={`inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full ${
-                      isActive ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 group-hover:bg-gray-300'
+                      isActive ? 'bg-purple-700 text-white' : 'bg-purple-200 text-gray-700 group-hover:bg-gray-300'
                     }`}
                   >
                     {tab.count}
                   </span>
                 )}
 
-                {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"></span>}
+                {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-700"></span>}
               </button>
             );
           })}
