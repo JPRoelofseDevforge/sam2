@@ -30,6 +30,7 @@ import { filterValidBiometricData, getLatestBiometricRecord, getSortedBiometricD
 import ComprehensiveGeneticAnalysis from './athleteProfile/ComprehensiveGeneticAnalysis';
 import GeneticSummaryView from './athleteProfile/GeneticSummaryView';
 import type { BiometricData } from '../types';
+import HighValueComparisons from './HighValueComparisons';
 
 /**
  * Sleep helpers for accurate duration:
@@ -107,6 +108,7 @@ export const AthleteProfile: React.FC = () => {
     | 'chatAI'
     | 'geneticSummary'
     | 'geneticAnalysis'
+    | 'highValue'
   >('metrics');
   const tabContentRef = useRef<HTMLDivElement>(null);
 
@@ -203,6 +205,7 @@ export const AthleteProfile: React.FC = () => {
     { id: 'bloodResults' as const, label: 'Blood Results', icon: '🩸', count: 1 },
     { id: 'circadian' as const, label: 'Circadian Rhythm', icon: '⏰', count: 1 },
     { id: 'trends' as const, label: 'Trends & Analysis', icon: '📈', count: athleteBiometrics.length },
+    { id: 'highValue' as const, label: 'High-Value Comparisons', icon: '🧠', count: athleteBiometrics.length },
     { id: 'geneticSummary' as const, label: 'Genetic Summary', icon: '🧬', count: geneticSummary.length },
     { id: 'geneticAnalysis' as const, label: 'Genetic Analysis', icon: '🔬', count: geneticSummary.length },
     { id: 'scaleReport' as const, label: 'Scale Report', icon: '⚖️', count: 1 },
@@ -340,8 +343,8 @@ export const AthleteProfile: React.FC = () => {
               >
                 <span className="flex items-center gap-2">
                   <span>{tab.icon}</span>
-                  <span className="sm:hidden">{tab.label}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden text-white">{tab.label}</span>
+                  <span className="hidden sm:inline text-white">{tab.label}</span>
                 </span>
 
                 {tab.count > 0 && (
@@ -569,6 +572,16 @@ export const AthleteProfile: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'highValue' && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-6">🧠 High-Value Comparisons</h2>
+            <HighValueComparisons
+              athleteId={athleteId}
+              biometricData={athleteBiometrics}
+              geneticProfiles={athleteGenetics}
+            />
+          </div>
+        )}
         {activeTab === 'geneticSummary' && <GeneticSummaryView geneticSummary={geneticSummary} />}
 
         {activeTab === 'geneticAnalysis' && (
