@@ -51,7 +51,7 @@ const WATCHLIST: WatchEntry[] = [
     risk: 'High',
   },
   {
-    category: 'Recovery/ Readiness',
+    category: 'Readiness',
     item: 'Caffeine (coffee, energy drinks, chocolate, pre-workouts)',
     interactions:
       'Excess: anxiety, poor sleep;\n' +
@@ -60,7 +60,7 @@ const WATCHLIST: WatchEntry[] = [
     risk: 'Moderate',
   },
   {
-    category: 'Recovery/ Readiness',
+    category: 'Recovery',
     item: 'Alcohol',
     interactions:
       'Risk of slower recovery; Increased bleed risk with NSAIDs; increased liver strain with Panado',
@@ -130,6 +130,13 @@ const WATCHLIST: WatchEntry[] = [
 ];
 
 const RISK_ORDER: Record<RiskLevel, number> = { High: 3, Moderate: 2, Low: 1 };
+
+// Ensure Recovery and Recovery/ Readiness sections appear first
+const CATEGORY_ORDER: Record<string, number> = {
+  'Recovery': 0,
+  'Recovery/ Readiness': 1,
+};
+const categoryPriority = (name: string) => CATEGORY_ORDER[name] ?? 99;
 
 const riskChip = (risk: RiskLevel) => {
   switch (risk) {
@@ -292,10 +299,13 @@ export const PharmaCoWatchlist: React.FC = () => {
         return hay.includes(q);
       })
       .sort((a, b) => {
+        // Prioritize categories: Recovery first, then Recovery/ Readiness, then others
+        const catDiff = categoryPriority(a.category) - categoryPriority(b.category);
+        if (catDiff !== 0) return catDiff;
+        // Within a category, keep risk emphasis (High -> Low)
         const riskDiff = (RISK_ORDER[b.risk] ?? 0) - (RISK_ORDER[a.risk] ?? 0);
         if (riskDiff !== 0) return riskDiff;
-        const cat = a.category.localeCompare(b.category);
-        if (cat !== 0) return cat;
+        // Then sort by item name
         return a.item.localeCompare(b.item);
       });
   }, [query, categoryFilter, riskFilter, tagFilter]);
@@ -307,13 +317,33 @@ export const PharmaCoWatchlist: React.FC = () => {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(r);
     });
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    return Array.from(map.entries()).sort((a, b) => {
+      const pa = categoryPriority(a[0]);
+      const pb = categoryPriority(b[0]);
+      if (pa !== pb) return pa - pb;
+      return a[0].localeCompare(b[0]);
+    });
   }, [filtered]);
 
   const counts = useMemo(() => {
     const c = { High: 0, Moderate: 0, Low: 0 } as Record<RiskLevel, number>;
     filtered.forEach((r) => c[r.risk]++);
     return c;
+  }, [filtered]);
+
+  // Remove any accidental header-like rows in table view
+  const filteredForTable = useMemo(() => {
+    const isHeaderLike = (s?: string) => {
+      const t = (s || '').trim().toLowerCase();
+      return t === 'category' || t === 'item' || t === 'interactions' || t === 'guidance' || t === 'risk';
+    };
+    return filtered.filter(
+      (r) =>
+        !isHeaderLike(r.category) &&
+        !isHeaderLike(r.item) &&
+        !isHeaderLike(r.interactions) &&
+        !isHeaderLike(r.guidance)
+    );
   }, [filtered]);
 
   const keyWarnings = useMemo(() => {
@@ -362,33 +392,133 @@ export const PharmaCoWatchlist: React.FC = () => {
             <KpiTile label="Low Risk" value={counts.Low} icon={<Leaf className="h-5 w-5" />} />
           </div>
 
-          {/* Quick warning tiles */}
-          {keyWarnings.length > 0 && (
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {keyWarnings.map((w, idx) => (
-                <motion.div
-                  key={`${w.item}-${idx}`}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, delay: idx * 0.05 }}
-                  className="rounded-2xl bg-white/15 border border-white/25 p-4 text-white shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-white/20 border border-white/25 flex items-center justify-center">
-                        {iconForCategory(w.category)}
-                      </div>
-                      <div className="text-sm font-semibold leading-tight line-clamp-2">{w.item}</div>
+          {/* Overview cards */}
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold text-white mb-3">Overview</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* NSAIDs */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.0 }}
+                className="rounded-2xl bg-white/15 border border-white/25 p-4 text-white shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-white/20 border border-white/25 flex items-center justify-center">
+                      <ShieldAlert className="h-5 w-5 text-rose-200" />
                     </div>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/15 border border-white/25">
-                      {w.risk}
-                    </span>
+                    <div className="text-sm font-semibold leading-tight">
+                      NSAIDs (e.g., Ibuprofen, Celebrex)
+                    </div>
                   </div>
-                  <p className="mt-2 text-xs text-indigo-100/90 line-clamp-3">{w.interactions}</p>
-                </motion.div>
-              ))}
+                </div>
+                <div className="mt-3">
+                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Interactions</div>
+                  <ul className="mt-1 text-xs text-indigo-100/90 list-disc pl-4 space-y-1">
+                    <li>Dehydration: risk of kidney strain.</li>
+                    <li>Alcohol: increases stomach irritation and bleed risk.</li>
+                  </ul>
+                </div>
+                <div className="mt-3">
+                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Guidance</div>
+                  <p className="mt-1 text-sm text-white/95">
+                    Use for the shortest effective duration; avoid chronic use with alcohol. Take with food and fluids.
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Codeine combos */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.05 }}
+                className="rounded-2xl bg-white/15 border border-white/25 p-4 text-white shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-white/20 border border-white/25 flex items-center justify-center">
+                      <PillIcon className="h-5 w-5 text-rose-200" />
+                    </div>
+                    <div className="text-sm font-semibold leading-tight">
+                      Codeine combos (Myprodol, Mybulen)
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Interactions</div>
+                  <ul className="mt-1 text-xs text-indigo-100/90 list-disc pl-4 space-y-1">
+                    <li>Alcohol: additive drowsiness and slowed reaction time.</li>
+                    <li>CYP2D6 ultra-rapid metaboliser: risk of severe side-effects.</li>
+                  </ul>
+                </div>
+                <div className="mt-3">
+                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Guidance</div>
+                  <p className="mt-1 text-sm text-white/95">
+                    Avoid long-term use, especially with alcohol or during training.
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Paracetamol */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.1 }}
+                className="rounded-2xl bg-white/15 border border-white/25 p-4 text-white shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-white/20 border border-white/25 flex items-center justify-center">
+                      <PillIcon className="h-5 w-5 text-amber-200" />
+                    </div>
+                    <div className="text-sm font-semibold leading-tight">Paracetamol (Panado)</div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Interactions</div>
+                  <ul className="mt-1 text-xs text-indigo-100/90 list-disc pl-4 space-y-1">
+                    <li>Alcohol: risk of liver strain.</li>
+                  </ul>
+                </div>
+                <div className="mt-3">
+                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Guidance</div>
+                  <div className="mt-1 text-sm text-white/95 space-y-1">
+                    <p>Standard doses can become harmful with chronic intake.</p>
+                    <p>Avoid long-term use with alcohol; keep total dose ≤ 4 g/24hrs.</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Alcohol */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.15 }}
+                className="rounded-2xl bg-white/15 border border-white/25 p-4 text-white shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-white/20 border border-white/25 flex items-center justify-center">
+                      <AlertTriangle className="h-5 w-5 text-amber-200" />
+                    </div>
+                    <div className="text-sm font-semibold leading-tight">Alcohol</div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Interactions</div>
+                  <ul className="mt-1 text-xs text-indigo-100/90 list-disc pl-4 space-y-1">
+                    <li>Interacts with many painkillers, amplifying side-effects.</li>
+                    <li>Delays recovery and impairs hydration and sleep quality.</li>
+                  </ul>
+                </div>
+                <div className="mt-3">
+                  <div className="text-[11px] uppercase tracking-wide text-indigo-100/80">Guidance</div>
+                  <p className="mt-1 text-sm text-white/95">Avoid during active injury or recovery.</p>
+                </div>
+              </motion.div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -594,7 +724,7 @@ export const PharmaCoWatchlist: React.FC = () => {
           {filtered.length > 0 && view === 'table' && (
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white/95 backdrop-blur rounded-2xl border border-gray-200 shadow-xl">
-                <thead className="bg-gray-50 sticky top-[calc(4rem+1.5rem)]">
+                <thead className="bg-gray-50 sticky z-30 shadow-sm">
                   <tr>
                     <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider p-3">
                       Category
@@ -614,14 +744,14 @@ export const PharmaCoWatchlist: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filtered.map((r, idx) => (
+                  {filteredForTable.map((r, idx) => (
                     <tr key={`${r.item}-row-${idx}`} className="hover:bg-gray-50/60">
                       <td className="p-3 align-top">
                         <div className="inline-flex items-center gap-2">
                           <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-gray-100 border border-gray-200">
                             {iconForCategory(r.category)}
                           </span>
-                          <span className="text-sm text-white">{r.category}</span>
+                          <span className="text-sm text-gray-900">{r.category}</span>
                         </div>
                       </td>
                       <td className="p-3 align-top font-medium text-gray-900">{r.item}</td>
