@@ -41,6 +41,107 @@ interface GeneticImpact {
   category: 'power' | 'endurance' | 'recovery' | 'metabolism' | 'stress';
 }
 
+// ---------- Genetics normalization (robust across shapes) ----------
+type GeneDict = Record<string, string>;
+
+const normalizeGenetics = (data: any[]): GeneDict => {
+ const dict: GeneDict = {};
+ if (!Array.isArray(data)) return dict;
+
+ for (const item of data) {
+   // Simple shape
+   const simpleGene = item?.gene ?? item?.Gene ?? item?.rsid ?? item?.RSID;
+   const simpleGeno = item?.genotype ?? item?.Genotype ?? item?.value ?? item?.Value;
+   if (simpleGene && simpleGeno) {
+     dict[String(simpleGene).toUpperCase()] = String(simpleGeno);
+   }
+
+   // Nested "Genes" field (string or array/object)
+   let genesField = item?.Genes ?? item?.genes;
+   if (typeof genesField === 'string') {
+     try {
+       genesField = JSON.parse(genesField);
+     } catch {
+       // ignore invalid JSON
+     }
+   }
+   if (Array.isArray(genesField)) {
+     for (const g of genesField) {
+       const k = g?.gene ?? g?.Gene ?? g?.rsid ?? g?.RSID ?? g?.Key ?? g?.key;
+       const v = g?.genotype ?? g?.Genotype ?? g?.Value ?? g?.value;
+       if (k && v) {
+         dict[String(k).toUpperCase()] = String(v);
+       }
+     }
+   } else if (genesField && typeof genesField === 'object') {
+     for (const [k, v] of Object.entries(genesField)) {
+       if (!String(k).startsWith('$') && v != null) {
+         dict[String(k).toUpperCase()] = String(v as any);
+       }
+     }
+   }
+ }
+ return dict;
+};
+
+// ---------- Environmental indices and helpers ----------
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+const cToF = (c: number) => (c * 9) / 5 + 32;
+const fToC = (f: number) => ((f - 32) * 5) / 9;
+
+// Magnus formula dewpoint from T/RH
+const dewPointFromTempRH = (tC: number, rh: number) => {
+  const a = 17.625;
+  const b = 243.04;
+  const alpha = Math.log(rh / 100) + (a * tC) / (b + tC);
+  return (b * alpha) / (a - alpha);
+};
+
+// Heat Index (Steadman) in °C
+const heatIndexC = (tC: number, rh: number) => {
+  const T = cToF(tC);
+  const R = rh;
+  const HI =
+    -42.379 +
+    2.04901523 * T +
+    10.14333127 * R -
+    0.22475541 * T * R -
+    0.00683783 * T * T -
+    0.05481717 * R * R +
+    0.00122874 * T * T * R +
+    0.00085282 * T * R * R -
+    0.00000199 * T * T * R * R;
+  return fToC(HI);
+};
+
+// Humidex approximation (°C)
+const humidex = (tC: number, rh: number) => {
+  const td = dewPointFromTempRH(tC, rh);
+  const e = 6.11 * Math.exp(5417.7530 * ((1 / 273.16) - 1 / (td + 273.15)));
+  return tC + (5 / 9) * (e - 10);
+};
+
+// Wind chill (°C), valid when t <= 10C and wind > 4.8 km/h
+const windChillC = (tC: number, windKph: number) => {
+  if (tC > 10 || windKph <= 4.8) return tC;
+  const v = Math.pow(windKph, 0.16);
+  return 13.12 + 0.6215 * tC - 11.37 * v + 0.3965 * tC * v;
+};
+
+// WBGT shade approximation (°C): Stull (2011) approximation
+const wbgtApproxC = (tC: number, rh: number) => {
+  const es = 6.105 * Math.exp((17.27 * tC) / (237.7 + tC));
+  const e = es * (rh / 100);
+  return 0.567 * tC + 0.393 * e + 3.94; // shade estimate
+};
+
+const envRiskCategory = (score: number): { label: 'low' | 'moderate' | 'high' | 'extreme'; color: string } => {
+  if (score <= 30) return { label: 'low', color: 'text-green-600' };
+  if (score <= 60) return { label: 'moderate', color: 'text-yellow-600' };
+  if (score <= 80) return { label: 'high', color: 'text-orange-600' };
+  return { label: 'extreme', color: 'text-red-600' };
+};
+
 export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, geneticData }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,6 +246,250 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
       default: return 'Cloudy';
     }
   };
+
+  // Environmental stress metrics derived from current weather + genetics
+  const envMetrics = useMemo(() => {
+    if (!weatherData) {
+      return {
+        available: false,
+        stressScore: 0,
+        risk: 'low',
+        riskColor: 'text-gray-500',
+        hi: 0,
+        humidex: 0,
+        windChill: 0,
+        wbgt: 0,
+        hydrationMlPerHour: 0,
+        sodiumMgPerHour: 0,
+        recommendations: [] as string[],
+      };
+    }
+    const t = weatherData.temperature ?? 0;
+    const rh = weatherData.humidity ?? 0;
+    const wind = weatherData.windSpeed ?? 0;
+    const aqi = weatherData.aqi ?? 0;
+
+    const hi = heatIndexC(t, rh);
+    const hdx = humidex(t, rh);
+    const wc = windChillC(t, wind);
+    const wbgt = wbgtApproxC(t, rh);
+
+    // Normalize impacts (0..1)
+    const norm = (v: number, min: number, max: number) => clamp((v - min) / (max - min), 0, 1);
+    const heatImpact = t >= 20 ? norm(wbgt, 22, 32) : 0; // WBGT-driven heat stress
+    const humidityImpact = norm(rh, 30, 90);
+    const aqiImpact = aqi ? norm(aqi, 50, 200) : 0;
+    const coldWindImpact = t < 10 ? norm(10 - wc, 0, 15) : 0;
+
+    // Composite environmental stress score (0..100, higher = worse)
+    const stressScore = Math.round(
+      clamp(heatImpact * 0.5 + humidityImpact * 0.2 + aqiImpact * 0.2 + coldWindImpact * 0.1, 0, 1) * 100
+    );
+    const riskInfo = envRiskCategory(stressScore);
+
+    // Hydration plan (ml/h) baseline
+    let hydrationMlPerHour = clamp(
+      500 + (t - 20) * 30 + (rh - 50) * 5 + wind * 5,
+      400,
+      1500
+    );
+
+    // Genetic modifiers
+    const hasAQP5 = !!geneticData?.find((g: any) => g.gene === 'AQP5');
+    const hasCFTR = !!geneticData?.find((g: any) => g.gene === 'CFTR');
+    const hasSCNN1A = !!geneticData?.find((g: any) => g.gene === 'SCNN1A');
+
+    let hydrationFactor = 1;
+    if (hasAQP5 && t > 28) hydrationFactor += 0.1;
+    if (hasCFTR && t > 25) hydrationFactor += 0.15;
+    if (hasSCNN1A && t > 30) hydrationFactor += 0.1;
+
+    hydrationMlPerHour = Math.round(hydrationMlPerHour * hydrationFactor);
+
+    // Sodium mg/h (approx 500 mg/L)
+    const sodiumMgPerHour = Math.round(hydrationMlPerHour * 0.5);
+
+    // Recommendations
+    const recs: string[] = [];
+    if (stressScore >= 60) recs.push('Shorten intervals and extend rest; monitor RPE closely');
+    if (t > 28) recs.push('Pre-cool (ice towel/vest) and use shade when possible');
+    if (rh > 75) recs.push('Use fan/airflow; prioritize evaporative cooling');
+    if (aqi > 100) recs.push('Prefer indoor training; consider filtration/mask');
+    if (t < 10 && wind > 10) recs.push('Layer clothing and extend warm-up to 15–20 min');
+
+    return {
+      available: true,
+      stressScore,
+      risk: riskInfo.label,
+      riskColor: riskInfo.color,
+      hi: Math.round(hi),
+      humidex: Math.round(hdx),
+      windChill: Math.round(wc),
+      wbgt: Math.round(wbgt),
+      hydrationMlPerHour,
+      sodiumMgPerHour,
+      recommendations: recs,
+    };
+  }, [weatherData, geneticData]);
+
+  // Parse genetics into a consistent dictionary
+  const geneDict = useMemo<GeneDict>(() => normalizeGenetics(geneticData), [geneticData]);
+
+  // Sensitivity watchlist (shown when no active impacts are triggered)
+  const potentialImpacts = useMemo<GeneticImpact[]>(() => {
+    const list: GeneticImpact[] = [];
+    const G = (n: string) => geneDict[n.toUpperCase()];
+    // Heat/sweat/electrolyte
+    if (G('AQP5')) {
+      list.push({
+        gene: 'AQP5',
+        genotype: G('AQP5')!,
+        impact: 'Sweat gland water channel; Trigger: Heat > 28°C or long-duration sessions',
+        severity: 'medium',
+        recommendation: 'Plan higher fluid intake; monitor sweat rate and cooling',
+        icon: <Droplets className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+    if (G('CFTR')) {
+      list.push({
+        gene: 'CFTR',
+        genotype: G('CFTR')!,
+        impact: 'Electrolyte loss risk; Trigger: Heat > 25°C, humid conditions',
+        severity: 'high',
+        recommendation: 'Use electrolyte drinks; consider sodium pre-load on hot days',
+        icon: <Shield className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+    if (G('SCNN1A')) {
+      list.push({
+        gene: 'SCNN1A',
+        genotype: G('SCNN1A')!,
+        impact: 'Sodium balance in sweat; Trigger: Heat > 30°C, heavy sweating',
+        severity: 'medium',
+        recommendation: 'Increase sodium replacement; monitor cramps signs',
+        icon: <Droplets className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+    // Cold/vascular
+    if (G('NOS3')) {
+      list.push({
+        gene: 'NOS3',
+        genotype: G('NOS3')!,
+        impact: 'Nitric oxide/circulation; Trigger: Cold < 10°C',
+        severity: 'low',
+        recommendation: 'Longer warm-up; add light aerobic priming',
+        icon: <Activity className="w-5 h-5" />,
+        category: 'endurance'
+      });
+    }
+    if (G('ADRB2')) {
+      list.push({
+        gene: 'ADRB2',
+        genotype: G('ADRB2')!,
+        impact: 'Vasoconstriction response; Trigger: Cold/windy sessions',
+        severity: 'medium',
+        recommendation: 'Extra layering; protect extremities; progressive warm-ups',
+        icon: <Thermometer className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+    // Circadian/light
+    if (G('CLOCK')) {
+      list.push({
+        gene: 'CLOCK',
+        genotype: G('CLOCK')!,
+        impact: 'Circadian sensitivity; Trigger: High UV, schedule shifts',
+        severity: 'medium',
+        recommendation: 'Keep consistent sleep/wake; manage late light exposure',
+        icon: <Clock className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+    if (G('PER3')) {
+      list.push({
+        gene: 'PER3',
+        genotype: G('PER3')!,
+        impact: 'Chronotype; Trigger: Late-evening sessions, bright light at night',
+        severity: 'low',
+        recommendation: 'Align training with chronotype; avoid screens pre-sleep',
+        icon: <Clock className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+    // Airway/inflammation
+    if (G('IL13')) {
+      list.push({
+        gene: 'IL13',
+        genotype: G('IL13')!,
+        impact: 'Airway sensitivity; Trigger: Humidity > 75%, allergens',
+        severity: 'high',
+        recommendation: 'Prefer dry indoor sessions; nasal breathing; warm-up longer',
+        icon: <Wind className="w-5 h-5" />,
+        category: 'endurance'
+      });
+    }
+    if (G('TNF')) {
+      list.push({
+        gene: 'TNF',
+        genotype: G('TNF')!,
+        impact: 'Inflammatory response; Trigger: Cold, large load spikes',
+        severity: 'medium',
+        recommendation: 'Increase anti-inflammatory nutrition; manage load ramp',
+        icon: <Shield className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+    // UV/vitamin D / skin
+    if (G('VDR')) {
+      list.push({
+        gene: 'VDR',
+        genotype: G('VDR')!,
+        impact: 'Vitamin D receptor; Trigger: Low sun seasons',
+        severity: 'low',
+        recommendation: 'Check vitamin D status; time outdoor sessions with sun',
+        icon: <EyeIcon className="w-5 h-5" />,
+        category: 'metabolism'
+      });
+    }
+    if (G('MC1R')) {
+      list.push({
+        gene: 'MC1R',
+        genotype: G('MC1R')!,
+        impact: 'UV sensitivity; Trigger: UV index > 7, midday sun',
+        severity: 'high',
+        recommendation: 'Use sunscreen/UV eyewear; avoid midday exposures',
+        icon: <EyeIcon className="w-5 h-5" />,
+        category: 'recovery'
+      });
+    }
+    // Neurological/weather triggers
+    if (G('TRPV1')) {
+      list.push({
+        gene: 'TRPV1',
+        genotype: G('TRPV1')!,
+        impact: 'Barometric/wind sensitivity; Trigger: Wind > 20 km/h',
+        severity: 'high',
+        recommendation: 'Prefer sheltered routes; reduce exposure window',
+        icon: <Brain className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+    if (G('BDNF')) {
+      list.push({
+        gene: 'BDNF',
+        genotype: G('BDNF')!,
+        impact: 'Mood regulation; Trigger: UV < 4, low-light days',
+        severity: 'medium',
+        recommendation: 'Use morning bright-light exposure; keep training regular',
+        icon: <Brain className="w-5 h-5" />,
+        category: 'stress'
+      });
+    }
+    return list;
+  }, [geneDict]);
 
   // Enhanced genetic analysis with comprehensive weather-responsive genes
   const analyzeGeneticImpacts = useMemo((): GeneticImpact[] => {
@@ -639,6 +984,14 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
       else if (impact.severity === 'medium') score -= 8;
     });
 
+    // Environmental stress penalty and recommendations
+    if (envMetrics.available) {
+      // Up to 30% penalty from environment
+      score -= Math.round(envMetrics.stressScore * 0.3);
+      envMetrics.recommendations.slice(0, 3).forEach(r => recommendations.push(r));
+      factors.push(`Environmental stress: ${envMetrics.risk.toUpperCase()}`);
+    }
+
     score = Math.max(0, Math.min(100, score));
 
     let category: PerformanceImpact['category'];
@@ -790,7 +1143,7 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
 
       {/* Tab Content */}
       <div className="weather-tab-content">
-        {activeTab === 'overview' && (
+        {activeTab === 'overview' && (<>
           <div className="overview-tab">
             {/* Weather Conditions Cards */}
             <div className="conditions-grid">
@@ -897,13 +1250,90 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
               </div>
             </div>
           </div>
-        )}
+
+          {/* Environmental Stress Summary */}
+          <div className="card-enhanced p-6 mt-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Stress gauge */}
+              <div className="flex-1">
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">Environmental Stress</h4>
+                <div className="flex items-center gap-6">
+                  <div className="relative w-32 h-32">
+                    <svg className="w-full h-full" viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" strokeWidth="10" />
+                      <circle
+                        cx="60" cy="60" r="50" fill="none" stroke="currentColor" strokeWidth="10"
+                        className={
+                          envMetrics.stressScore <= 30 ? 'text-green-500' :
+                          envMetrics.stressScore <= 60 ? 'text-yellow-500' :
+                          envMetrics.stressScore <= 80 ? 'text-orange-500' : 'text-red-500'
+                        }
+                        strokeDasharray={`${(Math.PI * 2 * 50) * (envMetrics.stressScore / 100)} ${(Math.PI * 2 * 50)}`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 60 60)"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-3xl font-extrabold text-gray-900">{envMetrics.stressScore}</div>
+                        <div className={`text-xs font-semibold ${envMetrics.riskColor}`}>{String(envMetrics.risk).toUpperCase()}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1 grid grid-cols-2 gap-3 text-sm">
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-gray-500">WBGT</div>
+                      <div className="text-gray-900 font-bold">{envMetrics.wbgt}°C</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-gray-500">Heat Index</div>
+                      <div className="text-gray-900 font-bold">{envMetrics.hi}°C</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-gray-500">Humidex</div>
+                      <div className="text-gray-900 font-bold">{envMetrics.humidex}</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-gray-500">Wind Chill</div>
+                      <div className="text-gray-900 font-bold">{envMetrics.windChill}°C</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hydration & Sodium plan */}
+              <div className="flex-1">
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">Hydration & Electrolytes</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="text-blue-600 text-sm">Recommended Fluid</div>
+                    <div className="text-2xl font-bold text-blue-700">{envMetrics.hydrationMlPerHour} ml/h</div>
+                    <div className="text-xs text-blue-600 mt-1">Adjust by body mass and session duration</div>
+                  </div>
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="text-purple-600 text-sm">Sodium Target</div>
+                    <div className="text-2xl font-bold text-purple-700">{envMetrics.sodiumMgPerHour} mg/h</div>
+                    <div className="text-xs text-purple-600 mt-1">Increase if heavy sweater/genotype risk</div>
+                  </div>
+                </div>
+                {envMetrics.recommendations.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-sm font-medium text-gray-900 mb-1">Immediate Actions</div>
+                    <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
+                      {envMetrics.recommendations.slice(0,3).map((r, i) => <li key={i}>{r}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>)}
 
         {activeTab === 'genetics' && (
           <div className="genetics-tab">
             <div className="genetics-header">
               <Dna className="w-8 h-8 text-purple-500" />
-              <h3 className="genetics-title">Genetic Impact Analysis</h3>
+              <h3 className="genetics-title text-white">Genetic Impact Analysis</h3>
               <p className="genetics-subtitle">Weather-responsive genetic factors</p>
             </div>
 
@@ -937,11 +1367,47 @@ export const WeatherImpact: React.FC<WeatherImpactProps> = ({ athleteId, genetic
                 ))}
               </div>
             ) : (
-              <div className="no-genetic-impacts">
-                <Dna className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h4 className="no-impacts-title">No Genetic Impacts Detected</h4>
-                <p className="no-impacts-text">Current weather conditions don't trigger any significant genetic responses for this athlete.</p>
-              </div>
+              <>
+                {potentialImpacts.length > 0 ? (
+                  <div>
+                    <h4 className="text-md font-semibold text-gray-900 mb-3">Sensitivity Watchlist (weather-triggered)</h4>
+                    <div className="genetic-impacts-grid">
+                      {potentialImpacts.map((impact, index) => (
+                        <div key={index} className={`genetic-impact-card ${impact.category}`}>
+                          <div className="impact-header">
+                            <div className="impact-icon-container">
+                              {impact.icon}
+                            </div>
+                            <div className="impact-gene-info">
+                              <h4 className="impact-gene">{impact.gene}</h4>
+                              <p className="impact-genotype">Genotype: {impact.genotype}</p>
+                            </div>
+                            <div className={`impact-severity ${impact.severity}`}>
+                              {impact.severity.toUpperCase()}
+                            </div>
+                          </div>
+                          <div className="impact-content">
+                            <p className="impact-description">{impact.impact}</p>
+                            <div className="impact-recommendation">
+                              <Target className="w-4 h-4" />
+                              <span>{impact.recommendation}</span>
+                            </div>
+                          </div>
+                          <div className={`impact-category-badge ${impact.category}`}>
+                            {impact.category}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="no-genetic-impacts">
+                    <Dna className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h4 className="no-impacts-title">No Genetic Data Parsed</h4>
+                    <p className="no-impacts-text">We couldn’t match any weather-relevant genotypes. Ensure genetic summary includes gene and genotype fields.</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

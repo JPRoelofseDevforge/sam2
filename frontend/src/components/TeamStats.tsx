@@ -4,6 +4,47 @@ import { generateAlert, calculateReadinessScore } from '../utils/analytics';
 import { getAthleteBiometricData } from '../utils/athleteUtils';
 import { getStatusColorClass, getStatusIcon } from '../utils/athleteUtils';
 
+/**
+ * Sleep helpers:
+ * - Handles nights crossing midnight (previous night into morning)
+ * - Handles morning-only sleep
+ * - Sums multiple segments (naps) occurring on the same day
+ */
+const parseTimeToMinutesLocal = (time?: string): number | null => {
+  if (!time || time === '00:00') return null;
+  const parts = time.split(':');
+  if (parts.length < 2) return null;
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+};
+
+const computeDurationHours = (
+  sleep_onset_time?: string,
+  wake_time?: string,
+  sleep_duration_h?: number | null
+): number => {
+  const start = parseTimeToMinutesLocal(sleep_onset_time);
+  const end = parseTimeToMinutesLocal(wake_time);
+  if (start !== null && end !== null) {
+    let minutes = end - start;
+    if (minutes < 0) minutes += 24 * 60; // crossed midnight
+    return Math.max(0, minutes) / 60;
+  }
+  // Fallback to provided duration if timing data is incomplete
+  return typeof sleep_duration_h === 'number' && sleep_duration_h > 0 ? sleep_duration_h : 0;
+};
+
+const computeSleepForDate = (entries: BiometricData[], targetDate?: string): number => {
+  if (!Array.isArray(entries) || entries.length === 0 || !targetDate) return 0;
+  // Sum all sleep segments (including naps) that are attributed to the same "report date"
+  // Assumption: API's record.date represents the wake/report date for that sleep episode (industry norm)
+  return entries
+    .filter(d => d.date === targetDate)
+    .reduce((sum, d) => sum + computeDurationHours(d.sleep_onset_time, d.wake_time, d.sleep_duration_h), 0);
+};
+
 interface TeamStatsProps {
   athletes: Athlete[];
   biometricData: BiometricData[];
@@ -16,6 +57,7 @@ interface AthleteMetric {
   latest: BiometricData | null;
   alert: any;
   readinessScore: number;
+  computedSleepH: number;
 }
 
 interface TeamStatsData {
@@ -46,18 +88,23 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
       const alert = generateAlert(athlete.athlete_id, data, genetics);
       const readinessScore = data.length > 0 ? calculateReadinessScore(data[data.length - 1]) : 0;
 
+      // Compute total sleep for the latest report date, summing night sleep and any naps on that date
+      const latestDate = latest?.date;
+      const computedSleepH = computeSleepForDate(data, latestDate);
+
       return {
         athlete,
         latest,
         alert,
         readinessScore,
+        computedSleepH,
       };
     });
 
     const validMetrics = athleteMetrics.filter(m => m.latest);
 
     const avgHRV = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + (m.latest?.hrv_night || 0), 0) / validMetrics.length : 0;
-    const avgSleep = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + (m.latest?.sleep_duration_h || 0), 0) / validMetrics.length : 0;
+    const avgSleep = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + (m.computedSleepH || 0), 0) / validMetrics.length : 0;
     const avgReadiness = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + m.readinessScore, 0) / validMetrics.length : 0;
 
     const alertCounts = {
@@ -113,9 +160,9 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
 
       {/* Athletes Grid */}
       <section className="athletes-section">
-        <h2 className="section-title text-white">👥 Athlete Status</h2>
+        
         <div className="athletes-grid">
-          {teamStats.athleteMetrics?.map(({ athlete, latest, alert, readinessScore }, index) => (
+          {teamStats.athleteMetrics?.map(({ athlete, latest, alert, readinessScore, computedSleepH }, index) => (
             <div
               key={athlete.id || index}
               className={`athlete-card ${getStatusColorClass(alert.type)} card-hover`}
@@ -136,11 +183,15 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
                 </div>
                 <div className="metric-pair">
                   <span className="label">Sleep</span>
-                  <span className="value">{latest?.sleep_duration_h ? latest.sleep_duration_h.toFixed(1) + 'h' : 'N/A'}</span>
+                  <span className="value">{(computedSleepH && computedSleepH > 0) ? computedSleepH.toFixed(1) + 'h' : 'N/A'}</span>
                 </div>
                 <div className="metric-pair">
                   <span className="label">RHR</span>
-                  <span className="value">{latest?.resting_hr ? latest.resting_hr.toFixed(0) + ' bpm' : 'N/A'}</span>
+                  <span className="value">
+                    {((latest?.resting_hr ?? latest?.avg_heart_rate ?? 0) > 0)
+                      ? `${((latest?.resting_hr ?? latest?.avg_heart_rate) as number).toFixed(0)} bpm`
+                      : 'N/A'}
+                  </span>
                 </div>
                 <div className="metric-pair">
                   <span className="label">Ready</span>

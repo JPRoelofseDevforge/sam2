@@ -101,6 +101,50 @@ export const StressManagement: React.FC<StressManagementProps> = ({
 
   const athleteAge = athlete?.age || 25;
 
+  // Sleep debt over last 7 days (hours; positive means owed sleep relative to 8h target)
+  const sleepDebt7d = useMemo(() => {
+    const last7 = biometricData.slice(-7);
+    return last7.reduce((sum, d) => {
+      const dur = (d.sleep_duration_h ?? 0);
+      return sum + Math.max(0, 8 - dur);
+    }, 0);
+  }, [biometricData]);
+
+  // Period slices and aggregates
+  const periodDays = selectedPeriod === '7d' ? 7 : 30;
+  const periodSlice = useMemo(() => biometricData.slice(-periodDays), [biometricData, periodDays]);
+
+  const highStressDays = useMemo(() => {
+    return periodSlice.filter(d => {
+      const hr = d.resting_hr ?? 0;
+      const hrv = d.hrv_night ?? 0;
+      if (hr <= 0 || hrv <= 0) return false;
+      return calculateStrainIndex(hr, hrv, athleteAge) >= 60;
+    }).length;
+  }, [periodSlice, athleteAge]);
+
+  const avgPeriodHR = useMemo(() => {
+    if (periodSlice.length === 0) return 0;
+    const vals = periodSlice.map(d => d.resting_hr ?? 0).filter(v => v > 0);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+  }, [periodSlice]);
+
+  const avgPeriodHRV = useMemo(() => {
+    if (periodSlice.length === 0) return 0;
+    const vals = periodSlice.map(d => d.hrv_night ?? 0).filter(v => v > 0);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+  }, [periodSlice]);
+
+  const avgPeriodSleep = useMemo(() => {
+    if (periodSlice.length === 0) return 0;
+    const vals = periodSlice.map(d => d.sleep_duration_h ?? 0).filter(v => v > 0);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+  }, [periodSlice]);
+
+  const cumulativeSleepDebtPeriod = useMemo(() => {
+    return periodSlice.reduce((sum, d) => sum + Math.max(0, 8 - (d.sleep_duration_h ?? 0)), 0);
+  }, [periodSlice]);
+
   // Process data for charts
   const stressData = useMemo<StressDataPoint[]>(() => {
     if (!biometricData || biometricData.length === 0) return [];
@@ -110,27 +154,27 @@ export const StressManagement: React.FC<StressManagementProps> = ({
     const filteredData = biometricData.slice(-days);
     
     return filteredData.map(data => {
-      const strainIndex = calculateStrainIndex(data.resting_hr, data.hrv_night, athleteAge);
+      const strainIndex = calculateStrainIndex(data.resting_hr ?? 0, data.hrv_night ?? 0, athleteAge);
       const stressLevel = getStressLevel(strainIndex).level;
       
-      // Calculate recovery readiness (simplified)
+      // Calculate recovery readiness using 7-day sleep debt
       const hrvTrend = getHRVTrend(biometricData, 7);
       const recoveryReadiness = calculateRecoveryReadiness(
         biometricData,
-        0, // sleepDebt - simplified
+        sleepDebt7d,
         hrvTrend,
-        data.resting_hr,
-        data.training_load_pct
+        data.resting_hr ?? 0,
+        data.training_load_pct ?? 0
       );
       
       return {
         date: data.date,
-        restingHR: data.resting_hr,
-        hrv: data.hrv_night,
+        restingHR: data.resting_hr ?? 0,
+        hrv: data.hrv_night ?? 0,
         strainIndex,
         stressLevel,
         recoveryReadiness,
-        trainingLoad: data.training_load_pct
+        trainingLoad: data.training_load_pct ?? 0
       };
     });
   }, [biometricData, selectedPeriod, athleteAge]);
@@ -145,6 +189,12 @@ export const StressManagement: React.FC<StressManagementProps> = ({
   const stressLevel = latestData ? getStressLevel(strainIndex) : null;
   const dailyStressLoad = calculateDailyStressLoad(biometricData, 7);
   const hrvTrend = getHRVTrend(biometricData, 7);
+
+  // Hex color for current stress level
+  const stressColorHex = React.useMemo(() => {
+    if (!stressLevel) return '#9CA3AF';
+    return stressLevel.level === 'Low' ? '#10B981' : stressLevel.level === 'Moderate' ? '#F59E0B' : '#EF4444';
+  }, [stressLevel]);
   
   // Calculate stress score (Whoop feature)
   const stressScore = useMemo(() => {
@@ -183,8 +233,8 @@ export const StressManagement: React.FC<StressManagementProps> = ({
       return recentData.map((data, index) => {
         // Calculate strain index for each data point
         const strainIndex = calculateStrainIndex(
-          data.resting_hr,
-          data.hrv_night,
+          data.resting_hr ?? 0,
+          data.hrv_night ?? 0,
           athleteAge
         );
         
@@ -194,7 +244,7 @@ export const StressManagement: React.FC<StressManagementProps> = ({
         
         return {
           time: timeLabel,
-          heartRate: data.resting_hr,
+          heartRate: data.resting_hr ?? 0,
           stressLevel: strainIndex
         };
       });
@@ -218,8 +268,8 @@ export const StressManagement: React.FC<StressManagementProps> = ({
       return dates.map(date => {
         // Calculate average values for the day
         const dayData = dataByDay[date];
-        const avgRestingHR = dayData.reduce((sum, d) => sum + d.resting_hr, 0) / dayData.length;
-        const avgHRV = dayData.reduce((sum, d) => sum + d.hrv_night, 0) / dayData.length;
+        const avgRestingHR = dayData.reduce((sum, d) => sum + (d.resting_hr ?? 0), 0) / dayData.length;
+        const avgHRV = dayData.reduce((sum, d) => sum + (d.hrv_night ?? 0), 0) / dayData.length;
         
         // Calculate strain index for the day
         const strainIndex = calculateStrainIndex(
@@ -469,6 +519,25 @@ export const StressManagement: React.FC<StressManagementProps> = ({
         </div>
       </div>
       
+      {/* Key Stress Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gray-50 p-5 rounded-lg">
+          <div className="text-xs uppercase tracking-wide text-gray-500">Cumulative Sleep Debt ({selectedPeriod === '7d' ? '7d' : '30d'})</div>
+          <div className="mt-1 text-3xl font-bold text-gray-900">{cumulativeSleepDebtPeriod.toFixed(1)}h</div>
+          <div className="text-sm text-gray-600 mt-1">Avg Sleep: {avgPeriodSleep.toFixed(1)}h</div>
+        </div>
+        <div className="bg-gray-50 p-5 rounded-lg">
+          <div className="text-xs uppercase tracking-wide text-gray-500">HRV Trend (7d)</div>
+          <div className="mt-1 text-3xl font-bold text-gray-900">{hrvTrend > 0 ? '+' : ''}{hrvTrend.toFixed(1)} ms</div>
+          <div className="text-sm text-gray-600 mt-1">Avg HRV: {avgPeriodHRV.toFixed(0)} ms</div>
+        </div>
+        <div className="bg-gray-50 p-5 rounded-lg">
+          <div className="text-xs uppercase tracking-wide text-gray-500">Stress Days</div>
+          <div className="mt-1 text-3xl font-bold text-gray-900">{highStressDays}</div>
+          <div className="text-sm text-gray-600 mt-1">Avg RHR: {avgPeriodHR.toFixed(0)} bpm</div>
+        </div>
+      </div>
+
       {/* Stress Dial */}
       <div className="card-enhanced p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Stress Level Indicator</h3>
@@ -481,12 +550,10 @@ export const StressManagement: React.FC<StressManagementProps> = ({
               {/* Stress level arc */}
               <div className="absolute inset-0 rounded-full border-8 border-transparent"
                 style={{
-                  borderTopColor: stressLevel?.bgColor.replace('bg-', '') === 'bg-green-500' ? '#10B981' : 
-                                  stressLevel?.bgColor.replace('bg-', '') === 'bg-yellow-500' ? '#F59E0B' : '#EF4444',
-                  borderRightColor: stressLevel?.bgColor.replace('bg-', '') === 'bg-green-500' ? '#10B981' : 
-                                    stressLevel?.bgColor.replace('bg-', '') === 'bg-yellow-500' ? '#F59E0B' : '#EF4444',
+                  borderTopColor: stressColorHex,
+                  borderRightColor: stressColorHex,
                   transform: 'rotate(45deg)',
-                  clipPath: `inset(0 ${100 - (strainIndex / 100) * 100}% 0 0)`
+                  clipPath: `inset(0 ${100 - Math.min(100, Math.max(0, strainIndex))}% 0 0)`
                 }}></div>
               
               {/* Center indicator */}
@@ -587,8 +654,15 @@ export const StressManagement: React.FC<StressManagementProps> = ({
                 tickFormatter={formatTime}
               />
               <YAxis
+                yAxisId="left"
                 stroke="#9CA3AF"
                 domain={[40, 180]}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                stroke="#9CA3AF"
+                domain={[0, 100]}
               />
               <Tooltip
                 contentStyle={{
@@ -604,11 +678,20 @@ export const StressManagement: React.FC<StressManagementProps> = ({
                 }}
               />
               <Area
+                yAxisId="left"
                 type="monotone"
                 dataKey="heartRate"
                 name="Heart Rate"
                 stroke="#3B82F6"
                 fill="url(#colorHeartRate)"
+                strokeWidth={2}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="stressLevel"
+                name="Stress Level"
+                stroke="#F59E0B"
                 strokeWidth={2}
               />
               <defs>

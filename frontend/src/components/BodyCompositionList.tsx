@@ -121,7 +121,7 @@ export const BodyCompositionList: React.FC<BodyCompositionListProps> = ({
             <option value="">Choose an athlete...</option>
             {athletes.map((athlete) => (
               <option key={athlete.id} value={athlete.id}>
-                {athlete.name} - {athlete.sport}
+                {athlete.name}
               </option>
             ))}
           </select>

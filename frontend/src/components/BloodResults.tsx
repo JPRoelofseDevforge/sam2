@@ -134,9 +134,7 @@ const BloodResults: React.FC<BloodResultsProps> = ({ athleteId }) => {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-red-200 to-pink-200 bg-clip-text text-transparent mb-2">
               Blood Results
             </h1>
-            <p className="text-gray-400 text-lg">
-              Comprehensive blood analysis from PostgreSQL database
-            </p>
+            
             <p className="text-gray-500 text-sm mt-2">
               {bloodResults.length} test result{bloodResults.length !== 1 ? 's' : ''} available
             </p>
