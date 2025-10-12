@@ -86,7 +86,14 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
       const latest = data && data.length > 0 ? data[0] : null;
 
       const alert = generateAlert(athlete.athlete_id, data, genetics);
-      const readinessScore = data.length > 0 ? calculateReadinessScore(data[data.length - 1]) : 0;
+      // Use latest non-zero readiness (data is latest-first per API); fall back to 0 if none
+      const readinessScore = (() => {
+        for (const d of data) {
+          const r = calculateReadinessScore(d as BiometricData);
+          if (r > 0) return r;
+        }
+        return 0;
+      })();
 
       // Compute total sleep for the latest report date, summing night sleep and any naps on that date
       const latestDate = latest?.date;

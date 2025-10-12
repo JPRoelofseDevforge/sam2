@@ -30,6 +30,7 @@ export interface BiometricData {
   sleep_duration_h: number | null;
   temp_trend_c: number | null;
   training_load_pct: number | null;
+  recovery_score?: number | null;
   sleep_onset_time?: string;
   wake_time?: string;
   steps?: number | null;

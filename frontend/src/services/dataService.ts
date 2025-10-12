@@ -167,6 +167,7 @@ const transformBiometricData = (backendData: any[]): BiometricData[] => {
       sleep_duration_h: sleepValue,
       temp_trend_c: getNumericValue(item.BodyTemperature ?? item.Temperature ?? item.BodyTemp ?? item.TempTrendC, 0),
       training_load_pct: trainingLoadValue,
+      recovery_score: scaledRecoveryScoreValue,
       sleep_onset_time: item.SleepOnsetTime ?? item.SleepOnset,
       wake_time: item.WakeTime ?? item.WakeUpTime,
       avg_heart_rate: getNumericValue(item.avg_heart_rate ?? item.avg_heart_rate ?? item.AvgHeartRate, 0),

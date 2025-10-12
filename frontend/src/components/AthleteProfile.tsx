@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { apiGet } from '../utils/api';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   generateAlert,
@@ -94,6 +95,7 @@ export const AthleteProfile: React.FC = () => {
     | 'insights'
     | 'digitalTwin'
     | 'trainingLoad'
+    | 'drills'
     | 'recoveryTimeline'
     | 'pharmacogenomics'
     | 'nutrigenomics'
@@ -136,25 +138,7 @@ export const AthleteProfile: React.FC = () => {
     if (athleteId) fetchGeneticSummary();
   }, [athleteId]);
 
-  // Show loading state while fetching data
-  if (dataLoading) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Loading athlete data...</p>
-      </div>
-    );
-  }
 
-  if (!athlete) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Athlete not found</p>
-        <button onClick={() => navigate('/')} className="mt-4 text-blue-600 hover:text-blue-800">
-          ← Back to Team Overview
-        </button>
-      </div>
-    );
-  }
 
   const alert = generateAlert(athlete?.athlete_id || athleteId.toString(), athleteBiometrics, athleteGenetics);
 
@@ -163,6 +147,18 @@ export const AthleteProfile: React.FC = () => {
   const latest = getLatestBiometricRecord(validBiometricData);
   const sortedBiometricData = getSortedBiometricDataForCharts(athleteBiometrics);
   const readinessScore = latest ? calculateReadinessScore(latest) : 0;
+
+  // Latest non-zero readiness within recent records (aligns with RecoveryTimeline logic)
+  const readinessRecent = (() => {
+    const arr = [...sortedBiometricData];
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const r = calculateReadinessScore(arr[i] as BiometricData);
+      if (r > 0) return r;
+    }
+    return 0;
+  })();
+
+  const displayReadiness = readinessRecent > 0 ? readinessRecent : readinessScore;
   const geneticInsights = getGeneticInsights(athleteGenetics);
 
   // Accurate sleep computation for tabs (latest day + recent series)
@@ -200,6 +196,216 @@ export const AthleteProfile: React.FC = () => {
     }
   })();
 
+  // Composite load for Trends tab (align with Training Load)
+  const [trendsTrainingLoad, setTrendsTrainingLoad] = useState<Array<{ date: string; compositeLoad: number }>>([]);
+
+  // Training Load (STATSports) - 7-day window via backend endpoint
+  const [dailyTrainingLoad, setDailyTrainingLoad] = useState<any[]>([]);
+  const [drills, setDrills] = useState<Array<{
+    name: string;
+    sessionType?: string;
+    start?: string;
+    end?: string;
+    durationMin?: number;
+    sRPE?: number;
+    zoneWeightedLoad?: number;
+    zoneWeightedPerMin?: number;
+    metabolicPowerLoad?: number;
+    metabolicPowerPerMin?: number;
+    compositeLoad?: number;
+    compositePerMin?: number;
+  }>>([]);
+  const [tlLoading, setTlLoading] = useState(false);
+  const [tlError, setTlError] = useState<string | null>(null);
+  const [drillsLoading, setDrillsLoading] = useState(false);
+  const [drillsError, setDrillsError] = useState<string | null>(null);
+
+  const extractDrills = (payload: any): Array<{ name: string; sessionType?: string; start?: string; end?: string; sRPE?: number; durationMin?: number }> => {
+    const out: Array<{ name: string; sessionType?: string; start?: string; end?: string; sRPE?: number; durationMin?: number }> = [];
+    const visit = (node: any) => {
+      if (!node) return;
+      if (Array.isArray(node)) {
+        node.forEach(visit);
+        return;
+      }
+      if (typeof node === 'object') {
+        const name = node.drillName || node.DrillName;
+        const start = node.startTime || node.StartTime;
+        const end = node.endTime || node.EndTime;
+        const sessionType = node.sessionType || node.SessionType;
+        const kpi = node.drillKpi || node.DrillKpi || node.kpi || node.Kpi;
+        if (name && (start || end)) {
+          let sRPE: number | undefined;
+          let durationMin: number | undefined;
+          if (kpi) {
+            const cm = (kpi as any).customMetrics || (kpi as any).CustomMetrics;
+            if (cm && typeof cm === 'object') {
+              for (const key of Object.keys(cm)) {
+                const lower = String(key).toLowerCase();
+                if (lower === 'srpe' || lower === 'rpe') sRPE = Number((cm as any)[key]);
+                if (lower === 'durationmin' || lower === 'duration') durationMin = Number((cm as any)[key]);
+              }
+            }
+          }
+          out.push({ name: String(name), sessionType: sessionType ? String(sessionType) : undefined, start: start ? String(start) : undefined, end: end ? String(end) : undefined, sRPE, durationMin });
+        }
+        Object.values(node).forEach(visit);
+      }
+    };
+    visit(payload);
+    return out
+      .map(d => ({ ...d, startTs: d.start ? Date.parse(d.start) : 0 }))
+      .sort((a, b) => (b.startTs || 0) - (a.startTs || 0))
+      .slice(0, 10);
+  };
+
+  // Fetch composite training load for Trends tab so the chart can use STATSports composite values
+  useEffect(() => {
+    if (activeTab !== 'trends') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // Span similar to what the trends view displays; cap to 28 days
+        const days = Math.min(28, Math.max(7, athleteBiometrics.length || 7));
+        let loads: any = await apiGet<any>(`/athletes/${athleteId}/training-load`, { days, includeZeros: true });
+        if (loads && typeof loads === 'object' && loads.$values && Array.isArray(loads.$values)) {
+          loads = loads.$values;
+        }
+        const normalized: Array<{ date: string; compositeLoad: number }> = Array.isArray(loads)
+          ? loads
+              .map((x: any) => ({
+                date: x.date || x.Date,
+                compositeLoad: Number(x.compositeLoad ?? x.CompositeLoad ?? x.load ?? x.Load ?? 0),
+              }))
+              .filter((x: any) => !!x.date)
+              .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          : [];
+        if (!cancelled) setTrendsTrainingLoad(normalized);
+      } catch {
+        if (!cancelled) setTrendsTrainingLoad([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [athleteId, activeTab, athleteBiometrics.length]);
+
+
+  useEffect(() => {
+    if (activeTab !== 'trainingLoad') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setTlLoading(true);
+        setTlError(null);
+        // Daily training load (7 days, include zeros)
+        let loads: any = await apiGet<any>(`/athletes/${athleteId}/training-load`, { days: 7, includeZeros: true });
+        if (loads && typeof loads === 'object' && loads.$values && Array.isArray(loads.$values)) {
+          loads = loads.$values;
+        }
+        const normalized = Array.isArray(loads)
+          ? loads
+              .map((x: any) => ({
+                date: x.date || x.Date,
+                zoneWeightedLoad: Number(x.zoneWeightedLoad ?? x.ZoneWeightedLoad ?? 0),
+                zoneWeightedPerMin: Number(x.zoneWeightedPerMin ?? x.ZoneWeightedPerMin ?? 0),
+                metabolicPowerLoad: Number(x.metabolicPowerLoad ?? x.MetabolicPowerLoad ?? 0),
+                metabolicPowerPerMin: Number(x.metabolicPowerPerMin ?? x.MetabolicPowerPerMin ?? 0),
+                compositeLoad: Number(x.compositeLoad ?? x.CompositeLoad ?? x.load ?? x.Load ?? 0),
+                compositePerMin: Number(x.compositePerMin ?? x.CompositePerMin ?? 0),
+                // Back-compat for existing UI using `load`: use composite
+                load: Number(x.compositeLoad ?? x.CompositeLoad ?? x.load ?? x.Load ?? 0),
+              }))
+              .filter((x: any) => !!x.date)
+              .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          : [];
+        if (!cancelled) setDailyTrainingLoad(normalized);
+
+        // Detailed drills (7 days)
+        let drillsResp: any = await apiGet<any>(`/athletes/${athleteId}/drills`, { days: 7, limit: 25 });
+        if (drillsResp && typeof drillsResp === 'object' && Array.isArray(drillsResp.$values)) {
+          drillsResp = drillsResp.$values;
+        }
+        const mappedDrills = Array.isArray(drillsResp)
+          ? drillsResp.map((d: any) => ({
+              name: d.name ?? d.Name,
+              sessionType: d.sessionType ?? d.SessionType,
+              start: d.startUtc ?? d.StartUtc,
+              end: d.endUtc ?? d.EndUtc,
+              durationMin: Number(d.durationMin ?? d.DurationMin ?? 0),
+              zoneWeightedLoad: Number(d.zoneWeightedLoad ?? d.ZoneWeightedLoad ?? 0),
+              zoneWeightedPerMin: Number(d.zoneWeightedPerMin ?? d.ZoneWeightedPerMin ?? 0),
+              metabolicPowerLoad: Number(d.metabolicPowerLoad ?? d.MetabolicPowerLoad ?? 0),
+              metabolicPowerPerMin: Number(d.metabolicPowerPerMin ?? d.MetabolicPowerPerMin ?? 0),
+              compositeLoad: Number(d.compositeLoad ?? d.CompositeLoad ?? 0),
+              compositePerMin: Number(d.compositePerMin ?? d.CompositePerMin ?? 0),
+            }))
+          : [];
+        if (!cancelled) setDrills(mappedDrills);
+      } catch (e) {
+        if (!cancelled) setTlError('Failed to load training load');
+      } finally {
+        if (!cancelled) setTlLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [athleteId, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'drills') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setDrillsLoading(true);
+        setDrillsError(null);
+        let drillsResp: any = await apiGet<any>(`/athletes/${athleteId}/drills`, { days: 7, limit: 50 });
+        if (drillsResp && typeof drillsResp === 'object' && Array.isArray(drillsResp.$values)) {
+          drillsResp = drillsResp.$values;
+        }
+        const mappedDrills = Array.isArray(drillsResp)
+          ? drillsResp.map((d: any) => ({
+              name: d.name ?? d.Name,
+              sessionType: d.sessionType ?? d.SessionType,
+              start: d.startUtc ?? d.StartUtc,
+              end: d.endUtc ?? d.EndUtc,
+              durationMin: Number(d.durationMin ?? d.DurationMin ?? 0),
+              sRPE: Number(d.sRPE ?? d.srpe ?? d.SRPE ?? d.RPE ?? d.rpe ?? 0),
+              zoneWeightedLoad: Number(d.zoneWeightedLoad ?? d.ZoneWeightedLoad ?? 0),
+              zoneWeightedPerMin: Number(d.zoneWeightedPerMin ?? d.ZoneWeightedPerMin ?? 0),
+              metabolicPowerLoad: Number(d.metabolicPowerLoad ?? d.MetabolicPowerLoad ?? 0),
+              metabolicPowerPerMin: Number(d.metabolicPowerPerMin ?? d.MetabolicPowerPerMin ?? 0),
+              compositeLoad: Number(d.compositeLoad ?? d.CompositeLoad ?? 0),
+              compositePerMin: Number(d.compositePerMin ?? d.CompositePerMin ?? 0),
+            }))
+          : [];
+        if (!cancelled) setDrills(mappedDrills);
+      } catch (e) {
+        if (!cancelled) setDrillsError('Failed to load drills');
+      } finally {
+        if (!cancelled) setDrillsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [athleteId, activeTab]);
+
+  // Show loading state while fetching data
+  if (dataLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">Loading athlete data...</p>
+      </div>
+    );
+  }
+
+  if (!athlete) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">Athlete not found</p>
+        <button onClick={() => navigate('/')} className="mt-4 text-blue-600 hover:text-blue-800">
+          ← Back to Team Overview
+        </button>
+      </div>
+    );
+  }
+
   const tabs = [
     { id: 'metrics' as const, label: 'Current Metrics', icon: '📊', count: athleteBiometrics.length > 0 ? 9 : 0 },
     { id: 'bloodResults' as const, label: 'Blood Results', icon: '🩸', count: 1 },
@@ -211,6 +417,7 @@ export const AthleteProfile: React.FC = () => {
     { id: 'scaleReport' as const, label: 'Scale Report', icon: '⚖️', count: 1 },
     { id: 'digitalTwin' as const, label: 'Digital Twin', icon: '🌐', count: 1 },
     { id: 'trainingLoad' as const, label: 'Training Load', icon: '🔥', count: athleteBiometrics.length },
+    { id: 'drills' as const, label: 'Drills', icon: '🏋️', count: drills.length },
     { id: 'recoveryTimeline' as const, label: 'Recovery Timeline', icon: '📅', count: athleteBiometrics.length },
     {
       id: 'pharmacogenomics' as const,
@@ -314,10 +521,10 @@ export const AthleteProfile: React.FC = () => {
           </div>
 
           <div className="text-center">
-            <div className="text-4xl font-bold mb-2 text-gray-900">{latest ? `${readinessScore.toFixed(0)}%` : 'N/A'}</div>
-            <div className="text-gray-600">Readiness Score</div>
+            <div className="text-4xl font-bold mb-2 text-gray-900">{latest ? `${displayReadiness.toFixed(0)}%` : 'N/A'}</div>
+            <div className="text-gray-600">Readiness</div>
             <div className="text-sm text-gray-500 mt-1">
-              {latest ? 'Based on HRV, RHR, Sleep & SpO₂' : 'No biometric data available'}
+              {latest ? 'HRV, RHR, Sleep (duration + stages), SpO₂' : 'No biometric data available'}
             </div>
           </div>
         </div>
@@ -384,10 +591,10 @@ export const AthleteProfile: React.FC = () => {
                 <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
                   <span
                     className={`w-2 h-2 rounded-full ${
-                      readinessScore > 75 ? 'bg-green-500' : readinessScore > 50 ? 'bg-yellow-500' : 'bg-red-500'
+                      displayReadiness > 75 ? 'bg-green-500' : displayReadiness > 50 ? 'bg-yellow-500' : 'bg-red-500'
                     }`}
                   ></span>
-                  {athlete.name.split(' ')[0]} is {readinessScore > 75 ? 'ready' : readinessScore > 50 ? 'recovering' : 'fatigued'}
+                  {athlete.name.split(' ')[0]} is {displayReadiness > 75 ? 'ready' : displayReadiness > 50 ? 'recovering' : 'fatigued'}
                 </div>
               )}
             </div>
@@ -562,6 +769,7 @@ export const AthleteProfile: React.FC = () => {
                   temp_trend_c: d.temp_trend_c || 0,
                   training_load_pct: d.training_load_pct || 0
                 }))}
+                trainingLoadDaily={trendsTrainingLoad}
               />
             ) : (
               <div className="text-center py-12 card-enhanced rounded-xl">
@@ -597,7 +805,384 @@ export const AthleteProfile: React.FC = () => {
 
         {activeTab === 'digitalTwin' && <DigitalTwin3D athleteId={athleteId.toString()} />}
 
-        {activeTab === 'trainingLoad' && <TrainingLoadHeatmap />}
+        {activeTab === 'trainingLoad' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">🔥 Training Load (Last 7 days)</h2>
+
+            {tlLoading && (
+              <div className="card-enhanced p-6 text-gray-600">Loading training load...</div>
+            )}
+            {tlError && (
+              <div className="card-enhanced p-6 text-red-500">Error: {tlError}</div>
+            )}
+
+            {!tlLoading && !tlError && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <div className="text-sm text-gray-600">7-day Total</div>
+                    <div className="text-2xl font-bold text-purple-700">
+                      {dailyTrainingLoad.reduce((sum, d) => sum + (Number(d.load) || 0), 0).toFixed(1)}
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="text-sm text-gray-600">Daily Average</div>
+                    <div className="text-2xl font-bold text-blue-700">
+                      {dailyTrainingLoad.length > 0
+                        ? (dailyTrainingLoad.reduce((sum, d) => sum + (Number(d.load) || 0), 0) / dailyTrainingLoad.length).toFixed(1)
+                        : '0.0'}
+                    </div>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="text-sm text-gray-600">Most Recent Day</div>
+                    <div className="text-2xl font-bold text-green-700">
+                      {dailyTrainingLoad.length > 0 ? Number(dailyTrainingLoad[dailyTrainingLoad.length - 1].load).toFixed(1) : '0.0'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card-enhanced p-6">
+                  <div className="mb-3 text-gray-600 text-sm">Training Load per day</div>
+                  {dailyTrainingLoad.length === 0 ? (
+                    <div className="text-gray-500">No training load available</div>
+                  ) : (
+                    <div className="grid grid-cols-7 gap-3">
+                      {dailyTrainingLoad.map((d, idx) => {
+                        const val = Number(d.load) || 0;
+                        const height = Math.min(100, Math.round(val)); // simple scale
+                        const color =
+                          val >= 300 ? 'bg-red-500'
+                          : val >= 200 ? 'bg-orange-500'
+                          : val >= 100 ? 'bg-yellow-500'
+                          : 'bg-green-500';
+                        return (
+                          <div key={idx} className="flex flex-col items-center">
+                            <div className="text-xs text-gray-500 mb-1">{d.date?.slice(5)}</div>
+                            <div className="w-8 h-32 bg-gray-100 rounded flex items-end">
+                              <div className={`${color} w-8 rounded`} style={{ height: `${Math.max(4, (height/100)*100)}%` }} title={`${d.date}: ${val.toFixed(1)}`} />
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1">{val.toFixed(0)}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="card-enhanced p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">Drills</h3>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Detailed drill analytics are available in the Drills tab.
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'drills' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">🏋️ Training Drills (Last 7 days)</h2>
+
+            {drillsLoading && (
+              <div className="card-enhanced p-6 text-gray-600">Loading drill data...</div>
+            )}
+            {drillsError && (
+              <div className="card-enhanced p-6 text-red-500">Error: {drillsError}</div>
+            )}
+
+            {!drillsLoading && !drillsError && (
+              <>
+                {(() => {
+                  const dateKey = (s?: string) => {
+                    if (!s) return null;
+                    const d = new Date(s);
+                    if (isNaN(d.getTime())) return null;
+                    return d.toISOString().slice(0, 10);
+                  };
+                  const today = new Date();
+                  const days7 = Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date(today);
+                    d.setUTCDate(today.getUTCDate() - (6 - i));
+                    return d.toISOString().slice(0, 10);
+                  });
+                  const byDay = new Map<string, { count: number; totalComposite: number; totalDuration: number }>();
+                  days7.forEach((k) => byDay.set(k, { count: 0, totalComposite: 0, totalDuration: 0 }));
+                  for (const dr of drills || []) {
+                    const k = dateKey(dr.start || dr.end);
+                    if (k && byDay.has(k)) {
+                      const cur = byDay.get(k)!;
+                      cur.count += 1;
+                      cur.totalComposite += Number(dr.compositeLoad || 0);
+                      cur.totalDuration += typeof dr.durationMin === 'number' ? dr.durationMin : 0;
+                    }
+                  }
+                  const daily = days7.map((k) => ({ date: k, ...(byDay.get(k)!) }));
+                  const totalComposite7 = daily.reduce((a, b) => a + b.totalComposite, 0);
+                  const totalDuration7 = daily.reduce((a, b) => a + b.totalDuration, 0);
+                  const drillsCount7 = (drills || []).length;
+                  const avgCompositePerDay = totalComposite7 / 7;
+                  const avgCompositePerDrill = drillsCount7 ? totalComposite7 / drillsCount7 : 0;
+
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div className="bg-purple-50 p-4 rounded-lg">
+                          <div className="text-sm text-gray-600">Drills (7 days)</div>
+                          <div className="text-2xl font-bold text-purple-700">{drillsCount7}</div>
+                        </div>
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <div className="text-sm text-gray-600">Total Composite</div>
+                          <div className="text-2xl font-bold text-blue-700">{totalComposite7.toFixed(1)}</div>
+                        </div>
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <div className="text-sm text-gray-600">Total Duration</div>
+                          <div className="text-2xl font-bold text-green-700">{Math.round(totalDuration7)} min</div>
+                        </div>
+                        <div className="bg-amber-50 p-4 rounded-lg">
+                          <div className="text-sm text-gray-600">Avg Composite / day</div>
+                          <div className="text-2xl font-bold text-amber-700">{avgCompositePerDay.toFixed(1)}</div>
+                        </div>
+                        <div className="bg-rose-50 p-4 rounded-lg">
+                          <div className="text-sm text-gray-600">Avg Intensity (comp/min)</div>
+                          <div className="text-2xl font-bold text-rose-700">{(totalDuration7 > 0 ? (totalComposite7 / totalDuration7) : 0).toFixed(2)}</div>
+                        </div>
+                      </div>
+
+                      <div className="card-enhanced p-6">
+                        <div className="mb-3 text-gray-600 text-sm">Composite Load per day</div>
+                        <div className="grid grid-cols-7 gap-3">
+                          {daily.map((d, idx) => {
+                            const val = Number(d.totalComposite) || 0;
+                            const height = Math.min(100, Math.round(val));
+                            const color =
+                              val >= 300 ? 'bg-red-500'
+                              : val >= 200 ? 'bg-orange-500'
+                              : val >= 100 ? 'bg-yellow-500'
+                              : 'bg-green-500';
+                            return (
+                              <div key={idx} className="flex flex-col items-center">
+                                <div className="text-xs text-gray-500 mb-1">{d.date.slice(5)}</div>
+                                <div className="w-8 h-32 bg-gray-100 rounded flex items-end">
+                                  <div className={`${color} w-8 rounded`} style={{ height: `${Math.max(4, (height/100)*100)}%` }} title={`${d.date}: ${val.toFixed(1)}`} />
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1">{val.toFixed(0)}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {(() => {
+                        // Session type breakdown
+                        const byType = new Map<string, { count: number; totalComposite: number; totalDuration: number }>();
+                        for (const dr of drills || []) {
+                          const t = (dr.sessionType || 'Session');
+                          const cur = byType.get(t) || { count: 0, totalComposite: 0, totalDuration: 0 };
+                          cur.count += 1;
+                          cur.totalComposite += Number(dr.compositeLoad || 0);
+                          cur.totalDuration += typeof dr.durationMin === 'number' ? dr.durationMin : 0;
+                          byType.set(t, cur);
+                        }
+                        const types = Array.from(byType.entries());
+
+                        const toIntensity = (d: any) => Number(d.compositePerMin) || ((Number(d.compositeLoad) || 0) / Math.max(1, Number(d.durationMin) || 0));
+                        const topByComposite = [...(drills || [])]
+                          .filter(d => Number(d.compositeLoad) > 0)
+                          .sort((a, b) => (Number(b.compositeLoad) || 0) - (Number(a.compositeLoad) || 0))
+                          .slice(0, 5);
+                        const topByIntensity = [...(drills || [])]
+                          .map(d => ({ ...d, __intensity: toIntensity(d) }))
+                          .filter(d => d.__intensity > 0)
+                          .sort((a, b) => b.__intensity - a.__intensity)
+                          .slice(0, 5);
+
+                        const grouped = new Map<string, any[]>();
+                        for (const dr of drills || []) {
+                          const k = dateKey(dr.start || dr.end);
+                          if (!k) continue;
+                          if (!grouped.has(k)) grouped.set(k, []);
+                          grouped.get(k)!.push(dr);
+                        }
+
+                        const fmtMin = (m: number) => {
+                          const h = Math.floor(m / 60);
+                          const mm = Math.round(m % 60);
+                          return h > 0 ? `${h}h ${mm}m` : `${mm}m`;
+                        };
+
+                        return (
+                          <>
+                            <div className="card-enhanced p-6">
+                              <h3 className="text-lg font-semibold text-gray-900 mb-3">By Session Type</h3>
+                              {types.length === 0 ? (
+                                <div className="text-sm text-gray-600">No drills categorized by session type.</div>
+                              ) : (
+                                <div className="w-full overflow-x-auto">
+                                  <div className="min-w-[560px]">
+                                    <div className="grid grid-cols-5 gap-2 text-xs text-gray-500 mb-2 px-1">
+                                      <div>Type</div>
+                                      <div className="text-right">Sessions</div>
+                                      <div className="text-right">Composite</div>
+                                      <div className="text-right">Duration</div>
+                                      <div className="text-right">Avg Intensity</div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      {types.map(([type, v], i) => (
+                                        <div key={i} className="grid grid-cols-5 gap-2 bg-gray-50 rounded px-2 py-2 text-sm">
+                                          <div className="font-medium text-gray-900">{type}</div>
+                                          <div className="text-right text-gray-800">{v.count}</div>
+                                          <div className="text-right text-gray-800">{v.totalComposite.toFixed(1)}</div>
+                                          <div className="text-right text-gray-800">{fmtMin(v.totalDuration)}</div>
+                                          <div className="text-right text-gray-800">
+                                            {(v.totalDuration > 0 ? (v.totalComposite / v.totalDuration) : 0).toFixed(2)}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="card-enhanced p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Top Drills by Composite</h3>
+                                {topByComposite.length === 0 ? (
+                                  <div className="text-sm text-gray-600">No drills in the last 7 days.</div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {topByComposite.map((d, i) => (
+                                      <div key={i} className="bg-gray-50 rounded p-3">
+                                        <div className="flex items-center justify-between">
+                                          <div className="font-medium text-gray-900">{d.name}</div>
+                                          <div className="text-xs text-gray-500">{new Date((d.start || d.end || '')).toLocaleString()}</div>
+                                        </div>
+                                        <div className="text-xs text-gray-500">{d.sessionType || 'Session'}</div>
+                                        <div className="flex flex-wrap gap-2 text-sm mt-2">
+                                          <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">Composite: {Number(d.compositeLoad || 0).toFixed(1)}</span>
+                                          <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded">Intensity: {(Number(d.compositePerMin) || ((Number(d.compositeLoad) || 0)/Math.max(1, Number(d.durationMin)||0))).toFixed(2)}</span>
+                                          {typeof d.durationMin === 'number' && d.durationMin > 0 && (
+                                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">{fmtMin(d.durationMin)}</span>
+                                          )}
+                                          {typeof d.sRPE === 'number' && d.sRPE > 0 && (
+                                            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded">sRPE: {Number(d.sRPE).toFixed(0)}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="card-enhanced p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Top Drills by Intensity</h3>
+                                {topByIntensity.length === 0 ? (
+                                  <div className="text-sm text-gray-600">No drills in the last 7 days.</div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {topByIntensity.map((d, i) => (
+                                      <div key={i} className="bg-gray-50 rounded p-3">
+                                        <div className="flex items-center justify-between">
+                                          <div className="font-medium text-gray-900">{d.name}</div>
+                                          <div className="text-xs text-gray-500">{new Date((d.start || d.end || '')).toLocaleString()}</div>
+                                        </div>
+                                        <div className="text-xs text-gray-500">{d.sessionType || 'Session'}</div>
+                                        <div className="flex flex-wrap gap-2 text-sm mt-2">
+                                          <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded">Intensity: {Number((d as any).__intensity || 0).toFixed(2)}</span>
+                                          <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">Composite: {Number(d.compositeLoad || 0).toFixed(1)}</span>
+                                          {typeof d.durationMin === 'number' && d.durationMin > 0 && (
+                                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">{fmtMin(d.durationMin)}</span>
+                                          )}
+                                          {typeof d.sRPE === 'number' && d.sRPE > 0 && (
+                                            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded">sRPE: {Number(d.sRPE).toFixed(0)}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <h3 className="text-lg font-semibold text-white">Drills by Day</h3>
+                              {days7.map((day) => {
+                                const items = grouped.get(day) || [];
+                                if (items.length === 0) return null;
+                                const sumComp = items.reduce((a, b) => a + (Number(b.compositeLoad) || 0), 0);
+                                const sumDur = items.reduce((a, b) => a + (typeof b.durationMin === 'number' ? b.durationMin : 0), 0);
+                                return (
+                                  <div key={day} className="card-enhanced p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="font-semibold text-gray-900">{day}</div>
+                                      <div className="text-xs text-gray-500">{items.length} drills • {sumComp.toFixed(1)} comp • {fmtMin(sumDur)}</div>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {items
+                                        .sort((a, b) => new Date(a.start || a.end || '').getTime() - new Date(b.start || b.end || '').getTime())
+                                        .map((dr, i) => (
+                                          <div key={i} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 rounded p-3">
+                                            <div className="flex-1">
+                                              <div className="font-medium text-gray-900">{dr.name}</div>
+                                              <div className="text-xs text-gray-500">
+                                                {dr.sessionType || 'Session'} • {new Date((dr.start || dr.end || '')).toLocaleTimeString()}
+                                                {dr.end ? ` - ${new Date(dr.end).toLocaleTimeString()}` : ''}
+                                              </div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 text-sm mt-2 sm:mt-0">
+                                              <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                                                Composite: {Number(dr.compositeLoad || 0).toFixed(1)}
+                                              </span>
+                                              <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded">
+                                                Intensity: {(Number(dr.compositePerMin) || ((Number(dr.compositeLoad) || 0)/Math.max(1, Number(dr.durationMin)||0))).toFixed(2)}
+                                              </span>
+                                              <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded">
+                                                Zone/min: {Number(dr.zoneWeightedPerMin || 0).toFixed(2)}
+                                              </span>
+                                              <span className="px-2 py-1 bg-teal-100 text-teal-700 rounded">
+                                                Metabolic/min: {Number(dr.metabolicPowerPerMin || 0).toFixed(2)}
+                                              </span>
+                                              {typeof dr.durationMin === 'number' && dr.durationMin > 0 && (
+                                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                                                  {fmtMin(dr.durationMin)}
+                                                </span>
+                                              )}
+                                              {typeof dr.sRPE === 'number' && dr.sRPE > 0 && (
+                                                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
+                                                  sRPE: {Number(dr.sRPE).toFixed(0)}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </>
+                  );
+                })()}
+
+                <div className="card-enhanced p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Recent Drills</h3>
+                    <div className="text-sm text-gray-500">{drills.length} items</div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    See detailed per-day drill breakdown above, including session types and intensity leaders.
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {activeTab === 'recoveryTimeline' && <RecoveryTimeline athleteId={athleteId.toString()} />}
 

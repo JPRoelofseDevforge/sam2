@@ -30,20 +30,26 @@ export function generateAlert(
   
   if (biometricData.length >= 2) {
     const prev = biometricData[biometricData.length - 2];
-    hrvDrop = (prev.hrv_night - latest.hrv_night) / prev.hrv_night > 0.15;
-    rhrRise = (latest.resting_hr - prev.resting_hr) / prev.resting_hr > 0.05;
+    const prevHrv = Number(prev.hrv_night ?? 0);
+    const latestHrv = Number(latest.hrv_night ?? 0);
+    const prevRhr = Number(prev.resting_hr ?? 0);
+    const latestRhr = Number(latest.resting_hr ?? 0);
+    hrvDrop = prevHrv > 0 ? (prevHrv - latestHrv) / prevHrv > 0.15 : latestHrv < 40;
+    rhrRise = prevRhr > 0 ? (latestRhr - prevRhr) / prevRhr > 0.05 : latestRhr > 70;
   } else {
-    hrvDrop = latest.hrv_night < 40;
-    rhrRise = latest.resting_hr > 70;
+    const latestHrv = Number(latest.hrv_night ?? 0);
+    const latestRhr = Number(latest.resting_hr ?? 0);
+    hrvDrop = latestHrv < 40;
+    rhrRise = latestRhr > 70;
   }
 
   // Alert conditions
-  const tempHigh = latest.temp_trend_c >= 37.0;
-  const spo2Low = latest.spo2_night <= 94;
-  const deepLow = latest.deep_sleep_pct < 17;
-  const remLow = latest.rem_sleep_pct < 16;
-  const sleepShort = latest.sleep_duration_h < 7.0;
-  const respHigh = latest.resp_rate_night >= 17;
+  const tempHigh = Number(latest.temp_trend_c ?? 0) >= 37.0;
+  const spo2Low = Number(latest.spo2_night ?? 0) > 0 ? Number(latest.spo2_night ?? 0) <= 94 : false;
+  const deepLow = Number(latest.deep_sleep_pct ?? 0) > 0 ? Number(latest.deep_sleep_pct ?? 0) < 17 : false;
+  const remLow = Number(latest.rem_sleep_pct ?? 0) > 0 ? Number(latest.rem_sleep_pct ?? 0) < 16 : false;
+  const sleepShort = Number(latest.sleep_duration_h ?? 0) > 0 ? Number(latest.sleep_duration_h ?? 0) < 7.0 : false;
+  const respHigh = Number(latest.resp_rate_night ?? 0) >= 17;
   
   // Sleep timing check
   const sleepLate = latest.sleep_onset_time && 
@@ -123,12 +129,66 @@ export function getMetricStatus(value: number, metric: string): 'red' | 'yellow'
 }
 
 export function calculateReadinessScore(data: BiometricData): number {
-  const hrvScore = data.hrv_night > 45 ? 1 : data.hrv_night > 35 ? 0.5 : 0;
-  const rhrScore = data.resting_hr < 65 ? 1 : data.resting_hr < 75 ? 0.5 : 0;
-  const sleepScore = data.sleep_duration_h > 7.5 ? 1 : data.sleep_duration_h > 6.5 ? 0.5 : 0;
-  const spo2Score = data.spo2_night > 96 ? 1 : data.spo2_night > 94 ? 0.5 : 0;
-  
-  return ((hrvScore + rhrScore + sleepScore + spo2Score) / 4) * 100;
+  // 1) Prefer backend-provided recovery score when available (0–100)
+  const provided = Number((data as any)?.recovery_score ?? 0);
+  if (provided > 0 && provided <= 100) return Math.round(provided);
+
+  // 2) Compute composite readiness aligned with RecoveryTimeline.computeReadiness
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+  // Robust sleep duration: use duration if present; otherwise derive from onset/wake times
+  const parseTimeToMinutesLocal = (time?: string): number | null => {
+    if (!time || time === '00:00') return null;
+    const parts = time.split(':');
+    if (parts.length < 2) return null;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    return h * 60 + m;
+  };
+  const computeSleepHours = (): number => {
+    const duration = typeof data.sleep_duration_h === 'number' ? Number(data.sleep_duration_h) : 0;
+    if (duration && duration > 0) return duration;
+    const start = parseTimeToMinutesLocal(data.sleep_onset_time);
+    const end = parseTimeToMinutesLocal(data.wake_time);
+    if (start !== null && end !== null) {
+      let minutes = end - start;
+      if (minutes < 0) minutes += 24 * 60; // crossed midnight
+      return Math.max(0, minutes) / 60;
+    }
+    return 0;
+  };
+
+  const hrv = Number(data.hrv_night ?? 0);
+  const rhr = Number(data.resting_hr ?? 0);
+  const sleepH = computeSleepHours();
+  const spo2 = Number(data.spo2_night ?? 0);
+  const deepPct = Number(data.deep_sleep_pct ?? 0);
+  const remPct = Number(data.rem_sleep_pct ?? 0);
+
+  // Factor normalization
+  const hrvFactor = hrv > 0 ? clamp((hrv - 35) / (80 - 35), 0, 1) : 0;
+  const rhrFactor = rhr > 0 ? clamp((75 - rhr) / (75 - 45), 0, 1) : 0;
+  const sleepDurFactor = sleepH > 0 ? clamp((sleepH - 6.0) / (8.0 - 6.0), 0, 1) : 0;
+  const spo2Factor = spo2 > 0 ? clamp((spo2 - 94) / (99 - 94), 0, 1) : 0;
+
+  // Sleep stage quality blended into sleep component
+  const deepTarget = 20; // %
+  const remTarget = 18;  // %
+  const deepFactor = deepPct > 0 ? clamp(deepPct / deepTarget, 0, 1) : 0;
+  const remFactor = remPct > 0 ? clamp(remPct / remTarget, 0, 1) : 0;
+  const stageComposite = (deepFactor + remFactor) / 2;
+
+  // Sleep composite (70% duration, 30% stage quality)
+  const sleepComposite = 0.7 * sleepDurFactor + 0.3 * stageComposite;
+
+  const score =
+    hrvFactor * 0.35 +
+    rhrFactor * 0.25 +
+    sleepComposite * 0.25 +
+    spo2Factor * 0.15;
+
+  return Math.round(score * 100);
 }
 
 export function getGeneticInsights(geneticProfiles: GeneticProfile[]): Array<{
@@ -191,12 +251,12 @@ export function calculateTrainingLoadTrends(biometricData: BiometricData[]) {
   
   // Get last 7 days of data
   const recentData = biometricData.slice(-7);
-  const avgLoad = recentData.reduce((sum, d) => sum + d.training_load_pct, 0) / recentData.length;
+  const avgLoad = recentData.reduce((sum, d) => sum + Number(d.training_load_pct ?? 0), 0) / recentData.length;
   
   // Compare with previous week if available
   if (biometricData.length >= 14) {
     const previousWeek = biometricData.slice(-14, -7);
-    const prevAvgLoad = previousWeek.reduce((sum, d) => sum + d.training_load_pct, 0) / previousWeek.length;
+    const prevAvgLoad = previousWeek.reduce((sum, d) => sum + Number(d.training_load_pct ?? 0), 0) / previousWeek.length;
     const change = avgLoad - prevAvgLoad;
     
     if (change > 5) return { trend: 'increasing', value: change };

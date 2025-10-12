@@ -20,21 +20,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { calculateReadinessScore } from '../utils/analytics';
+import type { BiometricData as AppBiometricData, GeneticProfile as AppGeneticProfile } from '../types';
 
 // === TYPES ===
-interface BiometricData {
-  date: string;
-  hrv_night?: number;
-  resting_hr?: number;
-  spo2_night?: number;
-  resp_rate_night?: number;
-  deep_sleep_pct?: number;
-  rem_sleep_pct?: number;
-  light_sleep_pct?: number;
-  sleep_duration_h?: number;
-  temp_trend_c?: number;
-  training_load_pct?: number;
-}
+/* BiometricData is imported from app types as AppBiometricData */
 
 interface BodyComposition {
   date?: string;
@@ -43,15 +33,14 @@ interface BodyComposition {
   fat_mass_kg: number;
 }
 
-interface GeneticProfile {
-  gene: string;
-  genotype: string;
-}
+/* GeneticProfile is imported from app types as AppGeneticProfile */
 
 interface TrendChartProps {
-  data: BiometricData[];
+  data: AppBiometricData[];
   bodyCompData?: BodyComposition[];
-  geneticData?: GeneticProfile[];
+  geneticData?: AppGeneticProfile[];
+  // Optional: daily composite training load (from STATSports endpoint) to align with Training Load tab
+  trainingLoadDaily?: Array<{ date: string; compositeLoad?: number; load?: number }>;
 }
 
 // Utility: Parse date
@@ -61,30 +50,35 @@ const parseDate = (date: string) => new Date(date);
 const formatDate = (date: string) =>
   parseDate(date).toLocaleDateString('en', { month: 'short', day: 'numeric' });
 
-// Utility: Calculate Readiness Score (mock)
-const calculateReadinessScore = (d: BiometricData): number => {
-  const hrv = ((d.hrv_night || 0) - 40) / 30; // norm: 40–70 → 0–1
-  const rhr = (70 - (d.resting_hr || 70)) / 20; // norm: 50–70 → 1–0
-  const sleep = (d.sleep_duration_h || 6) / 9; // max 9h
-  const spo2 = ((d.spo2_night || 95) - 90) / 10;
-  return Math.max(0, Math.min(100, (hrv + rhr + sleep + spo2) * 25));
-};
+// Readiness score computed via shared utils/analytics.calculateReadinessScore
 
 export const TrendChart: React.FC<TrendChartProps> = ({
   data,
   bodyCompData = [],
   geneticData = [],
+  trainingLoadDaily = [],
 }) => {
   if (!data || data.length === 0) {
     return <div className="text-center py-8 text-gray-600">No biometric data available</div>;
   }
+
+  // Map composite training load by date if provided
+  const loadMap = new Map<string, number>();
+  (trainingLoadDaily || []).forEach((l: any) => {
+    const key = (l?.date || '').slice(0, 10);
+    const val = Number(l?.compositeLoad ?? l?.load ?? 0);
+    if (key) loadMap.set(key, val);
+  });
 
   const sortedBiometrics = [...data]
     .filter(d => d.date && !isNaN(parseDate(d.date).getTime()))
     .sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime())
     .map(d => ({
       ...d,
+      // Composite readiness (0–100), see utils/analytics
       readiness: calculateReadinessScore(d),
+      // Prefer composite training load (STATSports) when provided; fallback to wearable training_load_pct
+      compositeLoad: Number(loadMap.get(d.date) ?? d.training_load_pct ?? 0),
       dateLabel: formatDate(d.date),
       dayOfWeek: parseDate(d.date).getDay(), // 0=Sun
     }));
@@ -209,24 +203,40 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             <YAxis
               yAxisId="left"
               stroke="#6b7280"
-              label={{ value: 'Training Load (%)', angle: -90, position: 'insideLeft' }}
+              label={{ value: 'Composite Load', angle: -90, position: 'insideLeft' }}
             />
             <YAxis
               yAxisId="right"
               orientation="right"
+              domain={[0, 100]}
               stroke="#6b7280"
-              label={{ value: 'HRV (ms)', angle: 90, position: 'insideRight' }}
+              label={{ value: 'Readiness (%)', angle: 90, position: 'insideRight' }}
             />
-            <Bar yAxisId="left" dataKey="training_load_pct" name="Training Load" fill="#e74c3c" />
-            <Line yAxisId="right" type="monotone" dataKey="hrv_night" name="HRV (Recovery)" stroke="#2ecc71" strokeWidth={4} />
+            <Tooltip
+              formatter={(value: any, name: any) => {
+                const v = Number(value);
+                if (name && String(name).toLowerCase().includes('readiness')) {
+                  return [`${isFinite(v) ? v.toFixed(0) : '0'}%`, 'Readiness'];
+                }
+                if (name && String(name).toLowerCase().includes('load')) {
+                  return [isFinite(v) ? v.toFixed(0) : '0', 'Composite Load'];
+                }
+                return [value, name];
+              }}
+              labelFormatter={(label: any) => `Date: ${label}`}
+              contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, color: '#1f2937' }}
+            />
+            <Legend />
+            <Bar yAxisId="left" dataKey="compositeLoad" name="Composite Load" fill="#e74c3c" />
+            <Line yAxisId="right" type="monotone" dataKey="readiness" name="Readiness (%)" stroke="#10b981" strokeWidth={4} dot={{ r: 2 }} />
           </ComposedChart>
         </ResponsiveContainer>
         <div className="mt-4 text-sm text-gray-600">
-          <p>This chart shows the relationship between training load and recovery (measured by HRV):</p>
+          <p>This chart shows the relationship between training load and recovery (composite Readiness):</p>
           <ul className="list-disc pl-5 space-y-1 mt-2">
-            <li>Higher training loads should ideally be followed by higher HRV values (better recovery)</li>
-            <li>Consistently low HRV despite high training loads may indicate overtraining</li>
-            <li>Optimal performance occurs when training load and recovery are balanced</li>
+            <li>Readiness reflects HRV, RHR, Sleep (duration + stages), and SpO₂ on a 0–100 scale</li>
+            <li>High loads with persistently low readiness can indicate under-recovery/overreaching</li>
+            <li>Aim for balanced progression: challenging load with stable or improving readiness</li>
           </ul>
         </div>
       </section>
