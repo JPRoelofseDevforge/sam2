@@ -59,33 +59,10 @@ export const getAthleteBiometricData = (
   const biometricArray = Array.isArray(biometricData) ? biometricData : [];
   const geneticArray = Array.isArray(geneticProfiles) ? geneticProfiles : [];
 
-  // Try multiple matching strategies to handle different ID formats
-  const data = biometricArray.filter(d => {
-    const biometricId = d.athlete_id?.toString();
-    const athleteIdStr = athleteId?.toString();
+  // Filter to exact athlete_id match only
+  const data = biometricArray.filter(d => d.athlete_id === athleteId);
 
-    // Try exact match first
-    if (biometricId === athleteIdStr) return true;
-
-    // Try loose equality
-    if (d.athlete_id == athleteId) return true;
-
-    // Try numeric comparison
-    if (parseInt(biometricId || '') === parseInt(athleteIdStr || '')) return true;
-
-    return false;
-  });
-
-  const genetics = geneticArray.filter(g => {
-    const geneticId = g.athlete_id?.toString();
-    const athleteIdStr = athleteId?.toString();
-
-    if (geneticId === athleteIdStr) return true;
-    if (g.athlete_id == athleteId) return true;
-    if (parseInt(geneticId || '') === parseInt(athleteIdStr || '')) return true;
-
-    return false;
-  });
+  const genetics = geneticArray.filter(g => g.athlete_id === athleteId);
 
   return { data, genetics };
 };
