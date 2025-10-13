@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Athlete, BiometricData, GeneticProfile } from '../types';
 import { chatAIService } from '../services/dataService';
 
@@ -358,7 +359,13 @@ export const ChatWithAI: React.FC<ChatWithAIProps> = ({
                   : 'bg-gray-100 text-gray-900'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              {message.role === 'assistant' ? (
+                <div className="text-sm prose prose-sm max-w-none">
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              )}
               <p className={`text-xs mt-2 ${
                 message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
               }`}>
