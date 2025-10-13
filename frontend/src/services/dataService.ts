@@ -771,6 +771,47 @@ export const biometricDataService = {
   async saveBiometricData(athleteId: number, data: Omit<BiometricData, 'athlete_id'>): Promise<void> {
     await api.post(`/athletes/${athleteId}/biometric-data`, data);
   },
+
+  // Get previous night's sleep data for specific athlete
+  async getPreviousNightSleep(
+    athleteId: number,
+    targetDate?: string
+  ): Promise<{
+    date: string;
+    sleepDurationH: number;
+    deepSleepPct: number;
+    remSleepPct: number;
+    lightSleepPct: number;
+    sleepOnsetTime: string;
+    wakeTime: string;
+  } | null> {
+    try {
+      const params = new URLSearchParams();
+      if (targetDate) params.append('targetDate', targetDate);
+
+      const url = `/Wearable/previous-night-sleep/${athleteId}?${params.toString()}`;
+
+      const response = await wearableApi.get(url);
+      const data = response.data;
+
+      if (!data) return null;
+
+      return {
+        date: data.Date || data.date || '',
+        sleepDurationH: Number(data.SleepDurationH || data.sleepDurationH) || 0,
+        deepSleepPct: Number(data.DeepSleepPct || data.deepSleepPct) || 0,
+        remSleepPct: Number(data.RemSleepPct || data.remSleepPct) || 0,
+        lightSleepPct: Number(data.LightSleepPct || data.lightSleepPct) || 0,
+        sleepOnsetTime: data.SleepOnsetTime || data.sleepOnsetTime || '',
+        wakeTime: data.WakeTime || data.wakeTime || ''
+      };
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        return null;
+      }
+      return null;
+    }
+  },
 };
 
 // =====================================================
@@ -1067,6 +1108,92 @@ export const bodyCompositionService = {
   async getAllAthletes(page: number = 1, limit: number = 50): Promise<Athlete[]> {
     const response = await athleteService.getAllAthletes(page, limit);
     return response.athletes || [];
+  },
+};
+
+// =====================================================
+// HEART RATE DATA SERVICES
+// =====================================================
+
+export const heartRateService = {
+  // Get heart rate data for specific athlete within date range
+  async getHeartRateData(
+    athleteId: number,
+    startDate?: string,
+    endDate?: string,
+    page: number = 1,
+    limit: number = 100
+  ): Promise<{ measuredAt: Date; heartRateBPM: number; type: string }[]> {
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      params.append('dataType', 'dynamicHeartRateData');
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+
+      const url = `/Wearable/biometric/${athleteId}?${params.toString()}`;
+
+      const response = await wearableApi.get(url);
+      let rawData = response.data?.data || response.data || [];
+
+      // Handle .NET JSON serialization format with $values
+      if (rawData && typeof rawData === 'object' && rawData.$values && Array.isArray(rawData.$values)) {
+        rawData = rawData.$values;
+      }
+
+      // Transform to heart rate format
+      const transformedData = Array.isArray(rawData) ? rawData.map((item: any) => ({
+        measuredAt: new Date(item.MeasuredAt || item.measuredAt || item.date),
+        heartRateBPM: Number(item.HeartRateBPM || item.heartRateBPM || item.bpm || item.HeartRate || item.heartRate) || 0,
+        type: item.Type || item.type || 'Unknown'
+      })).filter(item => item.heartRateBPM > 0) : [];
+
+      return transformedData;
+    } catch (error) {
+      return [];
+    }
+  },
+
+  // Get previous night's sleep data for specific athlete
+  async getPreviousNightSleep(
+    athleteId: number,
+    targetDate?: string
+  ): Promise<{
+    date: string;
+    sleepDurationH: number;
+    deepSleepPct: number;
+    remSleepPct: number;
+    lightSleepPct: number;
+    sleepOnsetTime: string;
+    wakeTime: string;
+  } | null> {
+    try {
+      const params = new URLSearchParams();
+      if (targetDate) params.append('targetDate', targetDate);
+
+      const url = `/Wearable/previous-night-sleep/${athleteId}?${params.toString()}`;
+
+      const response = await wearableApi.get(url);
+      const data = response.data;
+
+      if (!data) return null;
+
+      return {
+        date: data.Date || data.date || '',
+        sleepDurationH: Number(data.SleepDurationH || data.sleepDurationH) || 0,
+        deepSleepPct: Number(data.DeepSleepPct || data.deepSleepPct) || 0,
+        remSleepPct: Number(data.RemSleepPct || data.remSleepPct) || 0,
+        lightSleepPct: Number(data.LightSleepPct || data.lightSleepPct) || 0,
+        sleepOnsetTime: data.SleepOnsetTime || data.sleepOnsetTime || '',
+        wakeTime: data.WakeTime || data.wakeTime || ''
+      };
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        return null;
+      }
+      return null;
+    }
   },
 };
 

@@ -3,6 +3,7 @@ import { Athlete, BiometricData, GeneticProfile } from '../types';
 import { generateAlert, calculateReadinessScore } from '../utils/analytics';
 import { getAthleteBiometricData } from '../utils/athleteUtils';
 import { getStatusColorClass, getStatusIcon } from '../utils/athleteUtils';
+import { heartRateService, biometricDataService } from '../services/dataService';
 
 /**
  * Sleep helpers:
@@ -38,11 +39,62 @@ const computeDurationHours = (
 
 const computeSleepForDate = (entries: BiometricData[], targetDate?: string): number => {
   if (!Array.isArray(entries) || entries.length === 0 || !targetDate) return 0;
-  // Sum all sleep segments (including naps) that are attributed to the same "report date"
-  // Assumption: API's record.date represents the wake/report date for that sleep episode (industry norm)
+
+  // Sum all sleep duration entries for the target date
+  // This matches how SleepMetrics.tsx calculates sleep duration
   return entries
     .filter(d => d.date === targetDate)
-    .reduce((sum, d) => sum + computeDurationHours(d.sleep_onset_time, d.wake_time, d.sleep_duration_h), 0);
+    .reduce((sum, d) => sum + (d.sleep_duration_h || 0), 0);
+};
+
+// Helpers to color entire sections based on "Last Synced" recency
+const daysSince = (dateStr?: string | null): number | null => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const today = new Date();
+  const toYMD = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  return Math.floor((toYMD(today).getTime() - toYMD(d).getTime()) / (24 * 60 * 60 * 1000));
+};
+
+// Card-level background color (faded)
+// - today: green-50
+// - within 3 days: orange-50
+// - >3 days: red-50
+const getSyncCardBgClass = (dateStr?: string | null): string => {
+  const d = daysSince(dateStr);
+  if (d === null) return '!bg-gray-50';
+  if (d <= 0) return '!bg-green-100';
+  if (d <= 3) return '!bg-orange-50';
+  return '!bg-red-50';
+};
+
+// Metric-pair container classes
+const getSyncMetricPairClasses = (dateStr?: string | null): string => {
+  const d = daysSince(dateStr);
+  if (d === null) return '!bg-gray-50 text-gray-700 px-2 py-1';
+  if (d <= 0) return '!bg-green-200 !text-green-800 px-2 py-1';
+  if (d <= 3) return '!bg-orange-200 !text-orange-800 px-2 py-1';
+  return '!bg-red-300 !text-red-800 px-2 py-1';
+};
+
+// Compute faded status classes for last synced date:
+// - today: faded green
+// - within 3 days: faded orange
+// - more than 3 days: faded red
+const getSyncStatusClasses = (dateStr?: string | null): string => {
+  const base = 'inline-block px-2 py-0.5 rounded text-xs font-medium';
+  if (!dateStr) return `${base} bg-gray-100 text-gray-600`;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return `${base} bg-gray-100 text-gray-600`;
+
+  const today = new Date();
+  const toYMD = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  const days = Math.floor((toYMD(today).getTime() - toYMD(d).getTime()) / (24 * 60 * 60 * 1000));
+
+  if (days <= 0) return `${base} bg-green-500 text-green-700`;   // today
+  if (days <= 3) return `${base} bg-orange-100 text-orange-700`; // within 3 days
+  return `${base} bg-red-100 text-red-700`;                       // more than 3 days
 };
 
 interface TeamStatsProps {
@@ -58,6 +110,8 @@ interface AthleteMetric {
   alert: any;
   readinessScore: number;
   computedSleepH: number;
+  lastSyncedDate: string | null;
+  rhr: number | null;
 }
 
 interface TeamStatsData {
@@ -65,6 +119,7 @@ interface TeamStatsData {
   avgHRV: number;
   avgSleep: number;
   avgReadiness: number;
+  lastSyncedDate: string | null;
   alertCounts: {
     high: number;
     medium: number;
@@ -79,9 +134,31 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
   geneticProfiles,
   onAthleteClick
 }) => {
+  const [heartRateData, setHeartRateData] = React.useState<Record<string, { measuredAt: Date; heartRateBPM: number; type: string }[]>>({});
+
+  // Fetch heart rate data for all athletes
+  React.useEffect(() => {
+    const fetchHeartRateData = async () => {
+      const hrData: Record<string, { measuredAt: Date; heartRateBPM: number; type: string }[]> = {};
+      for (const athlete of athletes) {
+        try {
+          const data = await heartRateService.getHeartRateData(parseInt(athlete.athlete_id));
+          hrData[athlete.athlete_id] = data;
+        } catch (error) {
+          hrData[athlete.athlete_id] = [];
+        }
+      }
+      setHeartRateData(hrData);
+    };
+    fetchHeartRateData();
+  }, [athletes]);
+
   const teamStats: TeamStatsData = useMemo(() => {
     const athleteMetrics = (athletes || []).map(athlete => {
       const { data, genetics } = getAthleteBiometricData(athlete.athlete_id, biometricData, geneticProfiles);
+      console.log('Athlete Data:', athlete.name, data);
+      console.log('Heart Rate Data:', heartRateData[athlete.athlete_id]);
+      
       // API returns latest data first, so take the first item (most recent)
       const latest = data && data.length > 0 ? data[0] : null;
 
@@ -95,9 +172,56 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
         return 0;
       })();
 
-      // Compute total sleep for the latest report date, summing night sleep and any naps on that date
-      const latestDate = latest?.date;
-      const computedSleepH = computeSleepForDate(data, latestDate);
+      // Get sleep duration from biometric data - use yesterday's record
+      const computedSleepH = (() => {
+        if (!Array.isArray(data) || data.length === 0) {
+          return 0;
+        }
+
+        // Calculate yesterday's date in YYYY-MM-DD format
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        // Find the record with yesterday's date
+        const targetRecord = data.find(d => d.date === yesterdayStr);
+
+        return targetRecord?.sleep_duration_h || 0;
+      })();
+
+      // Find last synced date for this athlete where heart rate is not 0
+      const lastSyncedDate = data
+        .filter(d => (d.avg_heart_rate && d.avg_heart_rate > 0) || (d.resting_hr && d.resting_hr > 0))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date || null;
+
+      // Calculate RHR based on closest heart rate data to the latest sleep time
+      const rhr = (() => {
+        const sleepData = data.filter(d => d.sleep_duration_h && d.sleep_duration_h > 0);
+        if (sleepData.length === 0) return null;
+        const latestSleep = sleepData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+        const sleepDate = new Date(latestSleep.date);
+
+        // Get heart rate data for this athlete
+        const athleteHrData = heartRateData[athlete.athlete_id] || [];
+
+        // Find heart rate data closest to the sleep time
+        if (athleteHrData.length > 0) {
+          const closestHr = athleteHrData
+            .map(hr => ({
+              ...hr,
+              timeDiff: Math.abs(hr.measuredAt.getTime() - sleepDate.getTime())
+            }))
+            .sort((a, b) => a.timeDiff - b.timeDiff)[0];
+
+          // Only use if within reasonable time window (e.g., 2 hours)
+          if (closestHr.timeDiff < 2 * 60 * 60 * 1000) {
+            return closestHr.heartRateBPM;
+          }
+        }
+
+        // Fallback to existing data
+        return latestSleep.avg_heart_rate || latestSleep.resting_hr || null;
+      })();
 
       return {
         athlete,
@@ -105,6 +229,8 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
         alert,
         readinessScore,
         computedSleepH,
+        lastSyncedDate,
+        rhr,
       };
     });
 
@@ -120,15 +246,20 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
       optimal: athleteMetrics.filter(m => m.alert.type === 'green').length,
     };
 
+    const lastSyncedDate = biometricData
+      .filter(d => (d.avg_heart_rate && d.avg_heart_rate > 0) || (d.resting_hr && d.resting_hr > 0))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date || null;
+
     return {
       totalAthletes: (athletes || []).length,
       avgHRV: avgHRV || 0,
       avgSleep: avgSleep || 0,
       avgReadiness: avgReadiness || 0,
+      lastSyncedDate,
       alertCounts,
       athleteMetrics,
     };
-  }, [athletes, biometricData, geneticProfiles]);
+  }, [athletes, biometricData, geneticProfiles, heartRateData]);
 
   return (
     <>
@@ -138,6 +269,13 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
         <StatCard label="Avg HRV" value={`${teamStats.avgHRV.toFixed(0)} ms`} icon="❤️" color="purple" />
         <StatCard label="Avg Sleep" value={`${teamStats.avgSleep.toFixed(1)}h`} icon="😴" color="indigo" />
         <StatCard label="Readiness" value={`${teamStats.avgReadiness.toFixed(0)}%`} icon="⚡" color="orange" />
+        <StatCard
+          label="Last Synced"
+          value={teamStats.lastSyncedDate ? new Date(teamStats.lastSyncedDate).toLocaleDateString() : 'N/A'}
+          icon="🔄"
+          color="green"
+          containerClassName={getSyncCardBgClass(teamStats.lastSyncedDate)}
+        />
       </div>
 
       {/* Alert Summary */}
@@ -169,7 +307,7 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
       <section className="athletes-section">
         
         <div className="athletes-grid">
-          {teamStats.athleteMetrics?.map(({ athlete, latest, alert, readinessScore, computedSleepH }, index) => (
+          {teamStats.athleteMetrics?.map(({ athlete, latest, alert, readinessScore, computedSleepH, lastSyncedDate, rhr }, index) => (
             <div
               key={athlete.id || index}
               className={`athlete-card ${getStatusColorClass(alert.type)} card-hover`}
@@ -195,21 +333,20 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
                 <div className="metric-pair">
                   <span className="label">RHR</span>
                   <span className="value">
-                    {((latest?.resting_hr ?? latest?.avg_heart_rate ?? 0) > 0)
-                      ? `${((latest?.resting_hr ?? latest?.avg_heart_rate) as number).toFixed(0)} bpm`
-                      : 'N/A'}
+                    {rhr ? `${rhr.toFixed(0)} bpm` : 'N/A'}
                   </span>
                 </div>
                 <div className="metric-pair">
                   <span className="label">Ready</span>
                   <span className="value">{readinessScore.toFixed(0)}%</span>
                 </div>
+                <div className={`metric-pair rounded-md ${getSyncMetricPairClasses(lastSyncedDate)}`}>
+                  <span className="label">Last Synced</span>
+                  <span className="value">{lastSyncedDate ? new Date(lastSyncedDate).toLocaleDateString() : 'N/A'}</span>
+                </div>
               </div>
 
-              <div className="athlete-alert">
-                <p className="alert-title">{alert.title.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim()}</p>
-                <p className="alert-cause">{alert.cause}</p>
-              </div>
+       
 
               <button className="profile-button">
                 📊 Open Profile
@@ -223,8 +360,8 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
 };
 
 // Reusable Components
-const StatCard: React.FC<{ label: string; value: number | string; icon: string; color: string }> = ({ label, value, icon, color }) => (
-  <div className="card-enhanced p-5 text-center">
+const StatCard: React.FC<{ label: string; value: React.ReactNode; icon: string; color: string; containerClassName?: string }> = ({ label, value, icon, color, containerClassName }) => (
+  <div className={`card-enhanced p-5 text-center ${containerClassName || ''}`}>
     <div className="text-3xl mb-2">{icon}</div>
     <div className={`text-2xl font-bold text-black`}>
       {value}

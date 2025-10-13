@@ -699,7 +699,7 @@ export const AthleteProfile: React.FC = () => {
                     goalLabel="Max"
                   />
                   <MetricCard
-                    title="Body Temp"
+                    title="Skin Temp"
                     value={latest.temp_trend_c || 0}
                     unit="°C"
                     icon="🌡️"
