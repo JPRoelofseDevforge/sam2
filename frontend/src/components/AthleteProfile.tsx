@@ -32,6 +32,7 @@ import ComprehensiveGeneticAnalysis from './athleteProfile/ComprehensiveGeneticA
 import GeneticSummaryView from './athleteProfile/GeneticSummaryView';
 import type { BiometricData } from '../types';
 import HighValueComparisons from './HighValueComparisons';
+import { Supplements } from './Supplements';
 
 /**
  * Sleep helpers for accurate duration:
@@ -99,6 +100,7 @@ export const AthleteProfile: React.FC = () => {
     | 'recoveryTimeline'
     | 'pharmacogenomics'
     | 'nutrigenomics'
+    | 'supplements'
     | 'recoveryGenes'
     | 'predictive'
     | 'sleep'
@@ -433,6 +435,12 @@ export const AthleteProfile: React.FC = () => {
       count: geneticSummary.filter((g) => (g.Category || g.category) === 'nutrigenomics').length || athleteGenetics.length
     },
     {
+      id: 'supplements' as const,
+      label: 'Supplements',
+      icon: '💊',
+      count: geneticSummary.filter((g) => (g.Category || g.category) === 'supplements').length || athleteGenetics.length
+    },
+    {
       id: 'recoveryGenes' as const,
       label: 'Recovery Genes',
       icon: '🧬',
@@ -554,15 +562,6 @@ export const AthleteProfile: React.FC = () => {
                   <span className="hidden sm:inline text-white">{tab.label}</span>
                 </span>
 
-                {tab.count > 0 && (
-                  <span
-                    className={`inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full ${
-                      isActive ? 'bg-purple-700 text-white' : 'bg-purple-200 text-gray-700 group-hover:bg-gray-300'
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                )}
 
                 {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-700"></span>}
               </button>
@@ -687,18 +686,6 @@ export const AthleteProfile: React.FC = () => {
                     goalLabel="Healthy"
                   />
                   <MetricCard
-                    title="Respiratory Rate"
-                    value={latest.resp_rate_night || 0}
-                    unit="/min"
-                    icon="🌬️"
-                    subtitle={(latest.resp_rate_night || 0) <= 16 ? 'Normal' : 'Elevated'}
-                    trend={(latest.resp_rate_night || 0) <= 16 ? 'up' : 'down'}
-                    data={sortedBiometricData.slice(-7).map((d) => ({ date: d.date, value: d.resp_rate_night || 0 }))}
-                    teamAverage={getTeamAverage('resp_rate_night', athlete?.athlete_id || '', allBiometricData)}
-                    goalValue={16}
-                    goalLabel="Max"
-                  />
-                  <MetricCard
                     title="Skin Temp"
                     value={latest.temp_trend_c || 0}
                     unit="°C"
@@ -709,18 +696,6 @@ export const AthleteProfile: React.FC = () => {
                     teamAverage={getTeamAverage('temp_trend_c', athlete?.athlete_id || '', allBiometricData)}
                     goalValue={36.8}
                     goalLabel="Normal"
-                  />
-                  <MetricCard
-                    title="Training Load"
-                    value={latest.training_load_pct || 0}
-                    unit="%"
-                    icon="💪"
-                    subtitle={(latest.training_load_pct || 0) > 85 ? 'High' : 'Moderate'}
-                    trend="neutral"
-                    data={sortedBiometricData.slice(-7).map((d) => ({ date: d.date, value: d.training_load_pct || 0 }))}
-                    teamAverage={getTeamAverage('training_load_pct', athlete?.athlete_id || '', allBiometricData)}
-                    goalValue={85}
-                    goalLabel="Optimal"
                   />
                 </div>
 
@@ -1189,6 +1164,8 @@ export const AthleteProfile: React.FC = () => {
         {activeTab === 'pharmacogenomics' && <Pharmacogenomics athleteId={athleteId.toString()} />}
 
         {activeTab === 'nutrigenomics' && <Nutrigenomics athleteId={athleteId.toString()} />}
+
+        {activeTab === 'supplements' && <Supplements athleteId={athleteId.toString()} />}
 
         {activeTab === 'recoveryGenes' && <RecoveryGenePanel athleteId={athleteId.toString()} />}
 

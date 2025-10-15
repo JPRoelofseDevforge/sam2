@@ -10,7 +10,7 @@ export const TeamOverview: React.FC = () => {
   
   const navigate = useNavigate();
 
-  // Use custom hooks for data fetching
+  // Use custom hooks for data fetching - same as AthleteProfile uses useIndividualAthleteData
   const { athletes, biometricData, geneticProfiles, loading: dataLoading } = useTeamData(true);
   const { airQuality } = useWeatherData();
 

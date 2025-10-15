@@ -2,8 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -44,7 +42,7 @@ interface StressDataPoint {
 interface WhoopStressDataPoint {
   time: string;
   heartRate: number;
-  stressLevel: number;
+  stressLevel?: number;
 }
 
 interface StressZone {
@@ -232,11 +230,15 @@ export const StressManagement: React.FC<StressManagementProps> = ({
       
       return recentData.map((data, index) => {
         // Calculate strain index for each data point
-        const strainIndex = calculateStrainIndex(
-          data.resting_hr ?? 0,
-          data.hrv_night ?? 0,
-          athleteAge
-        );
+        // Snapshot metrics
+        const hr = Math.round(data.resting_hr ?? 0);
+        const hrv = data.hrv_night ?? 0;
+
+        // Only compute stress when we have valid inputs
+        const stress =
+          hr > 0 && hrv > 0
+            ? Math.round(calculateStrainIndex(hr, hrv, athleteAge))
+            : undefined;
         
         // Create a time label (hours ago)
         const hoursAgo = recentData.length - 1 - index;
@@ -244,8 +246,8 @@ export const StressManagement: React.FC<StressManagementProps> = ({
         
         return {
           time: timeLabel,
-          heartRate: data.resting_hr ?? 0,
-          stressLevel: strainIndex
+          heartRate: hr,
+          stressLevel: stress
         };
       });
     }
@@ -271,12 +273,11 @@ export const StressManagement: React.FC<StressManagementProps> = ({
         const avgRestingHR = dayData.reduce((sum, d) => sum + (d.resting_hr ?? 0), 0) / dayData.length;
         const avgHRV = dayData.reduce((sum, d) => sum + (d.hrv_night ?? 0), 0) / dayData.length;
         
-        // Calculate strain index for the day
-        const strainIndex = calculateStrainIndex(
-          avgRestingHR,
-          avgHRV,
-          athleteAge
-        );
+        // Calculate strain index for the day when inputs are valid
+        const stress =
+          avgRestingHR > 0 && avgHRV > 0
+            ? Math.round(calculateStrainIndex(avgRestingHR, avgHRV, athleteAge))
+            : undefined;
         
         // Format date for display
         const dateObj = new Date(date);
@@ -285,11 +286,17 @@ export const StressManagement: React.FC<StressManagementProps> = ({
         return {
           time: dayLabel,
           heartRate: Math.round(avgRestingHR),
-          stressLevel: strainIndex
+          stressLevel: stress
         };
       });
     }
   }, [biometricData, whoopSelectedPeriod, athleteAge]);
+
+  // Only show stress line if data is valid (non-zero HR and HRV)
+  const hasWhoopStress = useMemo(
+    () => whoopChartData.some(d => typeof d.stressLevel === 'number' && d.stressLevel > 0),
+    [whoopChartData]
+  );
   
   // Generate stress zones data based on actual data
   const stressZones: StressZone[] = useMemo(() => {
@@ -534,7 +541,7 @@ export const StressManagement: React.FC<StressManagementProps> = ({
         <div className="bg-gray-50 p-5 rounded-lg">
           <div className="text-xs uppercase tracking-wide text-gray-500">Stress Days</div>
           <div className="mt-1 text-3xl font-bold text-gray-900">{highStressDays}</div>
-          <div className="text-sm text-gray-600 mt-1">Avg RHR: {avgPeriodHR.toFixed(0)} bpm</div>
+          <div className="text-sm text-gray-600 mt-1">Avg Sleeping HR: {avgPeriodHR.toFixed(0)} bpm</div>
         </div>
       </div>
 
@@ -583,7 +590,7 @@ export const StressManagement: React.FC<StressManagementProps> = ({
               
               {/* Resting HR Status */}
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900">Resting Heart Rate</h4>
+                <h4 className="font-medium text-gray-900">Sleeping Heart Rate</h4>
                 <p className={`text-2xl font-bold mt-1 ${restingHRStatus?.color || 'text-gray-500'}`}>
                   {latestData ? `${latestData.restingHR} bpm` : '--'}
                 </p>
@@ -658,12 +665,14 @@ export const StressManagement: React.FC<StressManagementProps> = ({
                 stroke="#9CA3AF"
                 domain={[40, 180]}
               />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                stroke="#9CA3AF"
-                domain={[0, 100]}
-              />
+              {hasWhoopStress && (
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="#9CA3AF"
+                  domain={[0, 100]}
+                />
+              )}
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#1F2937',
@@ -672,9 +681,10 @@ export const StressManagement: React.FC<StressManagementProps> = ({
                   color: '#F9FAFB'
                 }}
                 formatter={(value, name) => {
-                  if (name === 'heartRate') return [`${value} bpm`, 'Heart Rate'];
-                  if (name === 'stressLevel') return [`${Number(value).toFixed(1)}`, 'Stress Level'];
-                  return [value, name];
+                  const v = Number(value);
+                  if (name === 'heartRate') return [`${Math.round(v)} bpm`, 'Heart Rate'];
+                  if (name === 'stressLevel') return [`${Math.round(v)}`, 'Stress Level'];
+                  return [Math.round(v), name];
                 }}
               />
               <Area
@@ -686,14 +696,16 @@ export const StressManagement: React.FC<StressManagementProps> = ({
                 fill="url(#colorHeartRate)"
                 strokeWidth={2}
               />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="stressLevel"
-                name="Stress Level"
-                stroke="#F59E0B"
-                strokeWidth={2}
-              />
+              {hasWhoopStress && (
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="stressLevel"
+                  name="Stress Level"
+                  stroke="#F59E0B"
+                  strokeWidth={2}
+                />
+              )}
               <defs>
                 <linearGradient id="colorHeartRate" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
@@ -756,49 +768,52 @@ export const StressManagement: React.FC<StressManagementProps> = ({
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 tickFormatter={formatDate}
                 stroke="#6b7280"
               />
-              <YAxis stroke="#6b7280" />
+              <YAxis yAxisId="left" stroke="#6b7280" />
+              <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
               <Tooltip
-                contentStyle={{ 
-                  background: '#fff', 
-                  border: '1px solid #e5e7eb', 
-                  borderRadius: '6px', 
-                  color: '#1f2937' 
+                contentStyle={{
+                  background: '#fff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  color: '#1f2937'
                 }}
                 formatter={(value, name) => {
                   if (name === 'hrv') return [`${typeof value === 'number' ? Math.round(value) : value} ms`, 'HRV'];
-                  if (name === 'restingHR') return [`${typeof value === 'number' ? Math.round(value) : value} bpm`, 'Resting HR'];
+                  if (name === 'restingHR') return [`${typeof value === 'number' ? Math.round(value) : value} bpm`, 'Sleeping HR'];
                   return [typeof value === 'number' ? Math.round(value) : value, name];
                 }}
                 labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString()}`}
               />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="hrv" 
-                name="HRV (ms)" 
-                stroke="#10B981" 
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="hrv"
+                name="HRV (ms)"
+                stroke="#10B981"
                 strokeWidth={3}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
               />
-              <Line 
-                type="monotone" 
-                dataKey="restingHR" 
-                name="Resting HR (bpm)" 
-                stroke="#EF4444" 
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="restingHR"
+                name="Sleeping HR (bpm)"
+                stroke="#EF4444"
                 strokeWidth={3}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
               />
-              <ReferenceLine 
-                y={hrvTrend > 0 ? Math.min(...stressData.map(d => d.hrv)) : Math.max(...stressData.map(d => d.hrv))} 
-                stroke={hrvTrend > 0 ? "#10B981" : "#EF4444"} 
-                strokeDasharray="3 3" 
+              <ReferenceLine
+                y={hrvTrend > 0 ? Math.min(...stressData.map(d => d.hrv)) : Math.max(...stressData.map(d => d.hrv))}
+                stroke={hrvTrend > 0 ? "#10B981" : "#EF4444"}
+                strokeDasharray="3 3"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -818,82 +833,6 @@ export const StressManagement: React.FC<StressManagementProps> = ({
         </div>
       </div>
 
-      {/* Training Load vs Recovery Readiness */}
-      <div className="card-enhanced p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Training Load vs Recovery Readiness</h3>
-        <p className="text-sm text-gray-600 mb-4">This chart shows the relationship between training load and recovery readiness. Optimal performance occurs when training load and recovery are balanced.</p>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={stressData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis 
-                dataKey="date" 
-                tickFormatter={formatDate}
-                stroke="#6b7280"
-              />
-              <YAxis 
-                yAxisId="left" 
-                orientation="left" 
-                stroke="#6b7280"
-              />
-              <YAxis 
-                yAxisId="right" 
-                orientation="right" 
-                stroke="#6b7280"
-              />
-              <Tooltip
-                contentStyle={{ 
-                  background: '#fff', 
-                  border: '1px solid #e5e7eb', 
-                  borderRadius: '6px', 
-                  color: '#1f2937' 
-                }}
-                formatter={(value, name) => {
-                  if (name === 'trainingLoad') return [`${typeof value === 'number' ? Math.round(value) : value}%`, 'Training Load'];
-                  if (name === 'recoveryReadiness') return [`${typeof value === 'number' ? Math.round(value) : value}%`, 'Recovery Readiness'];
-                  return [typeof value === 'number' ? Math.round(value) : value, name];
-                }}
-              />
-              <Legend />
-              <Bar 
-                yAxisId="left" 
-                dataKey="trainingLoad" 
-                name="Training Load (%)" 
-                fill="#3B82F6" 
-                radius={[4, 4, 0, 0]}
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="recoveryReadiness"
-                name="Recovery Readiness (%)"
-                stroke="#10B981"
-                strokeWidth={3}
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="mt-4 text-sm text-gray-600">
-          <p>
-            Recovery Readiness: 
-            <span className={latestData?.recoveryReadiness && latestData.recoveryReadiness > 70 ? "text-green-600 font-medium" : 
-                             latestData?.recoveryReadiness && latestData.recoveryReadiness > 40 ? "text-yellow-600 font-medium" : "text-red-600 font-medium"}>
-              {' '}{latestData?.recoveryReadiness ? Math.round(latestData.recoveryReadiness) : '--'}%
-            </span>
-            {' '}| 
-            Chronic Stress: 
-            <span className={dailyStressLoad.chronicStress < 40 ? "text-green-600 font-medium" : 
-                             dailyStressLoad.chronicStress < 60 ? "text-yellow-600 font-medium" : "text-red-600 font-medium"}>
-              {' '}{Math.round(dailyStressLoad.chronicStress)}
-            </span>
-          </p>
-        </div>
-      </div>
 
       {/* Stress Insights */}
       <div className="card-enhanced p-6">

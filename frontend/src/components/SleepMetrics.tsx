@@ -151,10 +151,24 @@ const determineChronotype = (sleepOnsetTime: string, wakeTime: string): string =
 
 // Helper function to calculate sleep stage distribution
 const calculateSleepStageDistribution = (deepSleep: number, remSleep: number, lightSleep: number): { name: string; value: number }[] => {
+  const total = deepSleep + remSleep + lightSleep;
+  if (total === 0) {
+    return [
+      { name: 'Deep Sleep', value: 0 },
+      { name: 'REM Sleep', value: 0 },
+      { name: 'Light Sleep', value: 0 }
+    ];
+  }
+
+  // Normalize to ensure they add up to 100%
+  const normalizedDeep = (deepSleep / total) * 100;
+  const normalizedRem = (remSleep / total) * 100;
+  const normalizedLight = (lightSleep / total) * 100;
+
   return [
-    { name: 'Deep Sleep', value: deepSleep },
-    { name: 'REM Sleep', value: remSleep },
-    { name: 'Light Sleep', value: lightSleep }
+    { name: 'Deep Sleep', value: normalizedDeep },
+    { name: 'REM Sleep', value: normalizedRem },
+    { name: 'Light Sleep', value: normalizedLight }
   ];
 };
 
@@ -290,13 +304,16 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
     const avgDeepSleep = filteredData.length > 0 ? filteredData.reduce((sum, d) => sum + (d.deep_sleep_pct || 0), 0) / filteredData.length : 0;
     const avgRemSleep = filteredData.length > 0 ? filteredData.reduce((sum, d) => sum + (d.rem_sleep_pct || 0), 0) / filteredData.length : 0;
     const avgLightSleep = filteredData.length > 0 ? filteredData.reduce((sum, d) => sum + (d.light_sleep_pct || 0), 0) / filteredData.length : 0;
-  
-  // Calculate sleep stage distribution
-  const sleepStageDistribution = calculateSleepStageDistribution(
-    avgDeepSleep,
-    avgRemSleep,
-    avgLightSleep
-  );
+
+    // Use latest sleep data for stage distribution
+    const lastData = filteredData.length > 0 ? filteredData[filteredData.length - 1] : null;
+
+  // Calculate sleep stage distribution based on latest data
+  const sleepStageDistribution = lastData ? calculateSleepStageDistribution(
+    lastData.deep_sleep_pct || 0,
+    lastData.rem_sleep_pct || 0,
+    lastData.light_sleep_pct || 0
+  ) : calculateSleepStageDistribution(0, 0, 0);
   
   // Colors for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
@@ -361,17 +378,33 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
     };
   });
   
-  // Derived sleep quality metrics
-  const last = sleepDebtData.length > 0 ? sleepDebtData[sleepDebtData.length - 1] : null;
-  const lastNightScore = last
+  // Use latest sleep data for quality score (same as stage distribution)
+  const latestData = filteredData.length > 0 ? filteredData[filteredData.length - 1] : null;
+
+  // Calculate sleep quality metrics based on latest data (normalized percentages)
+  const rawDeep = latestData ? (latestData.deep_sleep_pct || 0) : 0;
+  const rawRem = latestData ? (latestData.rem_sleep_pct || 0) : 0;
+  const rawLight = latestData ? (latestData.light_sleep_pct || 0) : 0;
+
+  // Normalize to ensure they add up to 100%
+  const totalRaw = rawDeep + rawRem + rawLight;
+  const normalizedDeep = totalRaw > 0 ? (rawDeep / totalRaw) * 100 : 0;
+  const normalizedRem = totalRaw > 0 ? (rawRem / totalRaw) * 100 : 0;
+  const normalizedLight = totalRaw > 0 ? (rawLight / totalRaw) * 100 : 0;
+
+  const lastNightScore = latestData
     ? calculateSleepQualityScore(
-        last.sleepDuration,
-        last.sleepEfficiency,
-        last.deepSleep,
-        last.remSleep,
-        last.recommendedSleep
+        latestData.sleep_duration_h || 0,
+        calculateSleepEfficiency(
+          latestData.sleep_duration_h || 0,
+          (latestData.sleep_duration_h || 0) + 0.5 // Estimate time in bed as sleep duration + 30 min
+        ),
+        normalizedDeep,
+        normalizedRem,
+        8 // Recommended sleep hours
       )
     : 0;
+
   const avgSleepScore =
     sleepDebtData.length > 0
       ? Math.round(
@@ -389,7 +422,17 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
           ) / sleepDebtData.length
         )
       : 0;
-  const lastSubScores = last ? computeSubScores(last) : { duration: 0, efficiency: 0, deep: 0, rem: 0 };
+
+  const lastSubScores = latestData ? computeSubScores({
+    sleepDuration: latestData.sleep_duration_h || 0,
+    sleepEfficiency: calculateSleepEfficiency(
+      latestData.sleep_duration_h || 0,
+      (latestData.sleep_duration_h || 0) + 0.5
+    ),
+    deepSleep: normalizedDeep,
+    remSleep: normalizedRem,
+    recommendedSleep: 8
+  }) : { duration: 0, efficiency: 0, deep: 0, rem: 0 };
 
   // Aggregates
   const cumulativeSleepDebt = sleepDebtData.reduce((sum, d) => sum + (d.sleepDebt || 0), 0);
@@ -598,7 +641,7 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
             <div>
               <div className="flex justify-between text-xs text-gray-600 mb-1">
                 <span>Duration</span>
-                <span>{last ? `${(last.sleepDuration || 0).toFixed(1)}h / ${last.recommendedSleep}h` : '—'}</span>
+                <span>{latestData ? `${(latestData.sleep_duration_h || 0).toFixed(1)}h / 8h` : '—'}</span>
               </div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-500" style={{ width: `${Math.round((lastSubScores.duration || 0) * 100)}%` }}></div>
@@ -607,7 +650,7 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
             <div>
               <div className="flex justify-between text-xs text-gray-600 mb-1">
                 <span>Efficiency</span>
-                <span>{last ? `${Math.round(last.sleepEfficiency || 0)}%` : '—'}</span>
+                <span>{latestData ? `${Math.round(calculateSleepEfficiency(latestData.sleep_duration_h || 0, (latestData.sleep_duration_h || 0) + 0.5))}%` : '—'}</span>
               </div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div className="h-full bg-violet-500" style={{ width: `${Math.round((lastSubScores.efficiency || 0) * 100)}%` }}></div>
@@ -616,7 +659,7 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
             <div>
               <div className="flex justify-between text-xs text-gray-600 mb-1">
                 <span>Deep</span>
-                <span>{last ? `${(last.deepSleep || 0).toFixed(1)}%` : '—'}</span>
+                <span>{latestData ? `${normalizedDeep.toFixed(1)}% (${rawDeep.toFixed(1)}%)` : '—'}</span>
               </div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div className="h-full bg-indigo-700" style={{ width: `${Math.round((lastSubScores.deep || 0) * 100)}%` }}></div>
@@ -625,7 +668,7 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
             <div>
               <div className="flex justify-between text-xs text-gray-600 mb-1">
                 <span>REM</span>
-                <span>{last ? `${(last.remSleep || 0).toFixed(1)}%` : '—'}</span>
+                <span>{latestData ? `${normalizedRem.toFixed(1)}% (${rawRem.toFixed(1)}%)` : '—'}</span>
               </div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500" style={{ width: `${Math.round((lastSubScores.rem || 0) * 100)}%` }}></div>
@@ -737,50 +780,86 @@ export const SleepMetrics: React.FC<SleepMetricsProps> = ({ biometricData, athle
         
         {/* Sleep Stage Distribution */}
         <div className="card-enhanced p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">🌙 Sleep Stage Distribution</h3>
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="flex-1">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={sleepStageDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent ? percent * 100 : 0).toFixed(0)}%`}
-                  >
-                    {sleepStageDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">🌙 Latest Sleep Stage Distribution</h3>
+          {lastData ? (
+            <div className="space-y-6">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-4">Sleep stages from the most recent night ({new Date(lastData.date).toLocaleDateString()})</p>
+              </div>
+              <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="flex-1">
+                  <ResponsiveContainer width="100%" height={400}>
+                    <PieChart>
+                      <Pie
+                        data={sleepStageDistribution}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}\n${(percent ? percent * 100 : 0).toFixed(1)}%`}
+                      >
+                        {sleepStageDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, name) => [`${Number(value).toFixed(1)}%`, name]}
+                        contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', color: '#1f2937' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1">
+                  <div className="space-y-4">
+                    <div className="text-center mb-4">
+                      <h4 className="font-semibold text-gray-900">Stage Breakdown</h4>
+                    </div>
+                    {sleepStageDistribution.map((stage, index) => (
+                      <div key={stage.name} className="bg-gray-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div
+                              className="w-5 h-5 rounded-full mr-3"
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            ></div>
+                            <div>
+                              <div className="font-medium text-gray-900">{stage.name}</div>
+                              <div className="text-sm text-gray-600">
+                                {stage.value.toFixed(1)}% of total sleep time
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-gray-900">{stage.value.toFixed(1)}%</div>
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full"
+                              style={{
+                                width: `${stage.value}%`,
+                                backgroundColor: COLORS[index % COLORS.length]
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Percentage']}
-                    contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', color: '#1f2937' }}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1">
-              <div className="space-y-3">
-                {sleepStageDistribution.map((stage, index) => (
-                  <div key={stage.name} className="flex items-center">
-                    <div 
-                      className="w-4 h-4 rounded-full mr-3" 
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    ></div>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{stage.name}</div>
-                      <div className="text-sm text-gray-600">{stage.value.toFixed(1)}%</div>
+                    <div className="text-center text-xs text-gray-500 mt-4">
+                      Total: {sleepStageDistribution.reduce((sum, stage) => sum + stage.value, 0).toFixed(1)}%
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-8 text-gray-600">
+              <p>No sleep data available</p>
+            </div>
+          )}
         </div>
       </div>
       

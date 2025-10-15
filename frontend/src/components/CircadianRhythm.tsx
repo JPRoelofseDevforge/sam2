@@ -61,7 +61,8 @@ const calculateCircadianScore = (data: BiometricData[]): number => {
   const deepSleepPenalty = avgDeepSleep < 20 ? (20 - avgDeepSleep) * 2 : 0;
 
   // HRV during sleep
-  const avgHrvNight = data.reduce((sum, d) => sum + (d.hrv_night ?? 0), 0) / data.length;
+  const sleepingData = data.filter(d => (d.sleep_duration_h ?? 0) > 0 && (d.resting_hr ?? 0) > 0);
+  const avgHrvNight = sleepingData.length > 0 ? sleepingData.reduce((sum, d) => sum + (d.hrv_night ?? 0), 0) / sleepingData.length : 0;
   const hrvPenalty = avgHrvNight < 50 ? (50 - avgHrvNight) * 0.5 : 0;
 
   score -= consistencyPenalty + durationPenalty + deepSleepPenalty + hrvPenalty;
@@ -182,7 +183,8 @@ const calculateCircadianDisruptions = (data: BiometricData[]): string[] => {
   }
 
   // Check for low nighttime HRV
-  const avgHrvNight = data.reduce((sum, d) => sum + (d.hrv_night ?? 0), 0) / data.length;
+  const sleepingData = data.filter(d => (d.sleep_duration_h ?? 0) > 0 && (d.resting_hr ?? 0) > 0);
+  const avgHrvNight = sleepingData.length > 0 ? sleepingData.reduce((sum, d) => sum + (d.hrv_night ?? 0), 0) / sleepingData.length : 0;
   if (avgHrvNight < 40) {
     disruptions.push('Poor Nighttime Recovery');
   }
@@ -387,19 +389,20 @@ export const CircadianRhythm: React.FC<CircadianRhythmProps> = ({
     date: data.date,
     sleepDuration: data.sleep_duration_h ?? 0,
     deepSleep: data.deep_sleep_pct ?? 0,
-    hrvNight: data.hrv_night ?? 0,
+    hrvNight: (data.sleep_duration_h ?? 0) > 0 ? ((data.resting_hr ?? 0) > 0 ? data.hrv_night ?? 0 : 0) : null,
     restingHr: data.resting_hr ?? 0,
     circadianScore: calculateCircadianScore([data])
   }));
 
   // Circadian rhythm markers
+  const sleepingFilteredData = filteredData.filter(d => (d.sleep_duration_h ?? 0) > 0 && (d.resting_hr ?? 0) > 0);
   const circadianMarkers = [
     { name: 'Sleep Duration', value: filteredData.length > 0 ?
       filteredData.reduce((sum, d) => sum + (d.sleep_duration_h ?? 0), 0) / filteredData.length : 0, max: 10 },
     { name: 'Deep Sleep %', value: filteredData.length > 0 ?
       filteredData.reduce((sum, d) => sum + (d.deep_sleep_pct ?? 0), 0) / filteredData.length : 0, max: 30 },
-    { name: 'Night HRV', value: filteredData.length > 0 ?
-      filteredData.reduce((sum, d) => sum + (d.hrv_night ?? 0), 0) / filteredData.length : 0, max: 100 },
+    { name: 'Night HRV', value: sleepingFilteredData.length > 0 ?
+      sleepingFilteredData.reduce((sum, d) => sum + (d.hrv_night ?? 0), 0) / sleepingFilteredData.length : 0, max: 100 },
     { name: 'Resting HR', value: filteredData.length > 0 ?
       100 - (filteredData.reduce((sum, d) => sum + (d.resting_hr ?? 0), 0) / filteredData.length) : 0, max: 100 },
     { name: 'Sleep Consistency', value: 100 - Math.min(calculateStandardDeviation(

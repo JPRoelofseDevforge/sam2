@@ -15,6 +15,9 @@ const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(mod
 const WeatherImpactTest = lazy(() => import('./components/WeatherImpactTest').then(module => ({ default: module.WeatherImpactTest })));
 const BodyCompositionManagement = lazy(() => import('./components/BodyCompositionManagement').then(module => ({ default: module.BodyCompositionManagement })));
 const PharmaCoWatchlist = lazy(() => import('./components/PharmaCoWatchlist'));
+const InjurySurveillance = lazy(() => import('./components/InjurySurveillance'));
+const EventsCalendar = lazy(() => import('./components/EventsCalendar').then(module => ({ default: module.EventsCalendar })));
+const AthleteNotes = lazy(() => import('./components/AthleteNotes').then(module => ({ default: module.AthleteNotes })));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -50,14 +53,13 @@ const AppContent: React.FC = () => {
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               <Route path="/" element={<TeamOverview />} />
-              <Route path="/comparison" element={<TeamComparisonDashboard />} />
-              <Route path="/training-load" element={<TrainingLoadHeatmap />} />
-              <Route path="/recovery-timeline" element={<RecoveryTimeline />} />
-              <Route path="/predictive" element={<PredictiveAnalytics />} />
               <Route path="/user-management" element={<AdminDashboard />} />
               <Route path="/weather-test" element={<WeatherImpactTest />} />
               <Route path="/body-composition" element={<BodyCompositionManagement />} />
               <Route path="/pharma-watchlist" element={<PharmaCoWatchlist />} />
+              <Route path="/calendar" element={<EventsCalendar />} />
+              <Route path="/athlete-notes" element={<AthleteNotes />} />
+              <Route path="/injuries" element={<InjurySurveillance />} />
               <Route path="/athlete/:id" element={<AthleteProfile />} />
               <Route path="/login" element={<Login />} />
               <Route path="*" element={<Navigate to="/" replace />} />

@@ -80,23 +80,21 @@ const Navigation: React.FC<NavigationProps> = ({ isMobileMenuOpen, setIsMobileMe
             <Link to="/" className={getNavLinkClass('/')}>
               Team Overview
             </Link>
-            <Link to="/comparison" className={getNavLinkClass('/comparison')}>
-              Team Comparison
-            </Link>
-            <Link to="/training-load" className={getNavLinkClass('/training-load')}>
-              Training Load
-            </Link>
-            <Link to="/recovery-timeline" className={getNavLinkClass('/recovery-timeline')}>
-              Recovery Timeline
-            </Link>
-            <Link to="/predictive" className={getNavLinkClass('/predictive')}>
-              Predictive Analytics
-            </Link>
+            
             <Link to="/pharma-watchlist" className={getNavLinkClass('/pharma-watchlist')}>
               Pharma Interactions
             </Link>
             <Link to="/body-composition" className={getNavLinkClass('/body-composition')}>
               Body Composition
+            </Link>
+            <Link to="/calendar" className={getNavLinkClass('/calendar')}>
+              Calendar
+            </Link>
+            <Link to="/athlete-notes" className={getNavLinkClass('/athlete-notes')}>
+              Athlete Notes
+            </Link>
+            <Link to="/injuries" className={getNavLinkClass('/injuries')}>
+              Injuries
             </Link>
             <Link to="/user-management" className={getNavLinkClass('/user-management')}>
               User Management
@@ -122,34 +120,7 @@ const Navigation: React.FC<NavigationProps> = ({ isMobileMenuOpen, setIsMobileMe
           >
             Team Overview
           </Link>
-          <Link
-            to="/comparison"
-            onClick={() => handleNavClick('/comparison')}
-            className={getMobileNavLinkClass('/comparison')}
-          >
-            Team Comparison
-          </Link>
-          <Link
-            to="/training-load"
-            onClick={() => handleNavClick('/training-load')}
-            className={getMobileNavLinkClass('/training-load')}
-          >
-            Training Load
-          </Link>
-          <Link
-            to="/recovery-timeline"
-            onClick={() => handleNavClick('/recovery-timeline')}
-            className={getMobileNavLinkClass('/recovery-timeline')}
-          >
-            Recovery Timeline
-          </Link>
-          <Link
-            to="/predictive"
-            onClick={() => handleNavClick('/predictive')}
-            className={getMobileNavLinkClass('/predictive')}
-          >
-            Predictive Analytics
-          </Link>
+         
           <Link
             to="/pharma-watchlist"
             onClick={() => handleNavClick('/pharma-watchlist')}
@@ -163,6 +134,27 @@ const Navigation: React.FC<NavigationProps> = ({ isMobileMenuOpen, setIsMobileMe
             className={getMobileNavLinkClass('/body-composition')}
           >
             Body Composition
+          </Link>
+          <Link
+            to="/calendar"
+            onClick={() => handleNavClick('/calendar')}
+            className={getMobileNavLinkClass('/calendar')}
+          >
+            Calendar
+          </Link>
+          <Link
+            to="/athlete-notes"
+            onClick={() => handleNavClick('/athlete-notes')}
+            className={getMobileNavLinkClass('/athlete-notes')}
+          >
+            Athlete Notes
+          </Link>
+          <Link
+            to="/injuries"
+            onClick={() => handleNavClick('/injuries')}
+            className={getMobileNavLinkClass('/injuries')}
+          >
+            Injuries
           </Link>
           <Link
             to="/user-management"

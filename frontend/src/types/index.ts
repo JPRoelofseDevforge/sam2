@@ -414,3 +414,37 @@ export interface ThemeConfig {
     xl: string;
   };
 }
+
+// Calendar / Events
+export type EventType = 'Training' | 'Travel' | 'Meeting' | 'Competition' | 'Other';
+
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  type: EventType | string;
+  description?: string;
+  location?: string;
+  startUtc: string;       // ISO string
+  endUtc: string;         // ISO string
+  allDay: boolean;
+  athleteId?: number | null;
+  organizationId?: number | null;
+  recurrenceRule?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Athlete Notes
+export type NoteCategory = 'Positive' | 'Neutral' | 'Negative';
+
+export interface AthleteNote {
+  id: number;
+  athleteId: number;
+  category: NoteCategory | string;
+  title?: string;
+  content?: string;
+  tags?: string;      // comma-separated tags
+  author?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}

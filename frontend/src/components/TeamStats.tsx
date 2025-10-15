@@ -1,53 +1,16 @@
-import React, { useMemo } from 'react';
-import { Athlete, BiometricData, GeneticProfile } from '../types';
-import { generateAlert, calculateReadinessScore } from '../utils/analytics';
-import { getAthleteBiometricData } from '../utils/athleteUtils';
+import React from 'react';
+import { Athlete, GeneticProfile } from '../types';
 import { getStatusColorClass, getStatusIcon } from '../utils/athleteUtils';
-import { heartRateService, biometricDataService } from '../services/dataService';
+import { prepareTeamStatsData, TeamStatsData } from '../utils/teamStatsBuilder';
 
-/**
- * Sleep helpers:
- * - Handles nights crossing midnight (previous night into morning)
- * - Handles morning-only sleep
- * - Sums multiple segments (naps) occurring on the same day
- */
-const parseTimeToMinutesLocal = (time?: string): number | null => {
-  if (!time || time === '00:00') return null;
-  const parts = time.split(':');
-  if (parts.length < 2) return null;
-  const h = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10);
-  if (isNaN(h) || isNaN(m)) return null;
-  return h * 60 + m;
-};
+interface TeamStatsProps {
+  athletes: Athlete[];
+  biometricData: any[]; // not used here; builder fetches accurate per-athlete data
+  geneticProfiles: GeneticProfile[];
+  onAthleteClick: (athleteId: string) => void;
+}
 
-const computeDurationHours = (
-  sleep_onset_time?: string,
-  wake_time?: string,
-  sleep_duration_h?: number | null
-): number => {
-  const start = parseTimeToMinutesLocal(sleep_onset_time);
-  const end = parseTimeToMinutesLocal(wake_time);
-  if (start !== null && end !== null) {
-    let minutes = end - start;
-    if (minutes < 0) minutes += 24 * 60; // crossed midnight
-    return Math.max(0, minutes) / 60;
-  }
-  // Fallback to provided duration if timing data is incomplete
-  return typeof sleep_duration_h === 'number' && sleep_duration_h > 0 ? sleep_duration_h : 0;
-};
-
-const computeSleepForDate = (entries: BiometricData[], targetDate?: string): number => {
-  if (!Array.isArray(entries) || entries.length === 0 || !targetDate) return 0;
-
-  // Sum all sleep duration entries for the target date
-  // This matches how SleepMetrics.tsx calculates sleep duration
-  return entries
-    .filter(d => d.date === targetDate)
-    .reduce((sum, d) => sum + (d.sleep_duration_h || 0), 0);
-};
-
-// Helpers to color entire sections based on "Last Synced" recency
+// Helpers to color sections based on "Last Synced" recency
 const daysSince = (dateStr?: string | null): number | null => {
   if (!dateStr) return null;
   const d = new Date(dateStr);
@@ -58,9 +21,6 @@ const daysSince = (dateStr?: string | null): number | null => {
 };
 
 // Card-level background color (faded)
-// - today: green-50
-// - within 3 days: orange-50
-// - >3 days: red-50
 const getSyncCardBgClass = (dateStr?: string | null): string => {
   const d = daysSince(dateStr);
   if (d === null) return '!bg-gray-50';
@@ -78,189 +38,61 @@ const getSyncMetricPairClasses = (dateStr?: string | null): string => {
   return '!bg-red-300 !text-red-800 px-2 py-1';
 };
 
-// Compute faded status classes for last synced date:
-// - today: faded green
-// - within 3 days: faded orange
-// - more than 3 days: faded red
-const getSyncStatusClasses = (dateStr?: string | null): string => {
-  const base = 'inline-block px-2 py-0.5 rounded text-xs font-medium';
-  if (!dateStr) return `${base} bg-gray-100 text-gray-600`;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return `${base} bg-gray-100 text-gray-600`;
-
-  const today = new Date();
-  const toYMD = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
-  const days = Math.floor((toYMD(today).getTime() - toYMD(d).getTime()) / (24 * 60 * 60 * 1000));
-
-  if (days <= 0) return `${base} bg-green-500 text-green-700`;   // today
-  if (days <= 3) return `${base} bg-orange-100 text-orange-700`; // within 3 days
-  return `${base} bg-red-100 text-red-700`;                       // more than 3 days
-};
-
-interface TeamStatsProps {
-  athletes: Athlete[];
-  biometricData: BiometricData[];
-  geneticProfiles: GeneticProfile[];
-  onAthleteClick: (athleteId: string) => void;
-}
-
-interface AthleteMetric {
-  athlete: Athlete;
-  latest: BiometricData | null;
-  alert: any;
-  readinessScore: number;
-  computedSleepH: number;
-  lastSyncedDate: string | null;
-  rhr: number | null;
-}
-
-interface TeamStatsData {
-  totalAthletes: number;
-  avgHRV: number;
-  avgSleep: number;
-  avgReadiness: number;
-  lastSyncedDate: string | null;
-  alertCounts: {
-    high: number;
-    medium: number;
-    optimal: number;
-  };
-  athleteMetrics: AthleteMetric[];
-}
-
 export const TeamStats: React.FC<TeamStatsProps> = ({
   athletes,
-  biometricData,
+  biometricData, // unused; kept for prop compatibility
   geneticProfiles,
   onAthleteClick
 }) => {
-  const [heartRateData, setHeartRateData] = React.useState<Record<string, { measuredAt: Date; heartRateBPM: number; type: string }[]>>({});
+  const [teamStats, setTeamStats] = React.useState<TeamStatsData>({
+    totalAthletes: (athletes || []).length,
+    avgHRV: 0,
+    avgSleep: 0,
+    avgReadiness: 0,
+    lastSyncedDate: null,
+    alertCounts: { high: 0, medium: 0, optimal: 0 },
+    athleteMetrics: [],
+  });
+  const [loading, setLoading] = React.useState(true);
 
-  // Fetch heart rate data for all athletes
   React.useEffect(() => {
-    const fetchHeartRateData = async () => {
-      const hrData: Record<string, { measuredAt: Date; heartRateBPM: number; type: string }[]> = {};
-      for (const athlete of athletes) {
-        try {
-          const data = await heartRateService.getHeartRateData(parseInt(athlete.athlete_id));
-          hrData[athlete.athlete_id] = data;
-        } catch (error) {
-          hrData[athlete.athlete_id] = [];
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await prepareTeamStatsData(athletes || [], geneticProfiles || []);
+        if (!cancelled) setTeamStats(data);
+      } catch {
+        if (!cancelled) {
+          setTeamStats({
+            totalAthletes: (athletes || []).length,
+            avgHRV: 0,
+            avgSleep: 0,
+            avgReadiness: 0,
+            lastSyncedDate: null,
+            alertCounts: { high: 0, medium: 0, optimal: 0 },
+            athleteMetrics: [],
+          });
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setHeartRateData(hrData);
-    };
-    fetchHeartRateData();
-  }, [athletes]);
+    })();
+    // Recompute when inputs structurally change
+    return () => { cancelled = true; };
+  }, [JSON.stringify(athletes), JSON.stringify(geneticProfiles)]);
 
-  const teamStats: TeamStatsData = useMemo(() => {
-    const athleteMetrics = (athletes || []).map(athlete => {
-      const { data, genetics } = getAthleteBiometricData(athlete.athlete_id, biometricData, geneticProfiles);
-      console.log('Athlete Data:', athlete.name, data);
-      console.log('Heart Rate Data:', heartRateData[athlete.athlete_id]);
-      
-      // API returns latest data first, so take the first item (most recent)
-      const latest = data && data.length > 0 ? data[0] : null;
-
-      const alert = generateAlert(athlete.athlete_id, data, genetics);
-      // Use latest non-zero readiness (data is latest-first per API); fall back to 0 if none
-      const readinessScore = (() => {
-        for (const d of data) {
-          const r = calculateReadinessScore(d as BiometricData);
-          if (r > 0) return r;
-        }
-        return 0;
-      })();
-
-      // Get sleep duration from biometric data - use yesterday's record
-      const computedSleepH = (() => {
-        if (!Array.isArray(data) || data.length === 0) {
-          return 0;
-        }
-
-        // Calculate yesterday's date in YYYY-MM-DD format
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-        // Find the record with yesterday's date
-        const targetRecord = data.find(d => d.date === yesterdayStr);
-
-        return targetRecord?.sleep_duration_h || 0;
-      })();
-
-      // Find last synced date for this athlete where heart rate is not 0
-      const lastSyncedDate = data
-        .filter(d => (d.avg_heart_rate && d.avg_heart_rate > 0) || (d.resting_hr && d.resting_hr > 0))
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date || null;
-
-      // Calculate RHR based on closest heart rate data to the latest sleep time
-      const rhr = (() => {
-        const sleepData = data.filter(d => d.sleep_duration_h && d.sleep_duration_h > 0);
-        if (sleepData.length === 0) return null;
-        const latestSleep = sleepData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-        const sleepDate = new Date(latestSleep.date);
-
-        // Get heart rate data for this athlete
-        const athleteHrData = heartRateData[athlete.athlete_id] || [];
-
-        // Find heart rate data closest to the sleep time
-        if (athleteHrData.length > 0) {
-          const closestHr = athleteHrData
-            .map(hr => ({
-              ...hr,
-              timeDiff: Math.abs(hr.measuredAt.getTime() - sleepDate.getTime())
-            }))
-            .sort((a, b) => a.timeDiff - b.timeDiff)[0];
-
-          // Only use if within reasonable time window (e.g., 2 hours)
-          if (closestHr.timeDiff < 2 * 60 * 60 * 1000) {
-            return closestHr.heartRateBPM;
-          }
-        }
-
-        // Fallback to existing data
-        return latestSleep.avg_heart_rate || latestSleep.resting_hr || null;
-      })();
-
-      return {
-        athlete,
-        latest,
-        alert,
-        readinessScore,
-        computedSleepH,
-        lastSyncedDate,
-        rhr,
-      };
-    });
-
-    const validMetrics = athleteMetrics.filter(m => m.latest);
-
-    const avgHRV = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + (m.latest?.hrv_night || 0), 0) / validMetrics.length : 0;
-    const avgSleep = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + (m.computedSleepH || 0), 0) / validMetrics.length : 0;
-    const avgReadiness = validMetrics.length > 0 ? validMetrics.reduce((sum, m) => sum + m.readinessScore, 0) / validMetrics.length : 0;
-
-    const alertCounts = {
-      high: athleteMetrics.filter(m => ['inflammation', 'airway'].includes(m.alert.type)).length,
-      medium: athleteMetrics.filter(m => ['circadian', 'nutrition'].includes(m.alert.type)).length,
-      optimal: athleteMetrics.filter(m => m.alert.type === 'green').length,
-    };
-
-    const lastSyncedDate = biometricData
-      .filter(d => (d.avg_heart_rate && d.avg_heart_rate > 0) || (d.resting_hr && d.resting_hr > 0))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date || null;
-
-    return {
-      totalAthletes: (athletes || []).length,
-      avgHRV: avgHRV || 0,
-      avgSleep: avgSleep || 0,
-      avgReadiness: avgReadiness || 0,
-      lastSyncedDate,
-      alertCounts,
-      athleteMetrics,
-    };
-  }, [athletes, biometricData, geneticProfiles, heartRateData]);
-
+  if (loading) {
+    return (
+      <div className="card-enhanced p-6 text-gray-600 flex items-center gap-3">
+        <svg className="animate-spin h-5 w-5 text-purple-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <span>Loading team stats...</span>
+      </div>
+    );
+  }
   return (
     <>
       {/* Team Stats */}
@@ -305,7 +137,6 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
 
       {/* Athletes Grid */}
       <section className="athletes-section">
-        
         <div className="athletes-grid">
           {teamStats.athleteMetrics?.map(({ athlete, latest, alert, readinessScore, computedSleepH, lastSyncedDate, rhr }, index) => (
             <div
@@ -324,7 +155,7 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
               <div className="athlete-metrics">
                 <div className="metric-pair">
                   <span className="label">HRV</span>
-                  <span className="value">{latest?.hrv_night ? latest.hrv_night.toFixed(0) + ' ms' : 'N/A'}</span>
+                  <span className="value">{latest?.hrv_night ? (Number(latest.hrv_night) || 0).toFixed(0) + ' ms' : 'N/A'}</span>
                 </div>
                 <div className="metric-pair">
                   <span className="label">Sleep</span>
@@ -333,20 +164,18 @@ export const TeamStats: React.FC<TeamStatsProps> = ({
                 <div className="metric-pair">
                   <span className="label">RHR</span>
                   <span className="value">
-                    {rhr ? `${rhr.toFixed(0)} bpm` : 'N/A'}
+                    {typeof rhr === 'number' && rhr > 0 ? `${rhr.toFixed(0)} bpm` : 'N/A'}
                   </span>
                 </div>
                 <div className="metric-pair">
                   <span className="label">Ready</span>
-                  <span className="value">{readinessScore.toFixed(0)}%</span>
+                  <span className="value">{latest ? `${readinessScore.toFixed(0)}%` : 'N/A'}</span>
                 </div>
                 <div className={`metric-pair rounded-md ${getSyncMetricPairClasses(lastSyncedDate)}`}>
                   <span className="label">Last Synced</span>
                   <span className="value">{lastSyncedDate ? new Date(lastSyncedDate).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
-
-       
 
               <button className="profile-button">
                 📊 Open Profile

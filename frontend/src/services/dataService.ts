@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios';
 import { Athlete, BiometricData, GeneticProfile, BodyComposition, BloodResults } from '../types';
 import { WomenHealthRecord, GpsPoint, ApneaRecord } from '../types/specializedData';
 import authService, { jcringApi, ApiError, AuthError } from './authService';
+import { log } from 'three/src/nodes/TSL.js';
 
 // Transform backend athlete data to frontend format
 const transformAthletesData = (backendAthletes: any[]): Athlete[] => {
@@ -1249,6 +1250,427 @@ export const bloodResultsService = {
     await api.post(`/blood-results/athletes/${athleteId}/blood-results`, data);
   },
 };
+// =====================================================
+// INJURY SERVICES
+// =====================================================
+
+type InjuryPayload = {
+  AthleteId: number;
+  Diagnosis: string;
+  DateOfInjury?: string;
+  BodyArea?: string;
+  Laterality?: string;
+  Mechanism?: string;
+  Severity?: string;
+  IsConcussion?: boolean;
+  HIAFlag?: boolean;
+  ConcussionStage?: string;
+  RTPStage?: string;
+  Status?: string;
+  ReturnDatePlanned?: string;
+  ReturnDateActual?: string;
+  Notes?: string;
+};
+
+type InjuryQuery = {
+  athleteId?: number;
+  status?: string;
+  isConcussion?: boolean;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+};
+
+const extractArrayFromDotNet = (data: any): any[] => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (data.$values && Array.isArray(data.$values)) return data.$values;
+  return [];
+};
+
+const normalizeInjury = (raw: any) => {
+  const toIso = (d: any): string | undefined => {
+    try {
+      if (!d) return undefined;
+      const date = new Date(d);
+      if (isNaN(date.getTime())) return typeof d === 'string' ? d : undefined;
+      return date.toISOString().slice(0, 10);
+    } catch {
+      return undefined;
+    }
+  };
+
+  return {
+    id: Number(raw.id ?? raw.Id ?? 0),
+    athleteId: Number(raw.athleteId ?? raw.AthleteId ?? raw.Athlete?.Id ?? 0),
+    dateOfInjury: toIso(raw.dateOfInjury ?? raw.DateOfInjury),
+    diagnosis: raw.diagnosis ?? raw.Diagnosis ?? '',
+    bodyArea: raw.bodyArea ?? raw.BodyArea ?? undefined,
+    laterality: raw.laterality ?? raw.Laterality ?? undefined,
+    mechanism: raw.mechanism ?? raw.Mechanism ?? undefined,
+    severity: raw.severity ?? raw.Severity ?? undefined,
+    isConcussion: raw.isConcussion ?? raw.IsConcussion ?? undefined,
+    hIAFlag: raw.hIAFlag ?? raw.HIAFlag ?? undefined,
+    hIAFlagAlt: raw.HIAFlag ?? raw.hIAFlag ?? undefined,
+    concussionStage: raw.concussionStage ?? raw.ConcussionStage ?? undefined,
+    // The component expects rTPStage (camel with leading lower r), map from RTPStage as well
+    rTPStage: raw.rTPStage ?? raw.RTPStage ?? undefined,
+    status: raw.status ?? raw.Status ?? 'Open',
+    returnDatePlanned: toIso(raw.returnDatePlanned ?? raw.ReturnDatePlanned),
+    returnDateActual: toIso(raw.returnDateActual ?? raw.ReturnDateActual),
+    notes: raw.notes ?? raw.Notes ?? undefined,
+    createdAt: toIso(raw.createdAt ?? raw.CreatedAt),
+    updatedAt: toIso(raw.updatedAt ?? raw.UpdatedAt),
+  };
+};
+
+export const injuryService = {
+  // List injuries with optional filters and pagination
+  async getInjuries(query?: InjuryQuery): Promise<{ total: number; page: number; limit: number; items: any[] }> {
+    const params = new URLSearchParams();
+    if (query?.athleteId != null) params.append('athleteId', String(query.athleteId));
+    if (query?.status) params.append('status', query.status);
+    if (typeof query?.isConcussion === 'boolean') params.append('isConcussion', String(query.isConcussion));
+    if (query?.startDate) params.append('startDate', query.startDate);
+    if (query?.endDate) params.append('endDate', query.endDate);
+    params.append('page', String(query?.page ?? 1));
+    params.append('limit', String(query?.limit ?? 100));
+
+    const res = await api.get(`/injuries?${params.toString()}`);
+    const payload = res.data?.Data ?? res.data ?? {};
+
+    const rawItems =
+      (payload?.items?.$values && Array.isArray(payload.items.$values))
+        ? payload.items.$values
+        : Array.isArray(payload?.items) ? payload.items
+        : extractArrayFromDotNet(payload);
+
+    const items = Array.isArray(rawItems) ? rawItems.map(normalizeInjury) : [];
+
+    return {
+      total: Number(payload?.total ?? items.length),
+      page: Number(payload?.page ?? 1),
+      limit: Number(payload?.limit ?? items.length),
+      items,
+    };
+  },
+
+  // Get single injury
+  async getById(id: number): Promise<any | null> {
+    try {
+      const res = await api.get(`/injuries/${id}`);
+      const data = res.data?.Data ?? res.data ?? null;
+      return data ? normalizeInjury(data) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  // Create injury
+  async create(data: InjuryPayload): Promise<any> {
+    const res = await api.post('/injuries', data);
+    return res.data?.Data ?? res.data;
+  },
+
+  // Update injury
+  async update(id: number, data: Partial<InjuryPayload>): Promise<any> {
+    const res = await api.put(`/injuries/${id}`, data);
+    return res.data?.Data ?? res.data;
+  },
+
+  // Delete injury
+  async remove(id: number): Promise<boolean> {
+    try {
+      await api.delete(`/injuries/${id}`);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  // Update HIA/Concussion
+  async updateHia(id: number, data: { HIAFlag?: boolean; ConcussionStage?: string; IsConcussion?: boolean; Notes?: string }): Promise<any> {
+    const res = await api.post(`/injuries/${id}/hia`, data);
+    return res.data?.Data ?? res.data;
+  },
+
+  // Update RTP stage/planned return
+  async updateRtp(id: number, data: { RTPStage?: string; ReturnDatePlanned?: string; Notes?: string }): Promise<any> {
+    const res = await api.post(`/injuries/${id}/rtp`, data);
+    return res.data?.Data ?? res.data;
+  },
+
+  // Resolve injury and set actual return date
+  async resolve(id: number, data?: { ReturnDateActual?: string; Notes?: string }): Promise<any> {
+    const res = await api.post(`/injuries/${id}/resolve`, data ?? {});
+    return res.data?.Data ?? res.data;
+  },
+};
+
+// =====================================================
+// EVENTS SERVICES (Calendar)
+// =====================================================
+
+export const normalizeEvent = (raw: any) => {
+  const toIso = (d: any): string => {
+    try {
+      if (!d) return '';
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? String(d) : dt.toISOString();
+    } catch {
+      return '';
+    }
+  };
+  return {
+    id: Number(raw.id ?? raw.Id ?? 0),
+    title: raw.title ?? raw.Title ?? '',
+    type: raw.type ?? raw.Type ?? 'Other',
+    description: raw.description ?? raw.Description ?? undefined,
+    location: raw.location ?? raw.Location ?? undefined,
+    startUtc: toIso(raw.startUtc ?? raw.StartUtc),
+    endUtc: toIso(raw.endUtc ?? raw.EndUtc),
+    allDay: Boolean(raw.allDay ?? raw.AllDay ?? false),
+    athleteId: raw.athleteId ?? raw.AthleteId ?? null,
+    organizationId: raw.organizationId ?? raw.OrganizationId ?? null,
+    recurrenceRule: raw.recurrenceRule ?? raw.RecurrenceRule ?? undefined,
+    createdAt: toIso(raw.createdAt ?? raw.CreatedAt),
+    updatedAt: toIso(raw.updatedAt ?? raw.UpdatedAt),
+  };
+};
+
+export const eventService = {
+  async getEvents(params?: {
+    athleteId?: number;
+    type?: string;
+    start?: string;
+    end?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ total: number; page: number; limit: number; items: any[] }> {
+    const qs = new URLSearchParams();
+    if (params?.athleteId != null) qs.append('athleteId', String(params.athleteId));
+    if (params?.type) qs.append('type', params.type);
+    if (params?.start) qs.append('start', params.start);
+    if (params?.end) qs.append('end', params.end);
+    qs.append('page', String(params?.page ?? 1));
+    qs.append('limit', String(params?.limit ?? 200));
+
+    const res = await api.get(`/events?${qs.toString()}`);
+    const payload = res.data?.Data ?? res.data ?? {};
+    const rawItems =
+      (payload?.items?.$values && Array.isArray(payload.items.$values))
+        ? payload.items.$values
+        : Array.isArray(payload?.items) ? payload.items
+        : extractArrayFromDotNet(payload);
+
+    const items = Array.isArray(rawItems) ? rawItems.map(normalizeEvent) : [];
+    return {
+      total: Number(payload?.total ?? items.length),
+      page: Number(payload?.page ?? 1),
+      limit: Number(payload?.limit ?? items.length),
+      items,
+    };
+  },
+
+  async getById(id: number): Promise<any | null> {
+    try {
+      const res = await api.get(`/events/${id}`);
+      const data = res.data?.Data ?? res.data ?? null;
+      return data ? normalizeEvent(data) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async create(data: {
+    Title: string;
+    Type?: string;
+    Description?: string;
+    Location?: string;
+    StartUtc?: string;
+    EndUtc?: string;
+    AllDay?: boolean;
+    AthleteId?: number;
+    OrganizationId?: number;
+    RecurrenceRule?: string;
+  }): Promise<any> {
+    const res = await api.post('/events', data);
+    return res.data?.Data ?? res.data;
+  },
+
+  async update(id: number, data: Partial<{
+    Title: string;
+    Type: string;
+    Description: string;
+    Location: string;
+    StartUtc: string;
+    EndUtc: string;
+    AllDay: boolean;
+    AthleteId: number;
+    OrganizationId: number;
+    RecurrenceRule: string;
+  }>): Promise<any> {
+    const res = await api.put(`/events/${id}`, data);
+    return res.data?.Data ?? res.data;
+  },
+
+  async remove(id: number): Promise<boolean> {
+    try {
+      await api.delete(`/events/${id}`);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  async exportIcs(params?: { athleteId?: number; type?: string; start?: string; end?: string }): Promise<Blob> {
+    const qs = new URLSearchParams();
+    if (params?.athleteId != null) qs.append('athleteId', String(params.athleteId));
+    if (params?.type) qs.append('type', params.type);
+    if (params?.start) qs.append('start', params.start);
+    if (params?.end) qs.append('end', params.end);
+    const res = await api.get(`/events/ics?${qs.toString()}`, { responseType: 'blob' });
+    return res.data as Blob;
+  },
+};
+
+// =====================================================
+// ATHLETE NOTES SERVICES (categorized positive/neutral/negative)
+// =====================================================
+
+const normalizeNote = (raw: any) => {
+  const toIso = (d: any): string => {
+    try {
+      if (!d) return '';
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? String(d) : dt.toISOString();
+    } catch {
+      return '';
+    }
+  };
+  return {
+    id: Number(raw.id ?? raw.Id ?? 0),
+    athleteId: Number(raw.athleteId ?? raw.AthleteId ?? 0),
+    category: raw.category ?? raw.Category ?? 'Neutral',
+    title: raw.title ?? raw.Title ?? undefined,
+    content: raw.content ?? raw.Content ?? undefined,
+    tags: raw.tags ?? raw.Tags ?? undefined,
+    author: raw.author ?? raw.Author ?? undefined,
+    createdAt: toIso(raw.createdAt ?? raw.CreatedAt),
+    updatedAt: toIso(raw.updatedAt ?? raw.UpdatedAt),
+  };
+};
+
+export const athleteNotesService = {
+  async list(params?: {
+    athleteId?: number;
+    category?: string;
+    start?: string;
+    end?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ total: number; page: number; limit: number; items: any[] }> {
+    const qs = new URLSearchParams();
+    if (params?.athleteId != null) qs.append('athleteId', String(params.athleteId));
+    if (params?.category) qs.append('category', params.category);
+    if (params?.start) qs.append('start', params.start);
+    if (params?.end) qs.append('end', params.end);
+    if (params?.search) qs.append('search', params.search);
+    qs.append('page', String(params?.page ?? 1));
+    qs.append('limit', String(params?.limit ?? 100));
+
+    const res = await api.get(`/athlete-notes?${qs.toString()}`);
+    const payload = res.data?.Data ?? res.data ?? {};
+    const rawItems =
+      (payload?.items?.$values && Array.isArray(payload.items.$values))
+        ? payload.items.$values
+        : Array.isArray(payload?.items) ? payload.items
+        : extractArrayFromDotNet(payload);
+
+    const items = Array.isArray(rawItems) ? rawItems.map(normalizeNote) : [];
+    return {
+      total: Number(payload?.total ?? items.length),
+      page: Number(payload?.page ?? 1),
+      limit: Number(payload?.limit ?? items.length),
+      items,
+    };
+  },
+
+  async getById(id: number): Promise<any | null> {
+    try {
+      const res = await api.get(`/athlete-notes/${id}`);
+      const data = res.data?.Data ?? res.data ?? null;
+      return data ? normalizeNote(data) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async create(data: {
+    AthleteId: number;
+    Category?: string; // Positive | Neutral | Negative
+    Title?: string;
+    Content?: string;
+    Tags?: string;
+    Author?: string;
+  }): Promise<any> {
+    const res = await api.post('/athlete-notes', data);
+    return res.data?.Data ?? res.data;
+  },
+
+  async update(id: number, data: Partial<{
+    AthleteId: number;
+    Category: string;
+    Title: string;
+    Content: string;
+    Tags: string;
+    Author: string;
+  }>): Promise<any> {
+    const res = await api.put(`/athlete-notes/${id}`, data);
+    return res.data?.Data ?? res.data;
+  },
+
+  async remove(id: number): Promise<boolean> {
+    try {
+      await api.delete(`/athlete-notes/${id}`);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  async reportSummary(params?: { athleteId?: number; start?: string; end?: string }): Promise<any> {
+    const qs = new URLSearchParams();
+    if (params?.athleteId != null) qs.append('athleteId', String(params.athleteId));
+    if (params?.start) qs.append('start', params.start);
+    if (params?.end) qs.append('end', params.end);
+    const res = await api.get(`/athlete-notes/report/summary?${qs.toString()}`);
+    return res.data?.Data ?? res.data ?? {};
+  },
+
+  async reportTrend(params?: { athleteId?: number; start?: string; end?: string; interval?: 'day' | 'week' | 'month' }): Promise<any[]> {
+    const qs = new URLSearchParams();
+    if (params?.athleteId != null) qs.append('athleteId', String(params.athleteId));
+    if (params?.start) qs.append('start', params.start);
+    if (params?.end) qs.append('end', params.end);
+    if (params?.interval) qs.append('interval', params.interval);
+    const res = await api.get(`/athlete-notes/report/trend?${qs.toString()}`);
+    const data = res.data?.Data ?? res.data ?? [];
+    if (Array.isArray(data?.$values)) return data.$values;
+    return Array.isArray(data) ? data : [];
+  },
+
+  async exportCsv(params?: { athleteId?: number; start?: string; end?: string }): Promise<Blob> {
+    const qs = new URLSearchParams();
+    if (params?.athleteId != null) qs.append('athleteId', String(params.athleteId));
+    if (params?.start) qs.append('start', params.start);
+    if (params?.end) qs.append('end', params.end);
+    const res = await api.get(`/athlete-notes/export.csv?${qs.toString()}`, { responseType: 'blob' });
+    return res.data as Blob;
+  },
+};
 
 // =====================================================
 // DASHBOARD SERVICES
@@ -1272,7 +1694,7 @@ export const dashboardService = {
       try {
         // Use the new single API call instead of looping through athletes
         biometricData = await biometricDataService.getAllAthletesBiometricData(undefined, undefined, 1, 1000);
-
+        
       } catch (error) {
         biometricData = []; // Ensure it's always an array
       }
