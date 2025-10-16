@@ -3,6 +3,7 @@ export { default as Navigation } from './Navigation';
 export { TeamOverview } from './TeamOverview';
 export { AthleteProfile } from './AthleteProfile';
 export { TeamComparisonDashboard } from './TeamComparisonDashboard';
+export { TeamComparison } from './TeamComparison';
 export { TrainingLoadHeatmap } from './TrainingLoadHeatmap';
 export { RecoveryTimeline } from './RecoveryTimeline';
 export { PredictiveAnalytics } from './PredictiveAnalytics';

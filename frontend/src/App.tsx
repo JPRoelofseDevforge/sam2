@@ -8,6 +8,7 @@ import { Navigation, ErrorBoundary } from './components';
 const TeamOverview = lazy(() => import('./components/TeamOverview').then(module => ({ default: module.TeamOverview })));
 const AthleteProfile = lazy(() => import('./components/AthleteProfile').then(module => ({ default: module.AthleteProfile })));
 const TeamComparisonDashboard = lazy(() => import('./components/TeamComparisonDashboard').then(module => ({ default: module.TeamComparisonDashboard })));
+const TeamComparison = lazy(() => import('./components/TeamComparison').then(module => ({ default: module.TeamComparison })));
 const TrainingLoadHeatmap = lazy(() => import('./components/TrainingLoadHeatmap').then(module => ({ default: module.TrainingLoadHeatmap })));
 const RecoveryTimeline = lazy(() => import('./components/RecoveryTimeline').then(module => ({ default: module.RecoveryTimeline })));
 const PredictiveAnalytics = lazy(() => import('./components/PredictiveAnalytics').then(module => ({ default: module.PredictiveAnalytics })));
@@ -18,6 +19,7 @@ const PharmaCoWatchlist = lazy(() => import('./components/PharmaCoWatchlist'));
 const InjurySurveillance = lazy(() => import('./components/InjurySurveillance'));
 const EventsCalendar = lazy(() => import('./components/EventsCalendar').then(module => ({ default: module.EventsCalendar })));
 const AthleteNotes = lazy(() => import('./components/AthleteNotes').then(module => ({ default: module.AthleteNotes })));
+const MorningOverview = lazy(() => import('./components/MorningOverview').then(module => ({ default: module.MorningOverview })));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -53,6 +55,8 @@ const AppContent: React.FC = () => {
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               <Route path="/" element={<TeamOverview />} />
+              <Route path="/morning-overview" element={<MorningOverview />} />
+              <Route path="/team-comparison" element={<TeamComparison />} />
               <Route path="/user-management" element={<AdminDashboard />} />
               <Route path="/weather-test" element={<WeatherImpactTest />} />
               <Route path="/body-composition" element={<BodyCompositionManagement />} />

@@ -45,6 +45,10 @@ export const EventsCalendar: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [total, setTotal] = useState(0);
 
+  // Calendar View State
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'list'>('month');
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+
   // Create Modal
   const [openCreate, setOpenCreate] = useState(false);
   const [createData, setCreateData] = useState({
@@ -104,6 +108,41 @@ export const EventsCalendar: React.FC = () => {
     loadEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(filters)]);
+
+  // Keep filters' start/end in sync with the visible calendar range
+  useEffect(() => {
+    const toYMD = (d: Date) => d.toISOString().slice(0, 10);
+
+    const getMondayStart = (d: Date) => {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      const day = (x.getDay() + 6) % 7; // Monday=0
+      x.setDate(x.getDate() - day);
+      return x;
+    };
+
+    let start: Date;
+    let end: Date;
+    if (viewMode === 'week') {
+      start = getMondayStart(currentDate);
+      end = new Date(start);
+      end.setDate(end.getDate() + 6);
+    } else {
+      const first = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const last = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      start = getMondayStart(first);
+      const lastMondayStart = getMondayStart(last);
+      end = new Date(lastMondayStart);
+      end.setDate(end.getDate() + 6);
+    }
+
+    setFilters(prev => ({
+      ...prev,
+      start: toYMD(start),
+      end: toYMD(end),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, currentDate]);
 
   const onChangeFilters = (patch: Partial<Filters>) => {
     setFilters(prev => ({ ...prev, ...patch }));
@@ -171,16 +210,91 @@ export const EventsCalendar: React.FC = () => {
     }
   };
 
+  // Calendar helper functions
+  const getMondayStart = (d: Date) => {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    const day = (x.getDay() + 6) % 7;
+    x.setDate(x.getDate() - day);
+    return x;
+  };
+  const addDays = (d: Date, n: number) => {
+    const x = new Date(d);
+    x.setDate(x.getDate() + n);
+    return x;
+  };
+  const viewTitle = (() => {
+    if (viewMode === 'week') {
+      const s = getMondayStart(currentDate);
+      const e = addDays(s, 6);
+      const fmt = (x: Date) => x.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return `${fmt(s)} - ${fmt(e)}`;
+    }
+    return currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  })();
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="card-enhanced p-6">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="min-w-0">
             <h2 className="text-2xl font-bold text-black">🗓️ Central Calendar</h2>
             <p className="text-sm text-gray-700 mt-1">Synchronize Training, Travel, Meetings, Competitions.</p>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setCurrentDate(prev => (viewMode === 'week' ? new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7) : new Date(prev.getFullYear(), prev.getMonth() - 1, 1)))}
+                className="px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+                title="Previous"
+              >
+                ‹
+              </button>
+              <button
+                onClick={() => setCurrentDate(new Date())}
+                className="px-3 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+                title="Today"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => setCurrentDate(prev => (viewMode === 'week' ? new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7) : new Date(prev.getFullYear(), prev.getMonth() + 1, 1)))}
+                className="px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+                title="Next"
+              >
+                ›
+              </button>
+              <div className="ml-2 font-semibold text-gray-900">
+                {viewTitle}
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-md shadow-sm overflow-hidden border">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-3 py-2 text-sm ${viewMode === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                title="Month view"
+              >
+                Month
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-3 py-2 text-sm border-l ${viewMode === 'week' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                title="Week view"
+              >
+                Week
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-2 text-sm border-l ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                title="List view"
+              >
+                List
+              </button>
+            </div>
+
             <button
               onClick={exportIcs}
               className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-md transition-colors duration-200"
@@ -267,6 +381,103 @@ export const EventsCalendar: React.FC = () => {
 
         <div className="mt-6 text-sm text-gray-300">Total: {total}</div>
       </div>
+
+      {/* Calendar */}
+      {viewMode !== 'list' && (
+        <div className="card-enhanced p-6">
+          <div className="mb-4 text-sm font-medium text-gray-700">Calendar</div>
+
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 text-xs font-medium text-gray-500 mb-1">
+            {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => (
+              <div key={d} className="px-2 py-2 text-center">{d}</div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
+            {(() => {
+              const getMondayStart = (d: Date) => {
+                const x = new Date(d); x.setHours(0,0,0,0); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); return x;
+              };
+              const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+              const isSameMonth = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+              const isToday = (d: Date) => {
+                const t = new Date(); return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate();
+              };
+              const formatTime = (iso?: string) => {
+                if (!iso) return '';
+                const dt = new Date(iso);
+                if (isNaN(dt.getTime())) return '';
+                return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              };
+              const eventTypeColor = (type: string) => {
+                switch (type) {
+                  case 'Training': return 'bg-blue-100 text-blue-800 border-blue-200';
+                  case 'Travel': return 'bg-amber-100 text-amber-800 border-amber-200';
+                  case 'Meeting': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                  case 'Competition': return 'bg-rose-100 text-rose-800 border-rose-200';
+                  default: return 'bg-gray-100 text-gray-800 border-gray-200';
+                }
+              };
+
+              const days: Date[] = (() => {
+                if (viewMode === 'week') {
+                  const s = getMondayStart(currentDate);
+                  return Array.from({ length: 7 }, (_, i) => addDays(s, i));
+                }
+                const first = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                const start = getMondayStart(first);
+                return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+              })();
+
+              return days.map((day, idx) => {
+                const dayStart = new Date(day); dayStart.setHours(0,0,0,0);
+                const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
+
+                const dayEvents = events.filter(ev => {
+                  const s = new Date(ev.startUtc);
+                  const e = new Date(ev.endUtc || ev.startUtc);
+                  return s < dayEnd && e >= dayStart;
+                }).sort((a, b) => {
+                  return new Date(a.startUtc).getTime() - new Date(b.startUtc).getTime();
+                });
+
+                return (
+                  <div key={idx} className="bg-white min-h-[110px] p-2">
+                    <div className="flex items-center justify-between">
+                      <div className={`text-xs font-semibold ${isSameMonth(day, currentDate) ? 'text-gray-900' : 'text-gray-400'}`}>
+                        {day.getDate()}
+                      </div>
+                      {isToday(day) && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-600 text-white">Today</span>}
+                    </div>
+
+                    <div className="mt-2 space-y-1">
+                      {dayEvents.slice(0, 3).map(ev => (
+                        <div
+                          key={ev.id}
+                          title={`${ev.title}${ev.location ? ' @ ' + ev.location : ''}`}
+                          className={`border ${eventTypeColor(ev.type || 'Other')} rounded px-1.5 py-1 text-[11px] leading-tight truncate`}
+                        >
+                          <span className="font-medium">{ev.title}</span>
+                          {!ev.allDay && (
+                            <span className="ml-1 opacity-70">
+                              ({formatTime(ev.startUtc)} - {formatTime(ev.endUtc)})
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {dayEvents.length > 3 && (
+                        <div className="text-[11px] text-gray-500">+{dayEvents.length - 3} more</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* List */}
       <div className="card-enhanced p-6">

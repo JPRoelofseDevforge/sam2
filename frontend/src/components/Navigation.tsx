@@ -81,6 +81,14 @@ const Navigation: React.FC<NavigationProps> = ({ isMobileMenuOpen, setIsMobileMe
               Team Overview
             </Link>
             
+            <Link to="/morning-overview" className={getNavLinkClass('/morning-overview')}>
+              Morning Overview
+            </Link>
+
+            <Link to="/team-comparison" className={getNavLinkClass('/team-comparison')}>
+              Team Comparison
+            </Link>
+
             <Link to="/pharma-watchlist" className={getNavLinkClass('/pharma-watchlist')}>
               Pharma Interactions
             </Link>
@@ -121,6 +129,22 @@ const Navigation: React.FC<NavigationProps> = ({ isMobileMenuOpen, setIsMobileMe
             Team Overview
           </Link>
          
+          <Link
+            to="/morning-overview"
+            onClick={() => handleNavClick('/morning-overview')}
+            className={getMobileNavLinkClass('/morning-overview')}
+          >
+            Morning Overview
+          </Link>
+
+          <Link
+            to="/team-comparison"
+            onClick={() => handleNavClick('/team-comparison')}
+            className={getMobileNavLinkClass('/team-comparison')}
+          >
+            Team Comparison
+          </Link>
+
           <Link
             to="/pharma-watchlist"
             onClick={() => handleNavClick('/pharma-watchlist')}
