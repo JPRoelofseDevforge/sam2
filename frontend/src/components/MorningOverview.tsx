@@ -271,10 +271,10 @@ const MorningOverview: React.FC = () => {
           limit: 500,
         });
 
-        // Events - today only
+        // Events - today only: use full-day ISO window so backend overlap filter matches items within the day
         const evRes = await eventService.getEvents({
-          start: todayYMD,
-          end: todayYMD,
+          start: startOfLocalDay(now).toISOString(),
+          end: endOfLocalDay(now).toISOString(),
           page: 1,
           limit: 500,
         });
