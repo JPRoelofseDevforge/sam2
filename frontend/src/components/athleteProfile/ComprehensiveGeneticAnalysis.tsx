@@ -56,107 +56,118 @@ const ComprehensiveGeneticAnalysis: React.FC<ComprehensiveGeneticAnalysisProps> 
 
   // Comprehensive genetic analysis data
   const geneticAnalysisData = {
-    'Core Sleep markers': {
-      genes: {
-        'COMT': { rsid: 'rs4680', analysis: { 'GG': { impact: 'beneficial', description: 'Better dopamine metabolism, improved sleep quality and cognitive function', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate dopamine metabolism', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Slower dopamine metabolism, may affect sleep and stress response', color: 'red' } } },
-        'PER3 VNTR': { rsid: 'rs57875989', analysis: { '4/4': { impact: 'beneficial', description: 'Morning chronotype, better sleep efficiency', color: 'green' }, '4/5': { impact: 'neutral', description: 'Intermediate chronotype', color: 'yellow' }, '5/5': { impact: 'challenging', description: 'Evening chronotype, may have sleep difficulties', color: 'red' } } },
-        'CLOCK': { rsid: 'rs1801260', analysis: { 'TT': { impact: 'beneficial', description: 'Better circadian rhythm regulation', color: 'green' }, 'TC': { impact: 'neutral', description: 'Moderate circadian regulation', color: 'yellow' }, 'CC': { impact: 'challenging', description: 'Evening preference, potential sleep issues', color: 'red' } } },
-        'BDNF': { rsid: 'rs6265', analysis: { 'Val/Val': { impact: 'beneficial', description: 'Enhanced neuroplasticity and sleep quality', color: 'green' }, 'Val/Met': { impact: 'neutral', description: 'Moderate neuroplasticity', color: 'yellow' }, 'Met/Met': { impact: 'challenging', description: 'Reduced neuroplasticity, may affect sleep recovery', color: 'red' } } },
-        'PPARGC1A': { rsid: 'rs8192678', analysis: { 'GG': { impact: 'beneficial', description: 'Enhanced mitochondrial function and sleep recovery', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate mitochondrial function', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced mitochondrial efficiency', color: 'red' } } },
-        'ACTN3': { rsid: 'rs1815739', analysis: { 'RR': { impact: 'beneficial', description: 'Fast-twitch fiber dominance, explosive power', color: 'green' }, 'RX': { impact: 'neutral', description: 'Mixed fiber types', color: 'yellow' }, 'XX': { impact: 'beneficial', description: 'Slow-twitch fiber dominance, endurance focus', color: 'green' } } },
-        'NOS3': { rsid: 'rs1799983', analysis: { 'TT': { impact: 'beneficial', description: 'Optimal nitric oxide production', color: 'green' }, 'GT': { impact: 'neutral', description: 'Moderate nitric oxide production', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Reduced nitric oxide production', color: 'red' } } },
-        'TPH2': { rsid: 'rs4570625', analysis: { 'CC': { impact: 'beneficial', description: 'Optimal serotonin regulation', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate serotonin regulation', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Altered serotonin regulation', color: 'red' } } },
-        'GABRA6': { rsid: 'rs3219151', analysis: { 'GG': { impact: 'beneficial', description: 'Enhanced GABA function, better sleep', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate GABA function', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced GABA function', color: 'red' } } },
-        'GSK3B': { rsid: '', analysis: { 'default': { impact: 'neutral', description: 'Glycogen synthase kinase regulation', color: 'blue' } } },
-        'PER2': { rsid: '', analysis: { 'default': { impact: 'neutral', description: 'Circadian rhythm regulation', color: 'blue' } } }
-      },
-      description: 'Genes influencing sleep quality, circadian rhythms, and sleep recovery'
-    },
-    'Mental Health': {
-      genes: {
-        'COMT': { rsid: 'rs4680', analysis: { 'GG': { impact: 'beneficial', description: 'Efficient dopamine metabolism, better stress response', color: 'green' }, 'GA': { impact: 'neutral', description: 'Balanced dopamine metabolism', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Slower dopamine clearance, may increase anxiety', color: 'red' } } },
-        'SLC6A4 5-HTTLPR': { rsid: 'rs4795541', analysis: { 'LL': { impact: 'beneficial', description: 'Efficient serotonin transport, better mood regulation', color: 'green' }, 'LS': { impact: 'neutral', description: 'Moderate serotonin transport', color: 'yellow' }, 'SS': { impact: 'challenging', description: 'Reduced serotonin transport, higher anxiety risk', color: 'red' } } },
-        'TPH2': { rsid: 'rs4570625', analysis: { 'CC': { impact: 'beneficial', description: 'Optimal serotonin synthesis', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate serotonin synthesis', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Reduced serotonin synthesis', color: 'red' } } },
-        'BDNF': { rsid: 'rs6265', analysis: { 'Val/Val': { impact: 'beneficial', description: 'Enhanced neuroplasticity and resilience', color: 'green' }, 'Val/Met': { impact: 'neutral', description: 'Moderate neuroplasticity', color: 'yellow' }, 'Met/Met': { impact: 'challenging', description: 'Reduced neuroplasticity, higher depression risk', color: 'red' } } },
-        'MAO-A': { rsid: 'rs6323', analysis: { 'TT': { impact: 'beneficial', description: 'Balanced neurotransmitter metabolism', color: 'green' }, 'TC': { impact: 'neutral', description: 'Moderate metabolism', color: 'yellow' }, 'CC': { impact: 'challenging', description: 'Altered metabolism, potential mood issues', color: 'red' } } },
-        'FKBP5': { rsid: 'rs1360780', analysis: { 'TT': { impact: 'beneficial', description: 'Better stress response regulation', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate stress response', color: 'yellow' }, 'CC': { impact: 'challenging', description: 'Heightened stress response', color: 'red' } } },
-        'GABRA6': { rsid: 'rs3219151', analysis: { 'GG': { impact: 'beneficial', description: 'Enhanced GABA function, anxiety reduction', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate GABA function', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced GABA function, higher anxiety', color: 'red' } } },
-        'HTR1A': { rsid: 'rs6295', analysis: { 'GG': { impact: 'beneficial', description: 'Better serotonin receptor function', color: 'green' }, 'GC': { impact: 'neutral', description: 'Moderate receptor function', color: 'yellow' }, 'CC': { impact: 'challenging', description: 'Reduced receptor function', color: 'red' } } },
-        'OXTR': { rsid: 'rs53576', analysis: { 'GG': { impact: 'beneficial', description: 'Enhanced social bonding and trust', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate social bonding', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced social bonding capacity', color: 'red' } } }
-      },
-      description: 'Genes affecting mood regulation, anxiety, stress response, and mental resilience'
-    },
-    'Cardiovascular markers': {
-      genes: {
-        'APOE': { rsid: 'rs429358', analysis: { 'E2/E2': { impact: 'beneficial', description: 'Lowest cardiovascular risk, better lipid metabolism', color: 'green' }, 'E2/E3': { impact: 'beneficial', description: 'Low cardiovascular risk', color: 'green' }, 'E3/E3': { impact: 'neutral', description: 'Average cardiovascular risk', color: 'yellow' }, 'E2/E4': { impact: 'neutral', description: 'Moderate cardiovascular risk', color: 'yellow' }, 'E3/E4': { impact: 'challenging', description: 'Elevated cardiovascular risk', color: 'red' }, 'E4/E4': { impact: 'challenging', description: 'Highest cardiovascular risk', color: 'red' } } },
-        'NOS3': { rsid: 'rs1799983', analysis: { 'TT': { impact: 'beneficial', description: 'Optimal endothelial function and blood flow', color: 'green' }, 'GT': { impact: 'neutral', description: 'Moderate endothelial function', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Reduced endothelial function', color: 'red' } } },
-        'ACE': { rsid: 'rs4341', analysis: { 'II': { impact: 'beneficial', description: 'Lower blood pressure, better endurance', color: 'green' }, 'ID': { impact: 'neutral', description: 'Moderate ACE activity', color: 'yellow' }, 'DD': { impact: 'challenging', description: 'Higher blood pressure, power advantage', color: 'red' } } },
-        'AGT': { rsid: 'rs699', analysis: { 'CC': { impact: 'beneficial', description: 'Lower angiotensinogen levels', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate angiotensinogen levels', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Higher angiotensinogen levels', color: 'red' } } },
-        'ADRB2': { rsid: 'rs1042713', analysis: { 'GG': { impact: 'beneficial', description: 'Better bronchodilation and cardiovascular response', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate response', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced bronchodilation', color: 'red' } } },
-        'MTHFR C677T': { rsid: 'rs1801133', analysis: { 'CC': { impact: 'beneficial', description: 'Normal homocysteine metabolism', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate homocysteine elevation risk', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Elevated homocysteine risk', color: 'red' } } },
-        'LPA': { rsid: 'rs3798220', analysis: { 'low': { impact: 'beneficial', description: 'Lower cardiovascular risk', color: 'green' }, 'high': { impact: 'challenging', description: 'Elevated cardiovascular risk', color: 'red' } } },
-        'CRP': { rsid: 'rs1205', analysis: { 'CC': { impact: 'beneficial', description: 'Lower inflammation risk', color: 'green' }, 'CG': { impact: 'neutral', description: 'Moderate inflammation risk', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Higher inflammation risk', color: 'red' } } }
-      },
-      description: 'Genes influencing heart health, blood pressure, cholesterol metabolism, and cardiovascular disease risk'
-    },
-    'Metabolic Health': {
-      genes: {
-        'TCF7L2': { rsid: 'rs7903146', analysis: { 'TT': { impact: 'beneficial', description: 'Lower type 2 diabetes risk', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate diabetes risk', color: 'yellow' }, 'CC': { impact: 'challenging', description: 'Elevated type 2 diabetes risk', color: 'red' } } },
-        'PPARG': { rsid: 'rs1801282', analysis: { 'CC': { impact: 'beneficial', description: 'Better insulin sensitivity', color: 'green' }, 'CG': { impact: 'neutral', description: 'Moderate insulin sensitivity', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Reduced insulin sensitivity', color: 'red' } } },
-        'FTO': { rsid: 'rs9939609', analysis: { 'AA': { impact: 'beneficial', description: 'Lower obesity risk', color: 'green' }, 'AT': { impact: 'neutral', description: 'Moderate obesity risk', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Elevated obesity risk', color: 'red' } } },
-        'MC4R': { rsid: 'rs17782313', analysis: { 'CC': { impact: 'beneficial', description: 'Better appetite regulation', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate appetite control', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Reduced appetite regulation', color: 'red' } } },
-        'ADIPOQ': { rsid: 'rs266729', analysis: { 'GG': { impact: 'beneficial', description: 'Better adiponectin function', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate adiponectin function', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced adiponectin function', color: 'red' } } },
-        'SLC2A2': { rsid: 'rs5400', analysis: { 'GG': { impact: 'beneficial', description: 'Better glucose transport', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate glucose transport', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced glucose transport', color: 'red' } } },
-        'MTNR1B': { rsid: 'rs10830963', analysis: { 'GG': { impact: 'beneficial', description: 'Lower diabetes risk', color: 'green' }, 'GC': { impact: 'neutral', description: 'Moderate diabetes risk', color: 'yellow' }, 'CC': { impact: 'challenging', description: 'Elevated diabetes risk', color: 'red' } } },
-        'GCK': { rsid: 'rs1799884', analysis: { 'AA': { impact: 'beneficial', description: 'Normal glucose sensing', color: 'green' }, 'AG': { impact: 'neutral', description: 'Moderate glucose sensing', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Altered glucose sensing', color: 'red' } } }
-      },
-      description: 'Genes affecting metabolism, insulin sensitivity, obesity risk, and type 2 diabetes'
-    },
-    'Power and Strength': {
-      genes: {
-        'ACE': { rsid: 'rs4341', analysis: { 'DD': { impact: 'beneficial', description: 'Power advantage, better strength gains', color: 'green' }, 'ID': { impact: 'neutral', description: 'Balanced power/endurance', color: 'yellow' }, 'II': { impact: 'beneficial', description: 'Endurance advantage', color: 'green' } } },
-        'ACTN3': { rsid: 'rs1815739', analysis: { 'RR': { impact: 'beneficial', description: 'Elite power genetics, fast-twitch dominance', color: 'green' }, 'RX': { impact: 'neutral', description: 'Mixed fiber types', color: 'yellow' }, 'XX': { impact: 'beneficial', description: 'Endurance genetics, slow-twitch dominance', color: 'green' } } },
-        'AGT': { rsid: 'rs699', analysis: { 'TT': { impact: 'beneficial', description: 'Better strength potential', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate strength potential', color: 'yellow' }, 'CC': { impact: 'challenging', description: 'Reduced strength potential', color: 'red' } } },
-        'CKM': { rsid: 'rs8111989', analysis: { 'AA': { impact: 'beneficial', description: 'Enhanced creatine kinase activity', color: 'green' }, 'AG': { impact: 'neutral', description: 'Moderate creatine kinase activity', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Reduced creatine kinase activity', color: 'red' } } },
-        'IL6': { rsid: 'rs1800795', analysis: { 'CC': { impact: 'beneficial', description: 'Better inflammation control', color: 'green' }, 'CG': { impact: 'neutral', description: 'Moderate inflammation control', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Higher inflammation risk', color: 'red' } } },
-        'NOS3': { rsid: 'rs1799983', analysis: { 'TT': { impact: 'beneficial', description: 'Optimal blood flow to muscles', color: 'green' }, 'GT': { impact: 'neutral', description: 'Moderate blood flow', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Reduced blood flow', color: 'red' } } },
-        'PPARA': { rsid: 'rs4253778', analysis: { 'GG': { impact: 'beneficial', description: 'Enhanced fat metabolism', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate fat metabolism', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced fat metabolism', color: 'red' } } },
-        'PPARGC1A': { rsid: 'rs8192678', analysis: { 'GG': { impact: 'beneficial', description: 'Superior mitochondrial function', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate mitochondrial function', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced mitochondrial function', color: 'red' } } },
-        'SOD2': { rsid: 'rs4880', analysis: { 'TT': { impact: 'beneficial', description: 'Better antioxidant protection', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate antioxidant protection', color: 'yellow' }, 'CC': { impact: 'challenging', description: 'Reduced antioxidant protection', color: 'red' } } }
-      },
-      description: 'Genes influencing muscle fiber composition, strength development, and power output'
-    },
-    'Endurance Capability': {
-      genes: {
-        'ACE': { rsid: 'rs4341', analysis: { 'II': { impact: 'beneficial', description: 'Superior endurance capacity', color: 'green' }, 'ID': { impact: 'neutral', description: 'Balanced capacity', color: 'yellow' }, 'DD': { impact: 'beneficial', description: 'Power advantage', color: 'green' } } },
-        'ACTN3': { rsid: 'rs1815739', analysis: { 'XX': { impact: 'beneficial', description: 'Elite endurance genetics', color: 'green' }, 'RX': { impact: 'neutral', description: 'Mixed capacity', color: 'yellow' }, 'RR': { impact: 'beneficial', description: 'Power genetics', color: 'green' } } },
-        'COMT': { rsid: 'rs4680', analysis: { 'GG': { impact: 'beneficial', description: 'Better pain tolerance', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate pain tolerance', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Lower pain tolerance', color: 'red' } } },
-        'CRP': { rsid: 'rs1205', analysis: { 'CC': { impact: 'beneficial', description: 'Lower chronic inflammation', color: 'green' }, 'CG': { impact: 'neutral', description: 'Moderate inflammation', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Higher chronic inflammation', color: 'red' } } },
-        'DRD4': { rsid: 'rs1800955', analysis: { '4R/4R': { impact: 'beneficial', description: 'Better focus and endurance', color: 'green' }, '4R/7R': { impact: 'neutral', description: 'Moderate focus', color: 'yellow' }, '7R/7R': { impact: 'challenging', description: 'Reduced focus capacity', color: 'red' } } },
-        'HFE': { rsid: 'rs1799945', analysis: { 'CC': { impact: 'beneficial', description: 'Normal iron metabolism', color: 'green' }, 'CG': { impact: 'neutral', description: 'Moderate iron metabolism', color: 'yellow' }, 'GG': { impact: 'challenging', description: 'Altered iron metabolism', color: 'red' } } },
-        'PPARA': { rsid: 'rs4253778', analysis: { 'GG': { impact: 'beneficial', description: 'Enhanced aerobic capacity', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate aerobic capacity', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced aerobic capacity', color: 'red' } } },
-        'UCP3': { rsid: 'rs1800849', analysis: { 'CC': { impact: 'beneficial', description: 'Better energy efficiency', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate energy efficiency', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Reduced energy efficiency', color: 'red' } } },
-        'VEGFA': { rsid: 'rs2010963', analysis: { 'CC': { impact: 'beneficial', description: 'Enhanced angiogenesis', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate angiogenesis', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Reduced angiogenesis', color: 'red' } } }
-      },
-      description: 'Genes affecting aerobic capacity, fatigue resistance, and endurance performance'
-    },
-    'Injury Risk': {
-      genes: {
-        'COL1A1': { rsid: 'rs1800012', analysis: { 'GG': { impact: 'beneficial', description: 'Stronger collagen structure', color: 'green' }, 'GT': { impact: 'neutral', description: 'Moderate collagen strength', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Weaker collagen structure', color: 'red' } } },
-        'COL5A1': { rsid: 'rs12722', analysis: { 'CC': { impact: 'beneficial', description: 'Better tendon integrity', color: 'green' }, 'CT': { impact: 'neutral', description: 'Moderate tendon integrity', color: 'yellow' }, 'TT': { impact: 'challenging', description: 'Higher tendon injury risk', color: 'red' } } },
-        'GDF5': { rsid: 'rs143383', analysis: { 'TT': { impact: 'beneficial', description: 'Better joint health', color: 'green' }, 'TC': { impact: 'neutral', description: 'Moderate joint health', color: 'yellow' }, 'CC': { impact: 'challenging', description: 'Higher joint injury risk', color: 'red' } } }
-      },
-      description: 'Genes influencing connective tissue strength, tendon integrity, and injury susceptibility'
-    },
-    'Recovery & Adaptation': {
-      genes: {
-        'PPARGC1A': { rsid: 'rs8192678', analysis: { 'GG': { impact: 'beneficial', description: 'Superior recovery capacity', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate recovery capacity', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Reduced recovery capacity', color: 'red' } } },
-        'BDNF': { rsid: 'rs6265', analysis: { 'Val/Val': { impact: 'beneficial', description: 'Enhanced adaptation and learning', color: 'green' }, 'Val/Met': { impact: 'neutral', description: 'Moderate adaptation', color: 'yellow' }, 'Met/Met': { impact: 'challenging', description: 'Reduced adaptation capacity', color: 'red' } } },
-        'COMT': { rsid: 'rs4680', analysis: { 'GG': { impact: 'beneficial', description: 'Better stress recovery', color: 'green' }, 'GA': { impact: 'neutral', description: 'Moderate stress recovery', color: 'yellow' }, 'AA': { impact: 'challenging', description: 'Slower stress recovery', color: 'red' } } }
-      },
-      description: 'Genes affecting recovery rate, adaptation to training, and stress response'
+  "CoreSleep": {
+    "description": "Genes influencing sleep quality, circadian rhythm, and recovery efficiency.",
+    "genes": {
+      "COMT": { "rsid": "rs4680", "function": "Dopamine breakdown, stress resilience, and sleep depth" },
+      "PER3": { "rsid": "rs57875989", "function": "Chronotype (morning/evening preference), sleep duration" },
+      "CLOCK": { "rsid": "rs1801260", "function": "Sleep timing and circadian rhythm regulation" },
+      "BDNF": { "rsid": "rs6265", "function": "Neuroplasticity and recovery during sleep" },
+      "PPARGC1A": { "rsid": "rs8192678", "function": "Mitochondrial biogenesis, recovery, energy metabolism" },
+      "ACTN3": { "rsid": "rs1815739", "function": "Muscle fiber type balance, sleep recovery in athletes" },
+      "NOS3": { "rsid": "rs1799983", "function": "Vasodilation and oxygenation affecting sleep quality" },
+      "TPH2": { "rsid": "rs4570625", "function": "Serotonin synthesis, mood and sleep regulation" },
+      "GABRA6": { "rsid": "rs3219151", "function": "GABA receptor activity, sleep onset latency" },
+      "GSK3B": { "rsid": "rs334558", "function": "Circadian rhythm stability and bipolar risk" },
+      "PER2": { "rsid": "rs2304672", "function": "Light sensitivity, circadian phase timing" }
     }
-  };
+  },
+
+  "MentalHealth": {
+    "description": "Genes impacting stress response, resilience, and emotional regulation.",
+    "genes": {
+      "COMT": { "rsid": "rs4680", "function": "Dopamine metabolism, anxiety, cognitive function" },
+      "BDNF": { "rsid": "rs6265", "function": "Neuroplasticity and mood stability" },
+      "TPH2": { "rsid": "rs4570625", "function": "Serotonin synthesis, depression risk" },
+      "MAOA": { "rsid": "rs6323", "function": "Monoamine metabolism, aggression, stress response" },
+      "SLC6A4": { "rsid": "rs4795541", "function": "Serotonin transporter promoter (5-HTTLPR), stress resilience" },
+      "FKBP5": { "rsid": "rs1360780", "function": "HPA-axis stress response, trauma sensitivity" },
+      "GABRA6": { "rsid": "rs3219151", "function": "GABA receptor, anxiety regulation" },
+      "HTR1A": { "rsid": "rs6295", "function": "Serotonin receptor sensitivity, mood modulation" },
+      "OXTR": { "rsid": "rs53576", "function": "Oxytocin receptor, social bonding, empathy" }
+    }
+  },
+
+  "CardiovascularHealth": {
+    "description": "Genes associated with lipid metabolism, vascular tone, and cardiovascular risk.",
+    "genes": {
+      "APOE": {
+        "rsids": ["rs429358", "rs7412"],
+        "function": "Lipid transport and metabolism; defines APOE ε2/ε3/ε4 type"
+      },
+      "NOS3": { "rsid": "rs1799983", "function": "Endothelial nitric oxide synthesis, vascular tone" },
+      "ACE": { "rsid": "rs4341", "function": "Blood pressure regulation and endurance potential" },
+      "AGT": { "rsid": "rs699", "function": "Angiotensinogen activity, blood pressure and sodium balance" },
+      "ADRB2": { "rsid": "rs1042713", "function": "Adrenergic receptor sensitivity, cardiac output" },
+      "MTHFR": { "rsid": "rs1801133", "function": "Homocysteine metabolism, methylation" },
+      "LPA": { "rsid": "rs3798220", "function": "Lipoprotein(a) levels, cardiovascular risk" },
+      "CRP": { "rsid": "rs1205", "function": "C-reactive protein levels, inflammation" }
+    }
+  },
+
+  "MetabolicHealth": {
+    "description": "Genes influencing glucose control, lipid metabolism, and obesity risk.",
+    "genes": {
+      "TCF7L2": { "rsid": "rs7903146", "function": "Glucose metabolism, type 2 diabetes risk" },
+      "PPARG": { "rsid": "rs1801282", "function": "Insulin sensitivity, adipogenesis" },
+      "FTO": { "rsid": "rs9939609", "function": "Appetite regulation, obesity predisposition" },
+      "MC4R": { "rsid": "rs17782313", "function": "Energy balance, obesity risk" },
+      "ADIPOQ": { "rsid": "rs266729", "function": "Adiponectin levels, insulin sensitivity" },
+      "SLC2A2": { "rsid": "rs5400", "function": "Glucose transport and utilization" },
+      "MTNR1B": { "rsid": "rs10830963", "function": "Melatonin receptor, fasting glucose levels" },
+      "GCK": { "rsid": "rs1799884", "function": "Glucokinase activity, fasting glucose control" }
+    }
+  },
+
+  "PowerStrength": {
+    "description": "Genes contributing to muscle power, strength, and explosive performance.",
+    "genes": {
+      "ACE": { "rsid": "rs4341", "function": "ACE activity affects muscle oxygenation and performance" },
+      "ACTN3": { "rsid": "rs1815739", "function": "Fast-twitch muscle fiber efficiency" },
+      "AGT": { "rsid": "rs699", "function": "Muscle hypertrophy and recovery" },
+      "CKM": { "rsid": "rs8111989", "function": "Creatine kinase activity, muscle energy turnover" },
+      "IL6": { "rsid": "rs1800795", "function": "Inflammation and muscle recovery" },
+      "NOS3": { "rsid": "rs1799983", "function": "Oxygen delivery and muscle endurance" },
+      "PPARA": { "rsid": "rs4253778", "function": "Fat metabolism and energy substrate usage" },
+      "PPARGC1A": { "rsid": "rs8192678", "function": "Mitochondrial biogenesis and endurance adaptation" },
+      "SOD2": { "rsid": "rs4880", "function": "Antioxidant defense, recovery efficiency" }
+    }
+  },
+
+  "Endurance": {
+    "description": "Genes influencing aerobic capacity, focus, and energy utilization.",
+    "genes": {
+      "ACE": { "rsid": "rs4341", "function": "Endurance potential and oxygen efficiency" },
+      "ACTN3": { "rsid": "rs1815739", "function": "Slow vs fast-twitch muscle balance" },
+      "COMT": { "rsid": "rs4680", "function": "Mental endurance, dopamine regulation" },
+      "CRP": { "rsid": "rs1205", "function": "Inflammation control during long efforts" },
+      "DRD4": { "rsid": "rs1800955", "function": "Dopamine receptor; motivation and novelty-seeking" },
+      "HFE": { "rsid": "rs1799945", "function": "Iron regulation and oxygen-carrying capacity" },
+      "PPARA": { "rsid": "rs4253778", "function": "Fat oxidation and energy utilization" },
+      "UCP3": { "rsid": "rs1800849", "function": "Energy efficiency and thermogenesis" },
+      "VEGFA": { "rsid": "rs2010963", "function": "Capillary density, angiogenesis for oxygen delivery" }
+    }
+  },
+
+  "InjuryRisk": {
+    "description": "Genes influencing connective tissue integrity, collagen formation, and injury susceptibility.",
+    "genes": {
+      "COL1A1": { "rsid": "rs1800012", "function": "Collagen synthesis and tendon strength" },
+      "COL5A1": { "rsid": "rs12722", "function": "Collagen structure, ligament flexibility" },
+      "GDF5": { "rsid": "rs143383", "function": "Cartilage repair and joint health" }
+    }
+  },
+
+  "Recovery": {
+    "description": "Genes affecting recovery rate, inflammation control, and adaptation speed.",
+    "genes": {
+      "PPARGC1A": { "rsid": "rs8192678", "function": "Energy metabolism and adaptation to training" },
+      "BDNF": { "rsid": "rs6265", "function": "Neural recovery and plasticity" },
+      "COMT": { "rsid": "rs4680", "function": "Stress resilience and post-exercise recovery" }
+    }
+  }
+};
+
 
   const getGeneAnalysis = (categoryName: string, geneName: string, genotype: string) => {
     const category = geneticAnalysisData[categoryName as keyof typeof geneticAnalysisData] as any;
